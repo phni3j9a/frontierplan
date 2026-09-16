@@ -1,0 +1,3 @@
+role = "director"
+model = "gpt-6-astra"
+reasoning_effort = "xhigh"

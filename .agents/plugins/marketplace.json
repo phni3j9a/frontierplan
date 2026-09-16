@@ -1,0 +1,20 @@
+{
+  "name": "frontierplan-local",
+  "interface": {
+    "displayName": "FrontierPlan"
+  },
+  "plugins": [
+    {
+      "name": "frontierplan",
+      "source": {
+        "source": "local",
+        "path": "./plugins/frontierplan"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+role = "main"
+model = "gpt-5.6-sol"
+reasoning_effort = "xhigh"
+# Expected existing Main session; never switched or spawned by the plugin.

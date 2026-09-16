@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "frontierplan",
+  "version": "0.1.0",
+  "description": "Director-led engineering with Astra-only research and planning, coordinated execution, and Director acceptance.",
+  "author": {
+    "name": "phni3j9a"
+  },
+  "repository": "https://github.com/phni3j9a/frontierplan",
+  "license": "MIT",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "FrontierPlan",
+        "shortDescription": "Astra researches, plans and accepts; Main coordinates execution.",
+        "longDescription": "Explicit-only AstraPlan-herdr and AstraPlan-subagent. Astra alone handles research, dialogue and design before implementation; Main dispatches the approved Plan and returns results to Astra for final acceptance.",
+        "developerName": "phni3j9a",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "$frontierplan:astraplan-herdr でこの開発を進めてください。",
+          "$frontierplan:astraplan-subagent でこの開発を進めてください。"
+        ]
+      }
+    }
+  }
+}

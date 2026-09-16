@@ -1,0 +1,7 @@
+interface:
+  display_name: "AstraPlan-herdr"
+  short_description: "Astra researches and plans; Main coordinates via herdr."
+  default_prompt: "Use $frontierplan:astraplan-herdr for this engineering task."
+
+policy:
+  allow_implicit_invocation: false
