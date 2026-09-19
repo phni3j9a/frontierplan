@@ -24,8 +24,9 @@ Read [Review](../../core/review.md) before implementation review.
 
 Use `profiles/director/astra.toml` and the shared role-specific `profiles/*.toml`.
 Astra / `xhigh` is mandatory from the first substantive user reply through final
-acceptance. Main uses the expected existing Sol / `xhigh` session; this skill
-never replaces Main or changes global defaults. effort values are lowercase.
+acceptance. Main inherits its existing Codex session's model and effort; this backend still
+requires Codex native subagent tools. This skill never replaces Main or changes
+global defaults. Child effort values are lowercase.
 
 Before implementation, **only Astra** understands the request, researches code and
 external sources with available authorized tools, performs isolated probes,

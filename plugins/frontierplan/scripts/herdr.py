@@ -46,47 +46,110 @@ class Herdr:
 
 
 def session_id(pane: dict) -> str | None:
-    value = pane.get("agent_session")
-    if isinstance(value, dict):
-        value = value.get("value") or value.get("id")
-    return value or pane.get("agent_session_id") or pane.get("session_id") or pane.get("thread_id")
+    values = []
+    for key in ("agent_session", "agent_session_id", "session_id", "thread_id"):
+        value = pane.get(key)
+        candidates = (value.get("value"), value.get("id")) if isinstance(value, dict) else (value,)
+        for item in candidates:
+            if item is None or item == "":
+                continue
+            fp.require(isinstance(item, str) and item.strip(), "Invalid Main session metadata.")
+            values.append(item)
+    fp.require(len(set(values)) <= 1, "Contradictory live Main session IDs.")
+    return values[0] if values else None
 
 
-def validate_session(pane: dict, expected: str) -> None:
-    fp.require(str(pane.get("agent", "")).lower() == "codex", "The Main terminal is not Codex.")
+def agent_kind(pane: dict) -> str:
+    value = pane.get("agent")
+    fp.require(isinstance(value, str) and value.strip().lower() not in ("", "none", "unknown", "shell"),
+               "herdr must identify Main's agent kind; do not guess an unrecognized terminal.")
+    return value.strip().lower()
+
+
+def caller_identity() -> dict | None:
+    """Explicit provider-neutral identity, or the existing Codex environment."""
+    agent = os.environ.get("FRONTIERPLAN_MAIN_AGENT", "").strip().lower()
+    session = os.environ.get("FRONTIERPLAN_MAIN_SESSION_ID", "").strip()
+    fp.require(bool(agent) == bool(session),
+               "Set both FRONTIERPLAN_MAIN_AGENT and FRONTIERPLAN_MAIN_SESSION_ID, or neither.")
+    codex = fp.thread_id()
+    if agent:
+        fp.require(not codex or (agent == "codex" and session == codex),
+                   "Explicit Main identity contradicts the Codex environment; inspect inherited IDs.")
+        return {"agent": agent, "session_id": session}
+    return {"agent": "codex", "session_id": codex} if codex else None
+
+
+def current_pane(api: Herdr) -> dict:
+    expected = os.environ.get("HERDR_PANE_ID")
+    fp.require(expected, "No current Main identity. Supply verified FRONTIERPLAN_MAIN_AGENT and "
+               "FRONTIERPLAN_MAIN_SESSION_ID for every Main helper command; never guess from focus/cwd.")
+    pane = api.call("pane", "current", "--current")["pane"]
+    fp.require(pane.get("pane_id") == expected and pane.get("terminal_id"),
+               "Current pane does not match HERDR_PANE_ID; inspect the host/socket binding.")
+    return pane
+
+
+def validate_session(pane: dict, expected: str, agent: str = "codex", *,
+                     require_session: bool = False) -> None:
+    fp.require(agent_kind(pane) == agent, "Main's agent kind does not match the live pane.")
     observed = session_id(pane)
+    fp.require(not require_session or observed, "Main's live session ID is missing; inspect before continuing.")
     fp.require(not observed or observed == expected, "Main's conversation does not match the live pane.")
 
 
 def main_pane(state: dict, api: Herdr) -> dict:
-    fp.main_only(state)
+    fp.require(os.environ.get("FRONTIERPLAN_ROLE") not in fp.CHILDREN, "Only Main manages this run.")
     fp.require(state["backend"] == "herdr" and state.get("herdr"), "This is not a bound herdr run.")
     terminal = state["herdr"]["main_terminal_id"]
     matches = [p for p in api.call("pane", "list")["panes"] if p.get("terminal_id") == terminal]
     fp.require(len(matches) == 1, "Main's original terminal is missing or ambiguous; no pane changed.")
-    validate_session(matches[0], state["main_thread_id"])
-    return matches[0]  # Preserve terminal identity even after a manual move/swap.
+    pane = matches[0]
+    if "main_identity" not in state:
+        fp.main_only(state)  # Legacy Codex run; no recursive live-identity branch.
+        validate_session(pane, state["main_thread_id"])
+        return pane
+    expected = state["main_identity"]
+    validate_session(pane, expected["session_id"], expected["agent"],
+                     require_session=state["herdr"].get("session_verified", False))
+    caller = caller_identity()
+    if caller is not None:
+        fp.require(caller == expected, "This run belongs to a different Main agent/conversation.")
+    else:
+        current = current_pane(api)
+        fp.require(current.get("terminal_id") == terminal and current.get("pane_id") == pane.get("pane_id"),
+                   "The calling pane is not Main's original terminal; no pane changed.")
+        validate_session(current, expected["session_id"], expected["agent"], require_session=True)
+    return pane  # Follow terminal identity, not focus, cwd or a reused pane ID.
 
 
 def initialize(cwd: str, request_file: str, pane_id: str | None = None,
                terminal_id: str | None = None, socket: str | None = None) -> dict:
+    fp.require(os.environ.get("FRONTIERPLAN_ROLE") not in fp.CHILDREN, "Children cannot initialize runs.")
     fp.require(bool(pane_id) == bool(terminal_id), "Supply both Main pane and terminal IDs.")
-    fp.require(fp.thread_id(), "Main conversation identity is required.")
+    identity = caller_identity()
     api = Herdr(socket=socket)
     if pane_id:
         pane = api.call("pane", "get", pane_id)["pane"]
         fp.require(pane.get("pane_id") == pane_id and pane.get("terminal_id") == terminal_id,
                    "The selected Main pane/terminal does not match.")
+        if identity is None:
+            current = current_pane(api)
+            fp.require(current.get("terminal_id") == terminal_id and current.get("pane_id") == pane_id,
+                       "Explicit pane IDs alone do not establish the calling Main's identity.")
     else:
-        fp.require(os.environ.get("HERDR_PANE_ID"),
-                   "No HERDR_PANE_ID. Verify Main's conversation, then pass --main-pane and --main-terminal-id.")
-        pane = api.call("pane", "current", "--current")["pane"]
-    validate_session(pane, fp.thread_id())
-    value = fp.initialize("herdr", cwd, request_file)
-    with fp.transaction(value["run"]) as (_, state):
-        state["herdr"] = {"binary": str(api.binary), "socket": api.env.get("HERDR_SOCKET_PATH"),
-                          "main_pane_id": pane["pane_id"], "main_terminal_id": pane["terminal_id"]}
-    return {"run": value["run"], "main_pane": pane["pane_id"]}
+        pane = current_pane(api)
+    if identity is None:
+        observed = session_id(pane)
+        fp.require(observed, "herdr does not expose Main's session ID. Verify it externally and set "
+                   "FRONTIERPLAN_MAIN_AGENT plus FRONTIERPLAN_MAIN_SESSION_ID; do not invent an ID.")
+        identity = {"agent": agent_kind(pane), "session_id": observed}
+    validate_session(pane, identity["session_id"], identity["agent"])
+    binding = {"binary": str(api.binary), "socket": api.env.get("HERDR_SOCKET_PATH"),
+               "main_pane_id": pane["pane_id"], "main_terminal_id": pane["terminal_id"],
+               "session_verified": session_id(pane) is not None}
+    value = fp.initialize("herdr", cwd, request_file, main_identity=identity, herdr_binding=binding)
+    return {"run": value["run"], "main_pane": pane["pane_id"], "main_identity": identity}
 
 
 def live(task: dict, agents: dict) -> dict:
@@ -109,7 +172,8 @@ def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
     if p.get("service_tier") == "fast":
         args += ["-c", 'service_tier="fast"', "-c", "features.fast_mode=true"]
     env = {"FRONTIERPLAN_ROLE": task["role"], "FRONTIERPLAN_TASK": str(root / "tasks" / task["id"]),
-           "HERDR_PANE_ID": pane["pane_id"], "HERDR_BIN_PATH": str(api.binary)}
+           "HERDR_PANE_ID": pane["pane_id"], "HERDR_BIN_PATH": str(api.binary),
+           "FRONTIERPLAN_MAIN_AGENT": "", "FRONTIERPLAN_MAIN_SESSION_ID": ""}
     if api.env.get("HERDR_SOCKET_PATH"):
         env["HERDR_SOCKET_PATH"] = api.env["HERDR_SOCKET_PATH"]
     for key, value in env.items():
@@ -154,7 +218,8 @@ def spawn(run: str, role: str, file: str, cwd: str | None = None) -> dict:
         target_id, direction = main["pane_id"], "right"
     pane = api.call("pane", "split", target_id, "--direction", direction, "--ratio", "0.5",
                     "--cwd", task["cwd"], "--no-focus", "--env", f"FRONTIERPLAN_ROLE={role}",
-                    "--env", f"FRONTIERPLAN_TASK={path}")["pane"]
+                    "--env", f"FRONTIERPLAN_TASK={path}", "--env", "FRONTIERPLAN_MAIN_AGENT=",
+                    "--env", "FRONTIERPLAN_MAIN_SESSION_ID=")["pane"]
     task["handle"] = {"pane_id": pane["pane_id"], "terminal_id": pane["terminal_id"]}
     task["delivery"] = "starting"
     args = codex_args(task, root, pane, api)
@@ -279,6 +344,7 @@ def cli() -> None:
 
 
 if __name__ == "__main__":
+    sys.modules["herdr"] = sys.modules[__name__]
     try:
         cli()
     except (fp.Failure, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:

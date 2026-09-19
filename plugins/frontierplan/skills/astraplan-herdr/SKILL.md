@@ -24,8 +24,10 @@ Read [Review](../../core/review.md) before implementation review.
 
 Use `profiles/director/astra.toml` and the shared role-specific `profiles/*.toml`.
 Astra / `xhigh` is mandatory from the first substantive user reply through final
-acceptance. Main uses the expected existing Sol / `xhigh` session; this skill
-never replaces Main or changes global defaults. effort values are lowercase.
+acceptance. Main inherits its existing host agent, model and effort; Codex is required for
+children, not Main. Verify Main's agent/session/terminal identity as documented in
+the herdr backend. This skill never replaces Main or changes global defaults.
+Child effort values are lowercase.
 
 Before implementation, **only Astra** understands the request, researches code and
 external sources with available authorized tools, performs isolated probes,
