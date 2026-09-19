@@ -23,7 +23,9 @@ class Protocol(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.project = self.root / "project"; self.project.mkdir()
-        self.env = patch.dict(os.environ, {"CODEX_THREAD_ID": "main-test", "CODEX_SESSION_ID": "", "FRONTIERPLAN_ROLE": ""})
+        self.env = patch.dict(os.environ, {"CODEX_THREAD_ID": "main-test", "CODEX_SESSION_ID": "", "FRONTIERPLAN_ROLE": "",
+                                           "FRONTIERPLAN_MAIN_AGENT": "", "FRONTIERPLAN_MAIN_SESSION_ID": "",
+                                           "HERDR_PANE_ID": ""})
         self.env.start()
         self.git("init", "-q")
         self.git("config", "user.email", "tests@example.invalid")
@@ -274,9 +276,10 @@ class Protocol(unittest.TestCase):
         self.assertEqual(first, fp.snapshot(str(self.project))["id"])
 
     def test_profiles_role_specific_lowercase(self):
-        for role in fp.ROLES:
+        for role in fp.CHILDREN:
             with self.subTest(role=role):
                 self.assertIn(fp.profile(role)["reasoning_effort"], ("xhigh", "max"))
+        self.assertEqual(fp.profile("main"), {"role": "main", "inherit_session": True})
         with self.assertRaises(fp.Failure): fp.profile("director", "fable")
 
     def test_package_and_extracted_integrity(self):

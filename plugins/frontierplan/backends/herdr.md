@@ -1,18 +1,15 @@
 # herdr backend
 
 Requires Python 3.11+, Git for candidate verification, herdr and Codex on the same
-host, and a Main Codex conversation already inside herdr. Set absolute helper paths
-from this installed plugin, not a guessed checkout path:
+host. Main is an existing session inside herdr, not necessarily Codex: a recognized
+Devin or another agent can coordinate while all children still run through Codex.
+Main keeps its existing agent, model, effort and permissions. FrontierPlan never
+launches, switches or retunes Main, and never edits user configuration automatically.
+Set absolute helper paths from this installed plugin, not a guessed checkout path:
 ```
 fp=<plugin-root>/scripts/frontierplan.py
 hd=<plugin-root>/scripts/herdr.py
 ```
-Main is expected to be Sol / `xhigh`. Before starting it, the host-specific launch
-configuration used by the predecessor was:
-```
-codex -m gpt-5.6-sol -c 'model_reasoning_effort="xhigh"' -c background_terminal_max_timeout=3600000
-```
-Verify these flags against the installed CLI. Never edit user configuration yourself.
 
 ## Initialize and start ONLY Director
 
@@ -21,19 +18,61 @@ Save the original user request to a UTF-8 file, then:
 python3 "$hd" init --cwd "$project" --request-file "$request"
 python3 "$hd" spawn --run "$run" --role director --file "$assignment"
 ```
-Retain returned run/task handles. Assignment contains original dialogue references,
-known repository/worktree locations and permissions, not Main's researched Plan.
-For a shared app-server without HERDR_PANE_ID, inspect available herdr panes and
-match the current Codex conversation before using:
+Retain returned run/task handles and `main_identity`. Assignment contains original
+dialogue references, known repository/worktree locations and permissions, not Main's
+researched Plan. The common `frontierplan.py init --backend herdr` entry point also
+uses the same binding procedure; it cannot create an unbound herdr run.
+
+### Main identity: agent kind + session ID + terminal ID
+
+When `HERDR_PANE_ID` is available, the helper checks `pane current --current` against
+that ID. With no explicit identity or Codex identity in the environment, it derives
+Main's agent kind and session ID from this verified current pane. It does not look
+at focus, cwd, the only available agent, or model names to guess Main.
+
+Codex's `CODEX_THREAD_ID` / `CODEX_SESSION_ID` remain supported and must agree when
+both are present. For other hosts that cannot expose a trustworthy current pane or
+session ID, independently verify Main's actual agent kind, actual session ID and
+pane/terminal pair, then supply the provider-neutral identity in Main's command
+environment for **every** helper invocation (both scripts), not only initialization:
 ```
+export FRONTIERPLAN_MAIN_AGENT="$verified_agent_kind"
+export FRONTIERPLAN_MAIN_SESSION_ID="$verified_session_id"
 python3 "$hd" init --cwd "$project" --request-file "$request" \
   --main-pane "$verified_pane" --main-terminal-id "$verified_terminal" --socket "$socket"
 ```
-Never pick Main by focus, matching cwd or “only agent”. If herdr advertises a session
-ID it must match; otherwise verify terminal content or an explicit user association.
-Main is bound by conversation + terminal identity and may move without being confused
-with a replacement pane. First split is right/0.5; later splits use the largest owned
-child area. No global rebalance or focus stealing; respect manual resize/movement.
+Use the agent kind reported by the installed herdr, not an assumed product label.
+For example `devin` is appropriate only if that is the actual reported kind. These
+are FrontierPlan variables, not claims about a Devin-specific environment API.
+Do not invent a session ID, reuse a previous session's value, or copy an unrelated
+pane's identity. Explicit pane IDs alone do not prove which conversation is calling.
+Set both identity variables or neither. Contradictions with live metadata or inherited
+Codex IDs stop the command; inspect stale environment values rather than overriding
+checks. A shell/unknown/unrecognized agent cannot be made valid merely by naming it.
+
+If live session metadata is absent, an independently verified explicit identity can
+be used with the verified agent kind and terminal; this is cooperative identity
+checking, not authentication. A session ID observed at initialization must remain
+available and equal on later commands. The shared ledger also verifies live identity
+before Main-only operations such as message, authorize, prepare, decision and finish.
+
+Main's original terminal remains the anchor after moves/swaps. With an explicit or
+Codex session identity, its current pane is located by terminal ID. Auto-detection
+also needs a correct current `HERDR_PANE_ID`; if the host leaves it stale after a
+move, stop and re-establish the verified current context or explicit identity. Do
+not infer caller identity from the saved run alone. Replaced terminals, changed
+agent/session identities and ambiguous matches fail closed before pane mutation.
+Pre-existing Codex/herdr runs keep their original Codex ownership checks; there is
+no automatic owner migration. Native subagent runs still require Codex native tools.
+
+The plugin's installation metadata remains Codex-oriented. A non-Codex host must
+explicitly load this SKILL and its referenced contracts and be able to run the local
+helpers on the herdr host; this change does not install a Devin plugin or establish
+remote connectivity. Actual provider/host compatibility requires a real-host smoke
+test. Simulated Devin tests are not evidence of real model routing or billing.
+
+First split is right/0.5; later splits use the largest owned child area. No global
+rebalance or focus stealing; respect manual resize/movement.
 
 ## Reports and continuation
 ```
@@ -86,6 +125,8 @@ NOT a cross-version permission guarantee. Verify effective permissions and model
 effort from session evidence, not launch args or a child's self-report. Only Worker
 adds fast overrides. No role enables network access; Director's research uses only
 already available authorized search/connector/command tools. Missing tools are blockers.
+Main's explicit identity variables are cleared in child pane and Codex shell
+configuration; the child-role guard still prevents children from managing the run.
 
 Starting/sending persists the task and uncertain-delivery state before mutation.
 Inspect the recorded terminal after failures; don't duplicate prompts or start another

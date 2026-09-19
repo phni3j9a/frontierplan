@@ -34,7 +34,7 @@ def validate(root: Path) -> list[str]:
             check(bool(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy)), f"Explicit invocation required: {skill}")
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
         profiles = sorted((root / "profiles").rglob("*.toml"))
-        expected = {"director": ("gpt-6-astra", "xhigh"), "main": ("gpt-5.6-sol", "xhigh"),
+        expected = {"director": ("gpt-6-astra", "xhigh"), "main": (None, None),
                     "worker": ("gpt-5.6-luna", "max"), "design": ("gpt-5.6-sol", "max"),
                     "reviewer": ("gpt-5.6-sol", "xhigh")}
         seen = set()
@@ -43,6 +43,10 @@ def validate(root: Path) -> list[str]:
             role = data.get("role")
             check(role in expected and role not in seen, f"Unexpected/duplicate profile: {path}")
             seen.add(role)
+            if role == "main":
+                check(data.get("inherit_session") is True and
+                      not {"model", "reasoning_effort", "service_tier"} & data.keys(),
+                      "Main must inherit the existing session without routing overrides")
             check((data.get("model"), data.get("reasoning_effort")) == expected.get(role), f"Model/effort mismatch: {path}")
             check((role == "worker" and data.get("service_tier") == "fast") or
                   (role != "worker" and "service_tier" not in data), f"Unexpected tier override: {path}")

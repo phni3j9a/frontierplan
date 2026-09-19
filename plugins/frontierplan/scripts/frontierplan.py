@@ -87,7 +87,13 @@ def thread_id() -> str | None:
 
 def main_only(state: dict) -> None:
     require(os.environ.get("FRONTIERPLAN_ROLE") not in CHILDREN, "Only Main manages this run.")
-    require(thread_id() == state["main_thread_id"], "This run belongs to a different Main conversation.")
+    if state["backend"] == "herdr" and "main_identity" in state:
+        # Ledger commands need the same live identity checks as transport commands.
+        from herdr import Herdr, main_pane
+        main_pane(state, Herdr(state))
+    else:
+        # Native subagents and pre-generalization Codex runs keep their contract.
+        require(thread_id() == state["main_thread_id"], "This run belongs to a different Main conversation.")
 
 
 def run_at(path: str | Path) -> tuple[Path, dict]:
@@ -114,6 +120,11 @@ def profile(role: str, director: str = "astra") -> dict:
     with path.open("rb") as stream:
         value = tomllib.load(stream)
     require(value.get("role") == role, "Profile/role mismatch.")
+    if role == "main":
+        require(value.get("inherit_session") is True, "Main must inherit the existing session.")
+        require(not {"model", "reasoning_effort", "service_tier"} & value.keys(),
+                "Main must not override model, effort or service tier.")
+        return value
     require(value.get("reasoning_effort") in ("xhigh", "max"), "effort must be lowercase xhigh or max.")
     require(isinstance(value.get("model"), str) and value["model"], "A model is required.")
     require(role == "worker" or "service_tier" not in value, "Only Worker has a tier override.")
@@ -209,11 +220,23 @@ def executors_ready(root: Path, require_review: bool = False, candidate_id: str 
     require(not require_review or reviewers, "An independent Reviewer report is required.")
 
 
-def initialize(backend: str, cwd: str, request_file: str) -> dict:
+def initialize(backend: str, cwd: str, request_file: str, *,
+               main_identity: dict | None = None, herdr_binding: dict | None = None) -> dict:
     require(os.environ.get("FRONTIERPLAN_ROLE") not in CHILDREN, "Children cannot initialize runs.")
     require(backend in ("herdr", "subagent"), "Unknown backend.")
-    owner = thread_id()
-    require(owner, "Main's CODEX_THREAD_ID or CODEX_SESSION_ID is required.")
+    if backend == "herdr" and main_identity is None and herdr_binding is None:
+        # Do not create an unbound herdr run through the common CLI.
+        from herdr import initialize as initialize_herdr
+        return initialize_herdr(cwd, request_file)
+    if main_identity is not None or herdr_binding is not None:
+        require(backend == "herdr" and isinstance(main_identity, dict)
+                and isinstance(herdr_binding, dict), "Only herdr accepts a bound Main identity.")
+        require(all(isinstance(main_identity.get(k), str) and main_identity[k]
+                    for k in ("agent", "session_id")), "Incomplete Main identity.")
+        require(herdr_binding.get("main_pane_id") and herdr_binding.get("main_terminal_id"),
+                "Incomplete Main terminal binding.")
+    owner = main_identity["session_id"] if main_identity is not None else thread_id()
+    require(owner, "Main's CODEX_THREAD_ID or CODEX_SESSION_ID is required for native subagents.")
     cwd = str(Path(cwd).expanduser().resolve())
     require(Path(cwd).is_dir(), "cwd must exist.")
     request = text(request_file)
@@ -225,6 +248,8 @@ def initialize(backend: str, cwd: str, request_file: str) -> dict:
              "cwd": cwd, "main_thread_id": owner, "phase": "planning", "user_seq": 1,
              "awaiting_director": True, "authorization": None, "plan": None,
              "candidate": None, "acceptance": None, "last_decision": None}
+    if main_identity is not None:
+        state.update(main_identity=dict(main_identity), herdr=dict(herdr_binding))
     atomic(root / "run.json", state)
     return {"run": str(root), "state": state}
 
@@ -526,6 +551,8 @@ def cli() -> None:
 
 
 if __name__ == "__main__":
+    # herdr imports this module too; keep Failure and runtime state single-source.
+    sys.modules["frontierplan"] = sys.modules[__name__]
     try:
         cli()
     except (Failure, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
