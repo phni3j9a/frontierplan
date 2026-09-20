@@ -1,6 +1,8 @@
 ---
 name: astraplan-subagent
 description: Astra-led research, user dialogue, design and planning, followed by coordinated implementation and Astra final acceptance through subagent.
+triggers:
+  - user
 ---
 
 # AstraPlan-subagent

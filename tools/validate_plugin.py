@@ -30,6 +30,11 @@ def validate(root: Path) -> list[str]:
         for skill in skills:
             body = (root / "skills" / skill / "SKILL.md").read_text()
             check(body.startswith(f"---\nname: {skill}\n"), f"Skill frontmatter mismatch: {skill}")
+            frontmatter = re.search(r"(?ms)\A---\n(.*?)\n---", body)
+            triggers = re.search(r"(?m)^triggers:[ \t]*(.*(?:\n[ \t]+-[ \t]*\w+)*)",
+                                 frontmatter.group(1) if frontmatter else "")
+            check(triggers and set(re.findall(r"\w+", triggers.group(1))) == {"user"},
+                  f"Explicit-only Devin triggers required: {skill}")
             policy = (root / "skills" / skill / "agents/openai.yaml").read_text()
             check(bool(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy)), f"Explicit invocation required: {skill}")
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
