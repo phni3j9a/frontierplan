@@ -469,7 +469,7 @@ def shutdown(task_path: str, operation: str, file: str | None = None) -> dict:
         else:
             task["closed"] = True
         fp.atomic(path / "task.json", task)
-        return {operation + "d": True, "task": str(path)}
+        return {"released": True, "task": str(path)} if operation == "release" else {"closed_record": task["id"]}
 
 
 def release(task_path: str, file: str | None = None) -> dict:

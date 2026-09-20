@@ -201,7 +201,8 @@ class HerdrTransport(unittest.TestCase):
         with self.assertRaises(fp.Failure): hd.close(task)
 
     def test_close_only_owned_completed_participant(self):
-        task = self.discussion_finished(); hd.close(task)
+        task = self.discussion_finished(); result = hd.close(task)
+        self.assertEqual(result, {"closed_record": fp.task_at(task)[1]["id"]})
         closed = [c[2] for c in self.api.calls if c[:2] == ("pane", "close")]
         self.assertEqual(closed, [fp.task_at(task)[1]["handle"]["pane_id"]])
         self.assertNotIn("main-pane", closed)
