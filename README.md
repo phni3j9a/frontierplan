@@ -60,7 +60,13 @@ terminal IDと組み合わせて識別します。取得できないホストで
 明示指定は初期化だけでなく、その後の両helperへの呼び出しにも必要です。
 詳しくは [herdr手順](plugins/frontierplan/backends/herdr.md) を参照してください。
 非CodexホストではSKILLと参照先の規約を明示的に読み込み、同じherdrホスト上のhelperを
-実行できる必要があります。Devin用のPlugin自動インストールや実機互換性の保証ではありません。
+実行できる必要があります。Devinでは `devin plugins install` がAgent Plugins manifestを
+持つGitHubリポジトリ・git URL・ローカルフォルダを受け付け、両SKILLを
+`/frontierplan:astraplan-herdr` / `/frontierplan:astraplan-subagent` として公開します。
+SKILL frontmatterの `triggers: [user]` はDevin側でも明示起動を維持する宣言で、
+Codexの `allow_implicit_invocation: false` と同じ方針です。subagent backendは
+Codex nativeツールが必要なためDevinでは動作せず、DevinをMainにする場合はherdr版を
+使います。対象ホストでの実機互換性は別途検証してください。
 
 Marketplace登録:
 ```

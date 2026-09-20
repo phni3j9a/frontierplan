@@ -1,6 +1,8 @@
 ---
 name: astraplan-herdr
 description: Astra-led research, user dialogue, design and planning, followed by coordinated implementation and Astra final acceptance through herdr.
+triggers:
+  - user
 ---
 
 # AstraPlan-herdr
