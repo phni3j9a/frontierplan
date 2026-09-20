@@ -42,7 +42,16 @@ and final acceptance and writes the final user report.
 
 Use the bundled local helpers for packets and freshness checks. They are cooperative
 workflow aids, not a sandbox, proof of consent, or automatic tool interception.
-Retain the Director for the ongoing user work, and implementation participants
-through final acceptance. A returned turn, an intermediate user reply, or a context
+Retain the Director until overall finish. Follow the shared lifecycle and herdr
+release protocol: promptly release Worker/Design when integration and relevant
+review/rework are complete, no unresolved finding requires it, Main records no
+remaining role, and the release safety checks pass. After Astra accepts the exact
+candidate, release the Reviewer before finish when those checks pass. Retention
+beyond these points is exceptional and requires Main to record a specific reason
+as described in the shared workflow. Keep released evidence and hand late fixes to
+a new Worker.
+Use the role layout: Main left 40%, Astra right 60%; first execution participant
+creates the lower 60% of Astra's region, and later participants split only that area.
+A returned turn, an intermediate user reply, or a context
 compaction is not permission to close sessions. Never claim unavailable tools,
 unobserved model routing, unrun tests, or an unreturned Director decision succeeded.

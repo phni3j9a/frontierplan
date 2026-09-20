@@ -7,11 +7,14 @@ phni3j9a/axiom_for_herdr (MIT); see THIRD_PARTY_NOTICES.md.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
+import math
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import struct
 import sys
 import time
 
@@ -165,6 +168,111 @@ def ready(agent: dict) -> bool:
     return agent.get("agent_status") in ("idle", "done") and not agent.get("launch_pending", False)
 
 
+def owned_pane(task: dict, state: dict, api: Herdr) -> dict:
+    """Resolve the original terminal, then verify the actual pane occupant too."""
+    fp.require(task["role"] in fp.CHILDREN, "Never manage Main as a participant.")
+    agent = live(task, api.agents())
+    terminal = agent["terminal_id"]
+    fp.require(terminal != state["herdr"]["main_terminal_id"], "Never close or split Main as a child.")
+    panes = [p for p in api.call("pane", "list")["panes"] if p.get("terminal_id") == terminal]
+    fp.require(len(panes) == 1 and panes[0]["pane_id"] == agent.get("pane_id"),
+               "Participant terminal is missing, moved inconsistently or ambiguous.")
+    pane = api.call("pane", "get", agent["pane_id"])["pane"]
+    fp.require(pane.get("pane_id") == agent["pane_id"] and pane.get("terminal_id") == terminal
+               and str(pane.get("agent", "")).lower() == "codex",
+               "Pane occupant changed; no pane modified.")
+    return agent
+
+
+def safe_collected(path: Path, task: dict, state: dict, api: Herdr) -> dict:
+    result = fp.collected(path, task)
+    receipt = fp.read(path / "receipt.json")
+    agent = owned_pane(task, state, api)
+    fp.require(ready(agent) and receipt.get("state_change_seq") is not None
+               and receipt.get("terminal_id") == agent["terminal_id"]
+               and agent.get("state_change_seq") == receipt["state_change_seq"],
+               "Agent activity changed after collection; keep the pane open.")
+    fp.require(fp.digest(fp.current_result(path, task)) == fp.digest(result), "Report changed during inspection.")
+    return agent
+
+
+def contains(outer: dict, inner: dict) -> bool:
+    return (inner["width"] > 0 and inner["height"] > 0
+            and outer["x"] <= inner["x"] and outer["y"] <= inner["y"]
+            and inner["x"] + inner["width"] <= outer["x"] + outer["width"]
+            and inner["y"] + inner["height"] <= outer["y"] + outer["height"])
+
+
+def split_regions(split: dict) -> tuple[dict, dict]:
+    """Herdr ratios apply to the first child; pane rects may be inset by chrome."""
+    first, second = dict(split["rect"]), dict(split["rect"])
+    fp.require(split["direction"] in ("right", "down"), "Unknown layout split direction.")
+    size, position = ("width", "x") if split["direction"] == "right" else ("height", "y")
+    # Match Herdr's positive f32 multiplication/rounding, including odd dimensions.
+    f32 = lambda value: struct.unpack("f", struct.pack("f", value))[0]
+    ratio = split["ratio"]
+    fp.require(math.isfinite(ratio) and 0 < ratio < 1, "Invalid layout split ratio.")
+    first[size] = math.floor(f32(f32(first[size]) * f32(ratio)) + 0.5)
+    second[size] -= first[size]
+    second[position] += first[size]
+    return first, second
+
+
+def spawn_target(root: Path, state: dict, task: dict, api: Herdr) -> tuple[str, str, str, dict]:
+    main = main_pane(state, api)
+    layout = api.call("pane", "layout", "--pane", main["pane_id"])["layout"]
+    fp.require(layout.get("workspace_id") and layout.get("tab_id") and not layout.get("zoomed"),
+               "An unzoomed, identifiable layout is required before splitting.")
+    panes = {p["pane_id"]: p["rect"] for p in layout["panes"]}
+    fp.require(len(panes) == len(layout["panes"]) and main["pane_id"] in panes,
+               "Main layout is missing or ambiguous.")
+    fp.require(all(contains(layout["area"], rect) for rect in panes.values()),
+               "Layout has empty/outside pane geometry; enlarge or inspect it before splitting.")
+    binding = state["herdr"].get("layout")
+    if task["role"] == "director":
+        fp.require(not binding, "Director layout already exists; inspect it before recovering a lost Director.")
+        binding = {"workspace_id": layout["workspace_id"], "tab_id": layout["tab_id"],
+                   "director_task": task["id"]}
+        return main["pane_id"], "right", "0.4", binding
+    fp.require(binding and all(layout[k] == binding[k] for k in ("workspace_id", "tab_id")),
+               "The saved Director layout cannot be identified; no split performed.")
+    owned, director = set(), None
+    for _, other in fp.tasks(root):
+        if other["id"] == task["id"] or other.get("released") or other.get("closed") or other.get("lost"):
+            continue
+        fp.require(other.get("handle") and not other.get("closing"), "Resolve the partially started/closing participant first.")
+        agent = owned_pane(other, state, api)
+        fp.require(agent["pane_id"] in panes and agent["pane_id"] not in owned,
+                   "Owned participant moved outside the execution layout or shares a pane.")
+        owned.add(agent["pane_id"])
+        if other["id"] == binding["director_task"] and other["role"] == "director":
+            director = agent["pane_id"]
+    fp.require(director, "The original Director anchor is unavailable.")
+    members = lambda rect: {key for key, pane in panes.items() if contains(rect, pane)}
+    regions = []
+    for split in layout.get("splits", []):
+        if split["direction"] != "right":
+            continue
+        left, right = split_regions(split)
+        if members(left) == {main["pane_id"]} and members(right) == owned:
+            regions.append(right)
+    fp.require(len(regions) == 1, "Main/Director region changed; do not guess or rebalance user panes.")
+    execution = owned - {director}
+    if not execution:
+        return director, "down", "0.4", binding
+    lower = []
+    for split in layout.get("splits", []):
+        if split["direction"] == "down" and split["rect"] == regions[0]:
+            upper, bottom = split_regions(split)
+            if members(upper) == {director} and members(bottom) == execution:
+                lower.append(bottom)
+    fp.require(len(lower) == 1, "Execution region changed; no split performed.")
+    # Largest width, then position/ID for deterministic ties. Never split Astra again
+    # while execution participants remain, and never rebalance existing ratios.
+    target = min(execution, key=lambda key: (-panes[key]["width"], panes[key]["x"], key))
+    return target, "right", "0.5", binding
+
+
 def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
     p = task["profile"]
     args = ["-C", task["cwd"], "-m", p["model"], "-c", f'model_reasoning_effort="{p["reasoning_effort"]}"',
@@ -199,29 +307,16 @@ def spawn(run: str, role: str, file: str, cwd: str | None = None) -> dict:
     path, task, _, _ = fp.task_at(value["task"])
     # Persist and expose the task before any terminal mutation for partial-failure recovery.
     print(json.dumps({"prepared_task": str(path), "name": task["name"]}), flush=True)
-    agents = api.agents()
-    main = main_pane(state, api)
-    layout = api.call("pane", "layout", "--pane", main["pane_id"])["layout"]
-    owned = set()
-    for _, other in fp.tasks(root):
-        if other.get("closed") or other.get("lost") or not other.get("handle"):
-            continue
-        agent = agents.get(other["name"])
-        if agent and agent.get("terminal_id") == other["handle"].get("terminal_id"):
-            owned.add(agent["pane_id"])
-    candidates = [p for p in layout["panes"] if p["pane_id"] in owned and p["pane_id"] != main["pane_id"]]
-    if candidates:
-        target = max(candidates, key=lambda p: p["rect"]["width"] * p["rect"]["height"])
-        target_id = target["pane_id"]
-        direction = "right" if target["rect"]["width"] > 4 * target["rect"]["height"] else "down"
-    else:
-        target_id, direction = main["pane_id"], "right"
-    pane = api.call("pane", "split", target_id, "--direction", direction, "--ratio", "0.5",
-                    "--cwd", task["cwd"], "--no-focus", "--env", f"FRONTIERPLAN_ROLE={role}",
-                    "--env", f"FRONTIERPLAN_TASK={path}", "--env", "FRONTIERPLAN_MAIN_AGENT=",
-                    "--env", "FRONTIERPLAN_MAIN_SESSION_ID=")["pane"]
-    task["handle"] = {"pane_id": pane["pane_id"], "terminal_id": pane["terminal_id"]}
-    task["delivery"] = "starting"
+    with fp.transaction(root) as (_, state):
+        target_id, direction, ratio, binding = spawn_target(root, state, task, api)
+        pane = api.call("pane", "split", target_id, "--direction", direction, "--ratio", ratio,
+                        "--cwd", task["cwd"], "--no-focus", "--env", f"FRONTIERPLAN_ROLE={role}",
+                        "--env", f"FRONTIERPLAN_TASK={path}", "--env", "FRONTIERPLAN_MAIN_AGENT=",
+                        "--env", "FRONTIERPLAN_MAIN_SESSION_ID=")["pane"]
+        task["handle"] = {"pane_id": pane["pane_id"], "terminal_id": pane["terminal_id"]}
+        task["delivery"] = "starting"
+        fp.atomic(path / "task.json", task)
+        state["herdr"]["layout"] = binding
     args = codex_args(task, root, pane, api)
     task["requested_codex_args"] = args
     fp.atomic(path / "task.json", task)
@@ -249,6 +344,7 @@ def collect(task_path: str) -> dict:
     path, task, _, state = fp.task_at(task_path)
     api = Herdr(state)
     main_pane(state, api)
+    fp.require(not task.get("released") and not task.get("closing"), "Participant is released or closing.")
     agent = live(task, api.agents())
     fp.require(ready(agent), "Wait until the agent is idle before collection.")
     fp.require("state_change_seq" in agent, "herdr lacks activity sequence evidence; cannot collect safely.")
@@ -259,23 +355,129 @@ def collect(task_path: str) -> dict:
     return result
 
 
-def close(task_path: str) -> dict:
-    path, task, root, state = fp.task_at(task_path)
+def release_binding(path: Path, task: dict, state: dict, reviewer_path: str, api: Herdr) -> tuple[dict, dict]:
+    fp.require(task["role"] in ("worker", "design"), "Only Worker/Design uses a release decision.")
+    fp.require(state["phase"] in ("executing", "acceptance", "accepted")
+               and not state["awaiting_director"] and state.get("plan"), "Reconcile the current Plan/input before release.")
+    review_path, reviewer, review_root, _ = fp.task_at(reviewer_path)
+    fp.require(review_root == path.parent.parent and reviewer["role"] == "reviewer"
+               and not any(reviewer.get(k) for k in ("lost", "closed", "released", "closing")),
+               "Use a retained independent Reviewer from this run.")
+    for p, t in ((path, task), (review_path, reviewer)):
+        fp.require(not any(t.get(k) for k in ("lost", "closed", "released", "closing")), "Participant is unavailable.")
+        safe_collected(p, t, state, api)
+        fp.require(t.get("plan_id") == state["plan"]["id"], "Release requires the current Plan.")
+    report = fp.collected(review_path, reviewer)
+    candidate = fp.snapshot(state["cwd"])["id"]
+    fp.require(report.get("reviewed_snapshot") == candidate, "Re-review the current candidate before release.")
+    binding = {"task_id": task["id"], "request_id": task["request_id"],
+               "result_digest": fp.digest(fp.collected(path, task)),
+               "receipt_digest": fp.digest(fp.read(path / "receipt.json")),
+               "candidate_id": candidate, "plan_id": state["plan"]["id"], "user_seq": state["user_seq"],
+               "reviewer": {"task_id": reviewer["id"], "request_id": reviewer["request_id"],
+                            "result_digest": fp.digest(report),
+                            "receipt_digest": fp.digest(fp.read(review_path / "receipt.json"))}}
+    return binding, report
+
+
+def release_check(task_path: str, reviewer_path: str) -> dict:
+    """Read-only template. Main must supply the substantive disposition explicitly."""
+    path, task, _, state = fp.task_at(task_path)
     api = Herdr(state)
     main_pane(state, api)
-    fp.require(state["phase"] == "closed", "Do not close participants before overall wrap-up.")
-    if task.get("closed"):
-        return {"closed": True, "already_closed": True}
-    result = fp.collected(path, task)
-    receipt = fp.read(path / "receipt.json")
-    agent = live(task, api.agents())
-    fp.require(agent["terminal_id"] != state["herdr"]["main_terminal_id"], "Never close Main.")
-    fp.require(ready(agent) and receipt.get("state_change_seq") is not None
-               and agent.get("state_change_seq") == receipt["state_change_seq"],
-               "Agent activity changed after collection; keep the pane open.")
-    fp.require(fp.digest(fp.current_result(path, task)) == fp.digest(result), "Report changed during close.")
-    api.call("pane", "close", agent["pane_id"])
-    return fp.close_record(task_path)
+    binding, _ = release_binding(path, task, state, reviewer_path, api)
+    return {"binding": binding, "decision": {"integrated": False, "unresolved_findings": [],
+            "no_longer_needed": False, "reason": ""}}
+
+
+def shutdown(task_path: str, operation: str, file: str | None = None) -> dict:
+    path, _, root, _ = fp.task_at(task_path)
+    with fp.transaction(root) as (_, state), ExitStack() as locks:
+        locks.enter_context(fp.lock(path / ".report.lock"))
+        task = fp.read(path / "task.json")
+        api = Herdr(state)
+        main_pane(state, api)
+        fp.require(task["role"] in fp.CHILDREN, "Never close Main.")
+        fp.require(not task.get("closing"), "Previous pane close is uncertain; inspect its saved handle before recovery.")
+        if operation == "close":
+            fp.require(state["phase"] == "closed", "Do not close participants before overall wrap-up.")
+            if task.get("closed"):
+                return {"closed": True, "already_closed": True}
+            if task.get("released"):
+                fp.released_evidence(path, task)
+                task["closed"] = True
+                fp.atomic(path / "task.json", task)
+                return {"closed_record": task["id"], "already_released": True}
+        else:
+            fp.require(state["phase"] != "closed" and task["role"] != "director",
+                       "Astra stays until finish; use close for final cleanup.")
+            if task.get("released"):
+                fp.released_evidence(path, task)
+                return {"released": True, "already_released": True}
+        fp.require(not task.get("closed") and not task.get("lost"), "Participant is unavailable.")
+        release = None
+        peer = None
+        if operation == "release":
+            if task["role"] == "reviewer":
+                fp.require(state["phase"] == "accepted" and state.get("acceptance")
+                           and not state["awaiting_director"], "Retain Reviewer until Astra accepts the exact candidate.")
+                fp.require(fp.snapshot(state["cwd"])["id"] == state["acceptance"]["candidate_id"],
+                           "Accepted candidate changed; keep Reviewer for re-review.")
+                fp.executors_ready(root, require_review=True, candidate_id=state["candidate"]["id"])
+                for p, t in fp.tasks(root):
+                    if t["role"] != "director" and not any(t.get(k) for k in ("released", "closed", "lost")):
+                        safe_collected(p, t, state, api)
+                director_path, director, _, _ = fp.task_at(state["acceptance"]["task"])
+                locks.enter_context(fp.lock(director_path / ".report.lock"))
+                safe_collected(director_path, director, state, api)
+                fp.require(fp.digest(fp.collected(director_path, director)) == state["acceptance"]["result_digest"],
+                           "Director acceptance changed.")
+                release = {"binding": {"task_id": task["id"], "request_id": task["request_id"],
+                           "result_digest": fp.digest(fp.collected(path, task)), "plan_id": state["plan"]["id"],
+                           "candidate_id": state["candidate"]["id"]}, "acceptance": state["acceptance"]}
+                peer = (director_path, director)
+            else:
+                fp.require(file, "Worker/Design release requires a release-check template with Main's decision.")
+                evidence = fp.read(file)
+                binding = evidence.get("binding") or {}
+                review_id = binding.get("reviewer", {}).get("task_id", "")
+                fp.require(review_id and any(t["id"] == review_id and t["role"] == "reviewer" for _, t in fp.tasks(root)),
+                           "Unknown release Reviewer.")
+                review_path = root / "tasks" / review_id
+                locks.enter_context(fp.lock(review_path / ".report.lock"))
+                current, review = release_binding(path, task, state, str(review_path), api)
+                fp.require(binding == current, "Release evidence is stale; collect/review and obtain a fresh Main decision.")
+                decision = evidence.get("decision") or {}
+                fp.release_decision(decision)
+                release = {"binding": binding, "decision": decision, "review_report": review}
+                peer = (review_path, fp.read(review_path / "task.json"))
+        if release:
+            fp.require(fp.snapshot(state["cwd"])["id"] == release["binding"]["candidate_id"],
+                       "Candidate changed during release; keep the participant.")
+        if peer:
+            safe_collected(*peer, state, api)
+        agent = safe_collected(path, task, state, api)
+        # Preserve intent before the external side effect. A timeout/crash must never
+        # become an automatic retry against a possibly reused pane ID.
+        task["closing"] = {"operation": operation, "pane_id": agent["pane_id"],
+                           "terminal_id": agent["terminal_id"], "release": release}
+        fp.atomic(path / "task.json", task)
+        api.call("pane", "close", agent["pane_id"])
+        task.pop("closing")
+        if operation == "release":
+            task.update(released=True, release=release)
+        else:
+            task["closed"] = True
+        fp.atomic(path / "task.json", task)
+        return {"released": True, "task": str(path)} if operation == "release" else {"closed_record": task["id"]}
+
+
+def release(task_path: str, file: str | None = None) -> dict:
+    return shutdown(task_path, "release", file)
+
+
+def close(task_path: str) -> dict:
+    return shutdown(task_path, "close")
 
 
 def wait(run: str, timeout: int = 3600) -> dict:
@@ -291,8 +493,10 @@ def wait(run: str, timeout: int = 3600) -> dict:
             events, current, pending = [], {}, 0
             agents = api.agents()
             for path, task in fp.tasks(root):
-                if task.get("closed") or task.get("lost"):
+                if task.get("closed") or task.get("lost") or task.get("released"):
                     continue
+                if task.get("closing"):
+                    raise fp.Failure("Participant closure is uncertain; inspect the saved closing record.")
                 agent = agents.get(task["name"])
                 if agent and agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id"):
                     agent = None
@@ -332,6 +536,8 @@ def cli() -> None:
     q = sub.add_parser("send"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("collect", "close"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
+    q = sub.add_parser("release-check"); q.add_argument("--task", required=True); q.add_argument("--reviewer", required=True)
+    q = sub.add_parser("release"); q.add_argument("--task", required=True); q.add_argument("--file")
     q = sub.add_parser("wait"); q.add_argument("--run", required=True); q.add_argument("--timeout", type=int, default=3600)
     a = p.parse_args()
     if a.action == "init": result = initialize(a.cwd, a.request_file, a.main_pane, a.main_terminal_id, a.socket)
@@ -339,6 +545,8 @@ def cli() -> None:
     elif a.action == "send": result = send(a.task, a.file)
     elif a.action == "collect": result = collect(a.task)
     elif a.action == "close": result = close(a.task)
+    elif a.action == "release-check": result = release_check(a.task, a.reviewer)
+    elif a.action == "release": result = release(a.task, a.file)
     else: result = wait(a.run, a.timeout)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

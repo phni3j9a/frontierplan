@@ -1,0 +1,659 @@
+{
+  "herdr_version": "herdr 0.9.0",
+  "real": [
+    "pane creation",
+    "layout geometry",
+    "focus",
+    "resize",
+    "move",
+    "pane close",
+    "split collapse"
+  ],
+  "synthetic": [
+    "agent identity",
+    "model start",
+    "prompts",
+    "reports",
+    "acceptance",
+    "activity"
+  ],
+  "models_launched": 0,
+  "snapshots": {
+    "planning": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "execution": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 16,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p3",
+          "rect": {
+            "height": 24,
+            "width": 18,
+            "x": 48,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p5",
+          "rect": {
+            "height": 24,
+            "width": 18,
+            "x": 66,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p4",
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 84,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 72,
+            "x": 48,
+            "y": 16
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_3_110",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 48,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "manually_resized": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p3",
+          "rect": {
+            "height": 24,
+            "width": 15,
+            "x": 60,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p5",
+          "rect": {
+            "height": 24,
+            "width": 15,
+            "x": 75,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p4",
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 90,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_3_110",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "worker_moved": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p5",
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 60,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p4",
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 90,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "workers_released": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p5",
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "reviewer_released": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "execution_recreated": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w2:p6",
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    },
+    "finished": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w2:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w2:p1",
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [],
+      "tab_id": "w2:t1",
+      "workspace_id": "w2",
+      "zoomed": false
+    }
+  },
+  "split_calls": [
+    {
+      "target": "w2:p1",
+      "direction": "right",
+      "ratio": 0.4,
+      "no_focus": true
+    },
+    {
+      "target": "w2:p2",
+      "direction": "down",
+      "ratio": 0.4,
+      "no_focus": true
+    },
+    {
+      "target": "w2:p3",
+      "direction": "right",
+      "ratio": 0.5,
+      "no_focus": true
+    },
+    {
+      "target": "w2:p3",
+      "direction": "right",
+      "ratio": 0.5,
+      "no_focus": true
+    },
+    {
+      "target": "w2:p2",
+      "direction": "down",
+      "ratio": 0.4,
+      "no_focus": true
+    },
+    {
+      "target": "w2:p6",
+      "direction": "right",
+      "ratio": 0.5,
+      "no_focus": true
+    }
+  ],
+  "close_calls": [
+    [
+      "pane",
+      "close",
+      "w2:p3"
+    ],
+    [
+      "pane",
+      "close",
+      "w2:p4"
+    ],
+    [
+      "pane",
+      "close",
+      "w2:p5"
+    ],
+    [
+      "pane",
+      "close",
+      "w2:p6"
+    ],
+    [
+      "pane",
+      "close",
+      "w2:p7"
+    ],
+    [
+      "pane",
+      "close",
+      "w2:p2"
+    ]
+  ],
+  "result": "PASS",
+  "date": "2026-09-20"
+}

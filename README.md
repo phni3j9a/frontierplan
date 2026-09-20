@@ -91,7 +91,16 @@ ZIPを展開しても、別のaxiomリポジトリを参照しません。
 - Planと実装許可は別です。相談のみならDirectorの返答で完結します。
 - Mainは合意済み基準に沿うレビュー判定だけを行い、要求変更や重大なリスクはAstraへ戻します。
 - 実装差分・検証結果・却下/保留を含むレビュー証拠をAstraへ返します。古い候補の受理を流用しません。
-- 独立Reviewerと元Workerは最終受理まで保持し、途中の返答だけでDirectorを閉じません。
+- 通常のレビュー修正には元Workerと同じ独立Reviewerを使います。herdr版では統合・担当レビュー・修正が完了し、未解決指摘がなく、Mainが役割終了を記録して安全条件を満たしたら、Worker/Designを速やかに解放します。ReviewerもAstraが対象候補を受理し、安全条件を満たしたら`finish`前に解放します。
+- これらの時点を過ぎて保持するのは例外とし、Mainが対象と具体的な理由を実行記録に残します。安全条件を満たさない場合は保持し、その理由を記録します。
+- Worker解放後のAstraからの差し戻しは、担当内容・報告・指摘を引き継いだ新Workerへ割り当てます。解放済みの報告・レビュー証拠も最終確認に残します。native subagent版は従来どおり最後まで保持します。
+- Astraは途中の返答や待機では閉じず、全体の`finish`まで維持します。Mainは閉じません。
+
+herdr版の配置はMainが左40%、Astraが右60%。実装開始時に右側をAstra上40%・
+実行領域下60%へ分け、以降のWorker/Design/Reviewerは実行領域内で左右に分割します。
+手動リサイズを維持し、役割の領域や端末の識別が崩れた場合は操作を停止します。
+実行中の解放には `release-check` / `release`、全体終了後の後片付けには `close` を使います。
+詳しくは[herdr手順](plugins/frontierplan/backends/herdr.md#release-completed-execution-participants)。
 
 herdr操作とnative tool呼び出しは別のbackendです。native版のPython helperは
 モデルを起動するランタイムではなく、Mainが実際のnativeツールを呼び出すための

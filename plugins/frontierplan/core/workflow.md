@@ -55,7 +55,29 @@ Normal factual progress updates are Main's responsibility and do not need Astra.
 ## 3. Independent review, then Director acceptance
 
 Read review.md. Retain original Workers and the same independent Reviewer for fixes
-and re-review. Once quiescent, submit an evidence packet and candidate fingerprint.
+and re-review. In herdr, Main must promptly release a Worker/Design once its
+implementation is integrated, the relevant review/rework is complete, no unresolved
+finding needs that session, its latest complete report and idle/activity evidence
+are collected, Main has explicitly recorded that it has no remaining role for the
+current candidate, and the release safety checks pass.
+An implementation report alone is not enough. If Astra requests new changes after
+release, assign a new Worker with the original assignment, reports, findings and
+current Plan; restoring the released live session is not required. Retain/reuse the
+existing Reviewer until Astra accepts the exact candidate. In herdr, Main must then
+release the Reviewer before finish when the release safety checks pass.
+Retention beyond these points is exceptional: Main must record the participant and
+specific reason in the run's evidence or decision notes, and reassess when that
+reason no longer applies. Keeping eligible participants until finish is not the
+normal workflow. If safety checks fail, retain the participant and record the reason;
+never bypass the checks to satisfy prompt release.
+Native subagents retain implementation participants until final wrap-up as before.
+Keep the same Astra throughout dialogue, planning, execution and final reporting.
+
+Release ends a live role, not its evidence: preserve task/report/decision history.
+Released reports remain part of candidate/acceptance/finish checks. A released
+Reviewer's report only satisfies review for its exact candidate and Plan; subsequent
+changes require new review as applicable. Once quiescent, submit an evidence packet
+and candidate fingerprint.
 Astra personally checks the actual artifacts, review adjudication, criteria coverage,
 verification gaps and residual risk. It can accept or return a revised Plan; Main
 cannot convert a failure/blocker into acceptance. Acceptance is tied to the current
@@ -67,7 +89,10 @@ Director writes the final user response. `finish` returns that text only after v
 acceptance; `finish --discussion` is available only when no execution participants
 were created. Call finish only when overall work is actually wrapping up. An interim
 reply or user-input wait does not finish the session. Perform backend-specific safe
-closure after finish; never close unresolved, active or unrelated sessions.
+closure after finish; never close unresolved, active or unrelated sessions. Herdr
+`release` is distinct from post-finish `close`: final cleanup records already released
+participants without trying to close their old pane IDs again. Neither operation
+closes Main, deletes reports or deletes worktrees/branches.
 
 ## Failures and recovery
 
