@@ -71,8 +71,32 @@ helpers on the herdr host; this change does not install a Devin plugin or establ
 remote connectivity. Actual provider/host compatibility requires a real-host smoke
 test. Simulated Devin tests are not evidence of real model routing or billing.
 
-First split is right/0.5; later splits use the largest owned child area. No global
-rebalance or focus stealing; respect manual resize/movement.
+### Role layout
+
+The Director splits Main `right / 0.4`: Main retains the left 40%, Astra gets the
+right 60%. The first Worker/Design (or Reviewer if it is the first execution role)
+splits Astra `down / 0.4`: Astra retains the upper 40% of that right region and the
+execution area receives the lower 60%. Subsequent Worker/Design/Reviewer spawns
+split the widest owned execution pane `right / 0.5`, with leftmost pane then ID
+breaking ties. These subdivisions need not produce equal columns.
+
+Every split uses `--no-focus`. Existing user panes outside the original Main region
+and manual ratios remain intact; there is no global rebalance. The helper binds the
+Director task and tab/workspace, then verifies the live Main/Director/execution
+regions using `pane layout` split geometry and terminal ownership. Insets from pane
+borders/gaps are allowed. Zoomed, zero-sized, missing or ambiguous layouts stop
+dispatch before splitting. A moved participant or a user pane inserted inside the
+managed region may require manual restoration of the layout before dispatch resumes.
+Failed preparation leaves its task handle visible; inspect before retrying.
+
+Removing execution panes lets Herdr collapse the vacated split naturally. Once all
+execution panes are released, Astra occupies the right region again. If new work is
+authorized before finish, its first execution pane recreates `down / 0.4` from the
+verified Astra anchor. Retained Reviewer panes also count as execution panes.
+Runs started before role-layout metadata existed cannot guess an execution region;
+finish/clean up those runs with their existing participants before starting a new run.
+A lost Director anchor likewise requires explicit layout/session recovery; the helper
+does not split Main to silently replace it.
 
 ## Reports and continuation
 ```
@@ -95,9 +119,77 @@ The example message number is not blanket permission: use the real authorizing
 message. Optional design and later independent reviewer use the same spawn command.
 Candidate, decision and finish use frontierplan.py. Before candidate/finish ensure
 all participating live terminals are idle and no direct user activity is outstanding.
-After finish, use `python3 "$hd" close --task "$task"` for each owned participant.
+After finish, use `python3 "$hd" close --task "$task"` for each owned participant,
+including released records (which need no further pane operation).
 Closed records are not evidence of actual closure; the transport verifies and closes
 first. Never close Main, active/uncollected work or a terminal with changed identity.
+
+## Release completed execution participants
+
+The authoritative role lifecycle is in [workflow.md](../core/workflow.md).
+Keep the original Worker/Design while findings require fixes and use the same
+Reviewer for re-review. After integration and relevant review are complete, collect
+both reports through this transport, then request a read-only decision template:
+```
+python3 "$hd" release-check --task "$worker" --reviewer "$reviewer"
+```
+Save that JSON **outside the candidate checkout**, for example in the run directory.
+Preserve `binding` exactly: it includes task/request IDs, report/collection digests,
+the current candidate fingerprint, Plan, user message sequence and Reviewer evidence.
+Read the actual reports, integration and finding dispositions. Edit only `decision`:
+```
+"decision": {
+  "integrated": true,
+  "unresolved_findings": [],
+  "no_longer_needed": true,
+  "reason": "Implementation integrated; FP-001 fixed and re-reviewed; no remaining assignment."
+}
+```
+This example is not approval for a particular Worker. Main supplies its own factual
+reason, includes any important rejected/deferred finding rationale, and must not
+empty unresolved findings simply to enable release. The helper validates explicit
+claims and freshness; it cannot infer the truth of prose review/integration evidence.
+The initial template sets both approvals false and the reason empty, so it cannot
+authorize release unchanged. Then:
+```
+python3 "$hd" release --task "$worker" --file "$release_decision"
+```
+The same commands apply to Design. Any subsequent code/index/HEAD, Plan, input,
+request, report or recorded collection change invalidates the old binding. Recollect,
+re-review as needed, and make a fresh Main decision. Do not regenerate a template
+and carry old approvals forward without checking the new evidence.
+
+Reviewer needs no Main release-decision file; its gate is Astra's current acceptance:
+```
+python3 "$hd" release --task "$reviewer"
+```
+This requires unchanged accepted candidate, collected acceptance and idle/fresh live
+participants. Release Workers before Reviewer when both are ready. Otherwise Workers
+may remain for post-finish cleanup. Never release Astra; use `close` only after finish.
+
+Successful release records `released: true, closed: false`, the Main disposition and
+a copy of the relevant review report (or Astra acceptance for Reviewer). Task files,
+reports and evidence survive; later re-review cannot overwrite the archived copy.
+Released sessions reject send/begin/report and are excluded from wait pending work.
+Candidate/acceptance/finish still validate their archived evidence. Later changes
+can use a new Worker with the preserved history; the existing live Reviewer continues
+if retained. After an accepted Reviewer has been released, new review needs a new
+Reviewer and must not reuse an old report for a different candidate/Plan.
+
+Both release and close verify ownership, unique original terminal, current pane
+occupant, complete collected report and unchanged `state_change_seq`. A moved owned
+terminal can be closed only at its independently verified current pane, never by
+blindly reusing its original pane ID. Report/run locks prevent competing helper
+writes during closure. Herdr's pane lookup and close are separate API calls: these
+cooperative checks do not atomically intercept direct user typing or pane swaps.
+Avoid manual input/movement during the close operation.
+
+Before closing, the helper persists a `closing` record with the intended operation,
+pane/terminal identity and release evidence. A lost response or crash leaves that
+record and blocks retry/dispatch/finish; it is not success. Inspect that exact
+terminal and whether closure occurred before manually recovering the record; do not
+clear it automatically or retry against a reused pane ID. `close` still requires
+overall `finish`, and final cleanup of a released record never sends a second close.
 
 ## Waiting
 
@@ -107,7 +199,8 @@ outer result wait must also be `yield_time_ms=3600000` where the host supports i
 the helper timeout alone does not prevent short model wakeups. Resume the SAME handle,
 including yielded wrappers. Do not spawn duplicate waiters or repeatedly call status.
 Events/steering/process exit can return sooner; act immediately. Retained idle agents
-with collected complete reports do not count as pending. Pending:0 does not close them.
+with collected complete reports and released participants do not count as pending.
+Pending:0 does not itself release or close anyone.
 Unchanged blocked notifications are suppressed, not resolved. Resolve each returned
 event or explicitly retain its blocker before waiting again.
 

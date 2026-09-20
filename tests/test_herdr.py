@@ -4,6 +4,7 @@ import contextlib
 import copy
 import io
 import json
+import math
 from pathlib import Path
 import shutil
 import time
@@ -23,6 +24,38 @@ class FakeHerdr:
         self.registered = {}
         self.calls = []
         self.fail_prompt = False
+        self.tree = "main-pane"
+        self.next_pane = 1
+        self.area = {"x": 0, "y": 0, "width": 200, "height": 100}
+        self.zoomed = False
+
+    def replace(self, node, target, value):
+        if isinstance(node, str): return value if node == target else node
+        first = self.replace(node["first"], target, value)
+        second = self.replace(node["second"], target, value)
+        if first is None: return second
+        if second is None: return first
+        return dict(node, first=first, second=second)
+
+    def layout(self):
+        panes, splits = [], []
+        def visit(node, rect):
+            if node is None: return
+            if isinstance(node, str):
+                # Real Herdr returns pane rects inset by borders/gaps, but full split rects.
+                panes.append({"pane_id": node, "rect": dict(rect, x=rect["x"] + 1, y=rect["y"] + 1,
+                              width=max(0, rect["width"] - 2), height=max(0, rect["height"] - 2))})
+                return
+            split = {"direction": node["direction"], "ratio": node["ratio"], "rect": dict(rect)}
+            splits.append(split)
+            first, second = dict(rect), dict(rect)
+            size, pos = ("width", "x") if node["direction"] == "right" else ("height", "y")
+            first[size] = math.floor(rect[size] * node["ratio"] + 0.5)
+            second[size] -= first[size]; second[pos] += first[size]
+            visit(node["first"], first); visit(node["second"], second)
+        visit(self.tree, self.area)
+        return {"workspace_id": "workspace", "tab_id": "tab", "zoomed": self.zoomed,
+                "area": self.area, "panes": panes, "splits": splits}
 
     def agents(self): return copy.deepcopy(self.registered)
 
@@ -32,10 +65,13 @@ class FakeHerdr:
         if args[:2] == ("pane", "get"):
             return {"pane": copy.deepcopy(next(p for p in self.panes if p["pane_id"] == args[2]))}
         if args[:2] == ("pane", "layout"):
-            return {"layout":{"panes":[dict(p, rect={"width":60,"height":40}) for p in self.panes]}}
+            return {"layout": self.layout()}
         if args[:2] == ("pane", "split"):
-            number = len(self.panes)
+            number = self.next_pane; self.next_pane += 1
             pane = {"pane_id":f"pane-{number}", "terminal_id":f"terminal-{number}", "agent":"codex"}
+            self.tree = self.replace(self.tree, args[2], {"direction": args[args.index("--direction") + 1],
+                                    "ratio": float(args[args.index("--ratio") + 1]),
+                                    "first": args[2], "second": pane["pane_id"]})
             self.panes.append(pane)
             return {"pane": copy.deepcopy(pane)}
         if args[:2] == ("pane", "rename"): return {}
@@ -50,6 +86,8 @@ class FakeHerdr:
             return {}
         if args[:2] == ("pane", "close"):
             self.panes = [p for p in self.panes if p["pane_id"] != args[2]]
+            self.registered = {k: a for k, a in self.registered.items() if a["pane_id"] != args[2]}
+            self.tree = self.replace(self.tree, args[2], None)
             return {}
         raise AssertionError(f"Unexpected herdr invocation: {args}")
 
@@ -64,7 +102,9 @@ class HerdrTransport(unittest.TestCase):
         self.api = FakeHerdr()
         self.addCleanup(patch.stopall)
         patch.object(hd, "Herdr", side_effect=lambda *a, **k: self.api).start()
-        value = hd.initialize(str(self.project), self.input, "main-pane", "main-terminal", "/fake/socket")
+        main = self.api.panes[0]
+        value = hd.initialize(str(self.project), self.input, main["pane_id"], main["terminal_id"],
+                              self.api.env["HERDR_SOCKET_PATH"])
         self.run = value["run"]
         self.addCleanup(shutil.rmtree, self.run, True)
         self.output = contextlib.redirect_stdout(io.StringIO()); self.output.__enter__()

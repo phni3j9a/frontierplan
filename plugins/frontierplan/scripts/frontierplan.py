@@ -204,15 +204,57 @@ def collected(path: Path, task: dict, complete: bool = True) -> dict:
     return result
 
 
+def release_decision(decision: dict) -> None:
+    require(decision.get("integrated") is True and decision.get("unresolved_findings") == []
+            and decision.get("no_longer_needed") is True
+            and isinstance(decision.get("reason"), str) and decision["reason"].strip(),
+            "Main must confirm integration, no unresolved findings and no remaining role, with reasons.")
+
+
+def released_evidence(path: Path, task: dict) -> dict:
+    """Keep release-time evidence verifiable even after a Reviewer gets another turn."""
+    result = collected(path, task)
+    release = task.get("release") or {}
+    binding = release.get("binding") or {}
+    require(task.get("released") and not task.get("closing")
+            and binding.get("task_id") == task["id"]
+            and binding.get("request_id") == task["request_id"]
+            and binding.get("result_digest") == digest(result), "Released report changed or release evidence is missing.")
+    if task["role"] in ("worker", "design"):
+        release_decision(release.get("decision") or {})
+        review = release.get("review_report") or {}
+        require(digest(review) == binding.get("reviewer", {}).get("result_digest")
+                and review.get("reviewed_snapshot") == binding.get("candidate_id")
+                and review.get("task_id") == binding.get("reviewer", {}).get("task_id")
+                and review.get("request_id") == binding.get("reviewer", {}).get("request_id"),
+                "Archived release review changed.")
+    else:
+        require(task["role"] == "reviewer" and release.get("acceptance", {}).get("candidate_id")
+                == result.get("reviewed_snapshot") == binding.get("candidate_id")
+                and binding.get("plan_id") == task.get("plan_id"), "Invalid released role/evidence.")
+    return result
+
+
 def executors_ready(root: Path, require_review: bool = False, candidate_id: str | None = None) -> None:
+    state = read(root / "run.json")
     reviewers = 0
     for path, task in tasks(root):
         if task["role"] == "director" or task.get("lost"):
             continue
         require(not task.get("closed"), "Execution participants must remain available until final acceptance.")
-        result = collected(path, task)
+        require(not task.get("closing"), "Participant closure is uncertain; inspect before continuing.")
+        if task.get("released"):
+            require(state["backend"] == "herdr", "Participant release is only supported by herdr.")
+            result = released_evidence(path, task)
+        else:
+            result = collected(path, task)
         if task["role"] == "reviewer":
-            plan = read(root / "run.json").get("plan")
+            plan = state.get("plan")
+            # An accepted, released Reviewer remains evidence for that exact candidate.
+            # Later work needs a new Reviewer; old evidence must not block its report.
+            if task.get("released") and (not plan or task.get("plan_id") != plan["id"]
+                    or (candidate_id is not None and result.get("reviewed_snapshot") != candidate_id)):
+                continue
             require(plan and task.get("plan_id") == plan["id"], "Reviewer must use the current Plan boundary.")
             if candidate_id is not None:
                 require(result.get("reviewed_snapshot") == candidate_id, "Reviewer must inspect the current candidate; re-review after changes.")
@@ -286,7 +328,8 @@ def prepare(run: str, role: str, file: str, cwd: str | None = None, reuse: str |
         if reuse:
             path, task, task_root, _ = task_at(reuse)
             require(task_root == root and task["role"] == role, "Wrong role/run for continuation.")
-            require(not task.get("closed") and not task.get("lost"), "Session is unavailable.")
+            require(not any(task.get(k) for k in ("closed", "lost", "released", "closing")),
+                    "Session is unavailable; hand off released work to a new participant.")
             collected(path, task, complete=False)
         else:
             if role == "director":
@@ -372,7 +415,8 @@ def publish(task_path: str, request_id: str, status: str, file: str | None = Non
     path, task, _, state = task_at(task_path)
     with lock(path / ".report.lock"):
         task = read(path / "task.json")
-        require(not task.get("closed") and not task.get("lost") and state["phase"] != "closed", "Session ended.")
+        require(not any(task.get(k) for k in ("closed", "lost", "released", "closing"))
+                and state["phase"] != "closed", "Session ended or closure is pending.")
         require(request_id == task["request_id"], "The request is stale.")
         require(status in ("working", "complete", "blocked"), "Invalid status.")
         report = "" if status == "working" else text(file)
@@ -491,6 +535,8 @@ def retire_lost(task_path: str, evidence_file: str) -> dict:
     evidence = text(evidence_file)
     with transaction(root) as (_, state):
         require(state["phase"] != "closed", "The run is closed.")
+        require(not task.get("released") and not task.get("closing"),
+                "Released/closing participants cannot be retired as lost.")
         task.update(lost=True, recovery_evidence=evidence)
         atomic(path / "task.json", task)
         state.update(acceptance=None, candidate=None)
@@ -503,7 +549,12 @@ def close_record(task_path: str) -> dict:
     path, task, root, _ = task_at(task_path)
     with transaction(root) as (_, state):
         require(state["phase"] == "closed", "Retain participants until Director acceptance and overall wrap-up.")
-        collected(path, task)
+        require(task["role"] in CHILDREN, "Never close Main.")
+        require(not task.get("closing"), "Inspect uncertain closure before recording final cleanup.")
+        if task.get("released"):
+            released_evidence(path, task)
+        else:
+            collected(path, task)
         task["closed"] = True
         atomic(path / "task.json", task)
     return {"closed_record": task["id"]}

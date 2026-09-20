@@ -3,7 +3,10 @@
 Start a fresh Sol / `xhigh` Reviewer after implementation/integration, independent
 from Director, Workers and Design. Use the same Reviewer for accepted fixes and
 re-review, and original Workers for fixes. Do not use Luna or the planning Director
-as the independent Reviewer. Keep participants through Director acceptance.
+as the independent Reviewer. Follow the participant lifecycle in
+[workflow.md](workflow.md): Workers stay through their relevant review/rework;
+herdr may release them afterward with Main's explicit decision. The Reviewer stays
+through Director acceptance of the exact candidate.
 
 Review the accepted intent, non-goals, current Plan/criteria, integrated candidate,
 existing out-of-scope changes and actual verification. Inspect read-only; no edits,

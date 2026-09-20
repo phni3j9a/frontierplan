@@ -26,6 +26,12 @@ route is deliberately removed. Model effort identifiers are lowercase xhigh/max.
 `scripts/frontierplan.py` provides a local cooperative ledger, packets, immutable
 Director decision archives and Git candidate freshness checks. `scripts/herdr.py`
 implements visible CLI sessions, identity-aware continuation, wait and cleanup.
+Herdr additionally separates role release from final cleanup. Main's Worker/Design
+release decision is bound to the current Plan/input, integrated snapshot, task report
+and relevant Reviewer report; Reviewer release requires current Astra acceptance.
+Released evidence stays in the shared ledger while its live pane leaves the layout.
+Native subagent retention is unchanged. The layout binds the original Main/Director
+region and only subdivides its execution area, preserving manual split ratios.
 Native tool calls stay in Main, since shell Python cannot invoke Codex agent tools.
 
 The ledger refuses executor preparation before a current Plan + referenced user
