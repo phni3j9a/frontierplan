@@ -128,7 +128,9 @@ first. Never close Main, active/uncollected work or a terminal with changed iden
 
 The authoritative role lifecycle is in [workflow.md](../core/workflow.md).
 Keep the original Worker/Design while findings require fixes and use the same
-Reviewer for re-review. After integration and relevant review are complete, collect
+Reviewer for re-review. Once integration and relevant review/rework are complete,
+no unresolved finding needs the Worker/Design, and Main determines it has no remaining
+role, promptly complete the following release steps when safety checks pass. Collect
 both reports through this transport, then request a read-only decision template:
 ```
 python3 "$hd" release-check --task "$worker" --reviewer "$reviewer"
@@ -159,13 +161,19 @@ request, report or recorded collection change invalidates the old binding. Recol
 re-review as needed, and make a fresh Main decision. Do not regenerate a template
 and carry old approvals forward without checking the new evidence.
 
-Reviewer needs no Main release-decision file; its gate is Astra's current acceptance:
+Reviewer needs no Main release-decision file; its gate is Astra's current acceptance.
+After Astra accepts the exact candidate and safety checks pass, release Reviewer
+before finish:
 ```
 python3 "$hd" release --task "$reviewer"
 ```
 This requires unchanged accepted candidate, collected acceptance and idle/fresh live
-participants. Release Workers before Reviewer when both are ready. Otherwise Workers
-may remain for post-finish cleanup. Never release Astra; use `close` only after finish.
+participants. Release eligible Workers before Reviewer when both are ready. Retaining
+participants beyond their release point requires an explicit exception and a specific
+reason recorded in the run's evidence or decision notes, as required by the shared
+workflow. Participants retained for such exceptions remain subject to safe post-finish
+cleanup. Failed safety checks require retention and a recorded reason; do not bypass
+them. Never release Astra; use `close` only after finish.
 
 Successful release records `released: true, closed: false`, the Main disposition and
 a copy of the relevant review report (or Astra acceptance for Reviewer). Task files,
@@ -201,6 +209,8 @@ including yielded wrappers. Do not spawn duplicate waiters or repeatedly call st
 Events/steering/process exit can return sooner; act immediately. Retained idle agents
 with collected complete reports and released participants do not count as pending.
 Pending:0 does not itself release or close anyone.
+Before waiting again, perform any release due under the shared lifecycle or record
+the specific reason for exceptional retention.
 Unchanged blocked notifications are suppressed, not resolved. Resolve each returned
 event or explicitly retain its blocker before waiting again.
 
