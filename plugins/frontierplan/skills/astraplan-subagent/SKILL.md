@@ -17,7 +17,12 @@ Otherwise you are Main, the execution coordinator. Use only the **subagent**
 backend for this run. Do not combine this skill with another FrontierPlan skill,
 Axiom, or an unrequested hidden-agent fallback.
 
-Resolve the plugin root two directories above this SKILL.md. Read, in order:
+Resolve the plugin root as the directory two levels above this SKILL.md, using
+the path the host provided for this invocation. If no path was provided, use only
+the copy the host installed and loaded as this plugin; never substitute a source
+checkout, worktree, extracted package, or another copy found by searching. If that
+copy cannot be identified uniquely, stop and ask the user. State the resolved root
+before the first helper command. Read, in order:
 - [Shared workflow](../../core/workflow.md)
 - [Role boundaries](../../core/roles.md)
 - [Dialogue and decision handoff](../../core/handoff.md)
