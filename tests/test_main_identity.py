@@ -211,6 +211,8 @@ class MainIdentity(unittest.TestCase):
         hd.collect(director); fp.decision(director); fp.authorize(self.run, 2); fp.start(self.run)
         worker = hd.spawn(self.run, "worker", self.input)["task"]
         self.report(worker, "Implemented; simulated test evidence."); hd.collect(worker)
+        design = hd.spawn(self.run, "design", self.input)["task"]
+        self.report(design, "UI implemented; simulated test evidence."); hd.collect(design)
         reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
         self.report(reviewer, "FINDINGS: none"); hd.collect(reviewer)
         candidate = fp.candidate(self.run, self.input)
@@ -219,19 +221,21 @@ class MainIdentity(unittest.TestCase):
                               "user_response": "Astra final report"})
         hd.collect(director); fp.decision(director)
         self.assertEqual(fp.finish(self.run)["user_response"], "Astra final report")
-        for task in (director, worker, reviewer): hd.close(task)
+        for task in (director, worker, design, reviewer): hd.close(task)
         self.assertEqual(self.api.panes, [original])
         starts = [c for c in self.api.calls if c[:2] == ("agent", "start")]
-        self.assertEqual(len(starts), 3)
+        self.assertEqual(len(starts), 4)
         self.assertTrue(all(c[c.index("--kind") + 1] == "codex" for c in starts))
         for task, model, effort in ((director, "gpt-6-astra", "xhigh"),
-                                    (worker, "gpt-5.6-luna", "max"), (reviewer, "gpt-5.6-sol", "xhigh")):
+                                    (worker, "gpt-6-luna", "max"), (design, "gpt-6-sol", "max"),
+                                    (reviewer, "gpt-6-sol", "xhigh")):
             args = fp.task_at(task)[1]["requested_codex_args"]
             self.assertEqual(args[args.index("-m") + 1], model)
             self.assertIn(f'model_reasoning_effort="{effort}"', args)
+            self.assertEqual('service_tier="fast"' in args, task == worker)
+            self.assertEqual('features.fast_mode=true' in args, task == worker)
             self.assertIn('shell_environment_policy.set.FRONTIERPLAN_MAIN_AGENT=""', args)
             self.assertIn('shell_environment_policy.set.FRONTIERPLAN_MAIN_SESSION_ID=""', args)
-        self.assertEqual(fp.profile("design")["model"], "gpt-5.6-sol")
 
     def test_common_and_transport_cli_share_identity_and_json_errors(self):
         # Exercise real Python entry points against a minimal fake CLI, not real herdr.

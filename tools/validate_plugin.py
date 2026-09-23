@@ -40,8 +40,8 @@ def validate(root: Path) -> list[str]:
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
         profiles = sorted((root / "profiles").rglob("*.toml"))
         expected = {"director": ("gpt-6-astra", "xhigh"), "main": (None, None),
-                    "worker": ("gpt-5.6-luna", "max"), "design": ("gpt-5.6-sol", "max"),
-                    "reviewer": ("gpt-5.6-sol", "xhigh")}
+                    "worker": ("gpt-6-luna", "max"), "design": ("gpt-6-sol", "max"),
+                    "reviewer": ("gpt-6-sol", "xhigh")}
         seen = set()
         for path in profiles:
             data = tomllib.loads(path.read_text())
