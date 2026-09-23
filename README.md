@@ -72,6 +72,12 @@ Codexの `allow_implicit_invocation: false` と同じ方針です。subagent bac
 Codex nativeツールが必要なためDevinでは動作せず、DevinをMainにする場合はherdr版を
 使います。対象ホストでの実機互換性は別途検証してください。
 
+SKILLはPlugin rootを自身の2階層上として解決します。Devinのスラッシュ起動のように
+ホストがSKILL.mdのパスを渡さない場合、Mainはホストが導入・読み込んだPluginのコピーだけを
+使い、ソースのclone・worktree・展開済みZIPなど検索で見つかった別のコピーでは代用しません。
+一意に特定できなければ停止してユーザーに確認し、最初のhelper実行前に解決したrootを示します。
+cloneを開発用に使う場合は、そのフォルダをホストへPluginとして導入してください。
+
 Marketplace登録:
 ```
 codex plugin marketplace add phni3j9a/frontierplan
