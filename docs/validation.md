@@ -15,6 +15,13 @@ stale acceptance rejection (tracked, staged and untracked changes), premature cl
 wrong Main identity, no-focus layout, fixed launch policy, unread-report reconciliation and
 partial delivery failures. Tests do not establish reasoning quality or real routing.
 
+Role-routing checks cover the native helper's prepared/stored profiles and simulated
+herdr launch arguments: Director uses `gpt-6-astra` / `xhigh`, Worker uses
+`gpt-6-luna` / `max` with fast requested, Design uses `gpt-6-sol` / `max`, and
+Reviewer uses `gpt-6-sol` / `xhigh`. Main still inherits its existing session.
+GPT-6 Sol / Luna runtime routing and effective Worker tier require target-host
+evidence; the offline suite does not launch these models.
+
 `tests/test_herdr_lifecycle.py` exercises 40/60 role layout with a split-tree fake,
 inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
 legacy same-session fixes/re-review, explicit release decisions and stale/active/identity

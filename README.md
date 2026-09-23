@@ -36,13 +36,17 @@ Axiomとは別Pluginで、既存リポジトリ・設定を変更せず併存で
 |---|---|---|---|
 | Director | `gpt-6-astra` | `xhigh` | 調査・対話・設計・Plan・方針変更・最終受理・最終報告 |
 | Main | 起動済みセッションを継承 | 起動元を継承 | 受け渡し・分割・割当・統合・通常のレビュー判定 |
-| Worker | `gpt-5.6-luna` | `max` | 実装・テスト・修正・監視。fastは別設定 |
-| Design | `gpt-5.6-sol` | `max` | 任意の実装フェーズUI担当。重要な事前設計はAstra |
-| Reviewer | `gpt-5.6-sol` | `xhigh` | 独立レビュー。同じセッションで再レビュー |
+| Worker | `gpt-6-luna` | `max` | 実装・テスト・修正・監視。fastは別設定 |
+| Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当。重要な事前設計はAstra |
+| Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで再レビュー |
 
 `profiles/director/astra.toml` と `main.toml / worker.toml / design.toml / reviewer.toml`
 で役割別に管理します。両SKILLは同じprofiles/coreを共有します。
 profilesはFrontierPlan内部の設定で、Codexのカスタムエージェント登録ではありません。
+GPT-6 Sol / Lunaへの更新は両backendで新しく作る子タスクに適用されます。
+既存タスクの継続では、作成時に保存したprofileと同じセッションを使います。
+モデルIDと対応effortは [GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol) /
+[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) の公式資料で確認しています。
 Mainのprofileは `inherit_session = true` のみで、モデル・effort・tierを指定しません。
 Mainのモデルは実行中に変更しません。将来のFableはDirector profile/接続処理を追加する
 拡張点だけを確保し、未対応SKILLや架空の接続方法は登録していません。

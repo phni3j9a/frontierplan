@@ -276,9 +276,18 @@ class Protocol(unittest.TestCase):
         self.assertEqual(first, fp.snapshot(str(self.project))["id"])
 
     def test_profiles_role_specific_lowercase(self):
-        for role in fp.CHILDREN:
+        director = self.executing()
+        for role, model, effort in (("director", "gpt-6-astra", "xhigh"),
+                                    ("worker", "gpt-6-luna", "max"),
+                                    ("design", "gpt-6-sol", "max"),
+                                    ("reviewer", "gpt-6-sol", "xhigh")):
             with self.subTest(role=role):
-                self.assertIn(fp.profile(role)["reasoning_effort"], ("xhigh", "max"))
+                prepared = fp.prepare(self.run, role, self.input,
+                                      reuse=director if role == "director" else None)
+                expected = {"role": role, "model": model, "reasoning_effort": effort}
+                if role == "worker": expected["service_tier"] = "fast"
+                self.assertEqual(prepared["profile"], expected)
+                self.assertEqual(fp.task_at(prepared["task"])[1]["profile"], expected)
         self.assertEqual(fp.profile("main"), {"role": "main", "inherit_session": True})
         with self.assertRaises(fp.Failure): fp.profile("director", "fable")
 
