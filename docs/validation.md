@@ -12,15 +12,21 @@ and standalone extracted-package integrity.
 Coverage includes pre-implementation Director-only dispatch, authorization separation,
 current-message reconciliation, same-session follow-up, independent review freshness,
 stale acceptance rejection (tracked, staged and untracked changes), premature close,
-wrong Main identity, no-focus layout, fixed launch policy, event suppression and
+wrong Main identity, no-focus layout, fixed launch policy, unread-report reconciliation and
 partial delivery failures. Tests do not establish reasoning quality or real routing.
 
 `tests/test_herdr_lifecycle.py` exercises 40/60 role layout with a split-tree fake,
 inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
-same-session fixes/re-review, explicit release decisions and stale/active/identity
+legacy same-session fixes/re-review, explicit release decisions and stale/active/identity
 guards; archived evidence, late Astra revisions, empty execution area recreation,
 Reviewer acceptance gating, wait exclusion and final cleanup without duplicate close.
 Uncertain close responses must preserve the intent and stop automatic retry.
+
+`tests/test_completion.py` covers unread complete/blocked replay after lost wait output,
+read-only reconciliation while a waiter is alive, same-file publication, idle gating,
+old requests, the five-minute heartbeat, assignment release before review, fresh fixes
+with the same Reviewer, archived evidence and native closure-record guards. The clock,
+herdr and native closure evidence are simulated; no model is launched by these tests.
 
 ## Herdr pane smoke (real transport, synthetic agents)
 
@@ -58,13 +64,24 @@ end-to-end autonomous agent behavior. Those remain target-host checks below.
    evidence; launch args alone and a child's self-report are insufficient. Native
    permission inheritance needs separate validation from the herdr CLI route.
 4. Authorize a small implementation in a disposable repository. Confirm the Plan,
-   original Worker, separate Reviewer, same-session fixes/re-review, evidence packet,
+   fresh Worker assignments, separate retained Reviewer, bounded fix/re-review, evidence packet,
    Astra acceptance and Astra-authored final reply are all visible.
 5. Add user input after a Plan, alter a candidate after acceptance, interrupt a child,
    move herdr panes, or remove a session. Confirm the appropriate stale/identity guard
    prevents old results from being accepted or unrelated panes from being closed.
-6. Confirm one long event-aware wait, early return on report/steering, no repeated
-   Main polling, and retained idle participants do not trigger endless waits.
+6. Without sending `continue`, confirm child publication → Main result delivery →
+   collection → next assignment/review actually runs on each target host. Record
+   publish/receive/collect/next-action timestamps and the host's supported wait limit.
+   Exercise a report already present before waiting, working→complete in the same
+   file, lost/interrupted outer wait then resume, and an old request that must not
+   satisfy a new assignment. Confirm periodic reconciliation within about 300 seconds
+   while Main is actively coordinating, earlier native notification where supported,
+   and truthful disclosure when a stopped Main cannot be resumed by the host.
+7. Release a completed integrated Worker before independent review, retain its report,
+   then assign a discovered fix to a fresh Worker and re-review with the same Reviewer.
+   Confirm active processes/changed activity/uncollected reports prevent release and
+   final cleanup does not close an already released session again. Native tests must
+   use actual close-tool evidence; a helper record alone is not a real closure.
 
 Do not publish a claim that live Astra/herdr/native integration has passed until
 these target-host checks have actually been executed and their versions/evidence

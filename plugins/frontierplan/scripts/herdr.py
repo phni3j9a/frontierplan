@@ -380,11 +380,14 @@ def release_binding(path: Path, task: dict, state: dict, reviewer_path: str, api
     return binding, report
 
 
-def release_check(task_path: str, reviewer_path: str) -> dict:
+def release_check(task_path: str, reviewer_path: str | None = None) -> dict:
     """Read-only template. Main must supply the substantive disposition explicitly."""
     path, task, _, state = fp.task_at(task_path)
     api = Herdr(state)
     main_pane(state, api)
+    if reviewer_path is None:
+        safe_collected(path, task, state, api)
+        return fp.assignment_release_check(task_path)
     binding, _ = release_binding(path, task, state, reviewer_path, api)
     return {"binding": binding, "decision": {"integrated": False, "unresolved_findings": [],
             "no_longer_needed": False, "reason": ""}}
@@ -440,17 +443,25 @@ def shutdown(task_path: str, operation: str, file: str | None = None) -> dict:
                 fp.require(file, "Worker/Design release requires a release-check template with Main's decision.")
                 evidence = fp.read(file)
                 binding = evidence.get("binding") or {}
-                review_id = binding.get("reviewer", {}).get("task_id", "")
-                fp.require(review_id and any(t["id"] == review_id and t["role"] == "reviewer" for _, t in fp.tasks(root)),
-                           "Unknown release Reviewer.")
-                review_path = root / "tasks" / review_id
-                locks.enter_context(fp.lock(review_path / ".report.lock"))
-                current, review = release_binding(path, task, state, str(review_path), api)
-                fp.require(binding == current, "Release evidence is stale; collect/review and obtain a fresh Main decision.")
                 decision = evidence.get("decision") or {}
-                fp.release_decision(decision)
-                release = {"binding": binding, "decision": decision, "review_report": review}
-                peer = (review_path, fp.read(review_path / "task.json"))
+                if binding.get("kind") == "assignment":
+                    safe_collected(path, task, state, api)
+                    fp.require(binding == fp.assignment_release_binding(path, task, state),
+                               "Release evidence is stale; collect and obtain a fresh Main decision.")
+                    fp.assignment_release_decision(decision)
+                    release = {"binding": binding, "decision": decision}
+                else:
+                    # Keep existing reviewed-release records/commands usable.
+                    review_id = binding.get("reviewer", {}).get("task_id", "")
+                    fp.require(review_id and any(t["id"] == review_id and t["role"] == "reviewer" for _, t in fp.tasks(root)),
+                               "Unknown release Reviewer.")
+                    review_path = root / "tasks" / review_id
+                    locks.enter_context(fp.lock(review_path / ".report.lock"))
+                    current, review = release_binding(path, task, state, str(review_path), api)
+                    fp.require(binding == current, "Release evidence is stale; collect/review and obtain a fresh Main decision.")
+                    fp.release_decision(decision)
+                    release = {"binding": binding, "decision": decision, "review_report": review}
+                    peer = (review_path, fp.read(review_path / "task.json"))
         if release:
             fp.require(fp.snapshot(state["cwd"])["id"] == release["binding"]["candidate_id"],
                        "Candidate changed during release; keep the participant.")
@@ -480,8 +491,54 @@ def close(task_path: str) -> dict:
     return shutdown(task_path, "close")
 
 
-def wait(run: str, timeout: int = 3600) -> dict:
-    fp.require(0 <= timeout <= 3600, "Wait timeout must be between 0 and 3600 seconds.")
+def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
+    """Current conditions, not just newly delivered notifications. No receipt writes."""
+    events, marks, pending = [], {}, 0
+    agents = api.agents()
+    for path, task in fp.tasks(root):
+        if task.get("closed") or task.get("lost") or task.get("released"):
+            continue
+        if task.get("closing"):
+            raise fp.Failure("Participant closure is uncertain; inspect the saved closing record.")
+        agent = agents.get(task["name"])
+        if agent and (agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id")
+                      or agent.get("agent") != "codex"):
+            agent = None
+        result = fp.current_result(path, task)
+        receipt = fp.read(path / "receipt.json") if (path / "receipt.json").exists() else {}
+        unchanged = result and receipt.get("digest") == fp.digest(result)
+        collected_idle = (unchanged and agent and ready(agent) and "state_change_seq" in agent
+                          and agent["state_change_seq"] == receipt.get("state_change_seq")
+                          and agent.get("terminal_id") == receipt.get("terminal_id"))
+        if collected_idle and result["status"] == "complete":
+            continue
+        pending += 1
+        event = None
+        if not agent: event = "unavailable"
+        elif agent.get("agent_status") in ("blocked", "unknown"): event = agent["agent_status"]
+        elif result and result["status"] in ("complete", "blocked"):
+            if not ready(agent): event = "report_waiting_idle"
+            elif collected_idle: event = "blocked"
+            else: event = "report"
+        elif ready(agent) and time.time() - task.get("submitted_at", time.time()) > 8:
+            event = "idle_without_report"
+        if event:
+            events.append({"task": str(path), "event": event})
+            marks[str(path)] = fp.digest({"request": task["request_id"], "result": result, "event": event,
+                                          "seq": (agent or {}).get("state_change_seq")})
+    return {"events": events, "pending": pending}, marks
+
+
+def check(run: str) -> dict:
+    """Read-only reconciliation, also usable while the one waiter is running."""
+    root, state = fp.run_at(run)
+    api = Herdr(state)
+    main_pane(state, api)
+    return pending_snapshot(root, api)[0]
+
+
+def wait(run: str, timeout: int = 300) -> dict:
+    fp.require(0 <= timeout <= 300, "Wait timeout must be between 0 and 300 seconds.")
     root, state = fp.run_at(run)
     api = Herdr(state)
     main_pane(state, api)
@@ -490,41 +547,17 @@ def wait(run: str, timeout: int = 3600) -> dict:
     with fp.lock(root / ".wait.lock"):
         previous = fp.read(notice_file) if notice_file.exists() else {}
         while True:
-            events, current, pending = [], {}, 0
-            agents = api.agents()
-            for path, task in fp.tasks(root):
-                if task.get("closed") or task.get("lost") or task.get("released"):
-                    continue
-                if task.get("closing"):
-                    raise fp.Failure("Participant closure is uncertain; inspect the saved closing record.")
-                agent = agents.get(task["name"])
-                if agent and agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id"):
-                    agent = None
-                result = fp.current_result(path, task)
-                receipt = fp.read(path / "receipt.json") if (path / "receipt.json").exists() else {}
-                unchanged = result and receipt.get("digest") == fp.digest(result)
-                if (unchanged and result["status"] == "complete" and agent and ready(agent)
-                        and agent.get("state_change_seq") == receipt.get("state_change_seq")):
-                    continue
-                pending += 1
-                event = None
-                if not agent: event = "unavailable"
-                elif agent.get("agent_status") in ("blocked", "unknown"): event = agent["agent_status"]
-                elif ready(agent) and result and result["status"] in ("complete", "blocked"): event = "report"
-                elif ready(agent) and time.time() - task.get("submitted_at", time.time()) > 8: event = "idle_without_report"
-                if event:
-                    mark = fp.digest({"request": task["request_id"], "result": result, "event": event,
-                                      "seq": (agent or {}).get("state_change_seq")})
-                    current[str(path)] = mark
-                    if previous.get(str(path)) != mark:
-                        events.append({"task": str(path), "event": event})
+            snapshot, current = pending_snapshot(root, api)
+            # An uncollected (or activity-stale) report must survive a lost wait output.
+            wake = any(e["event"] == "report" or previous.get(e["task"]) != current[e["task"]]
+                       for e in snapshot["events"])
             if previous != current:
                 fp.atomic(notice_file, current)
                 previous = current
-            if events or not pending:
-                return {"events": events, "pending": pending}
+            if wake or not snapshot["pending"]:
+                return snapshot
             if time.monotonic() >= deadline:
-                return {"events": [], "pending": pending, "timeout": True}
+                return dict(snapshot, timeout=True)
             time.sleep(min(2, max(0, deadline - time.monotonic())))
 
 
@@ -536,9 +569,10 @@ def cli() -> None:
     q = sub.add_parser("send"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("collect", "close"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
-    q = sub.add_parser("release-check"); q.add_argument("--task", required=True); q.add_argument("--reviewer", required=True)
+    q = sub.add_parser("release-check"); q.add_argument("--task", required=True); q.add_argument("--reviewer")
     q = sub.add_parser("release"); q.add_argument("--task", required=True); q.add_argument("--file")
-    q = sub.add_parser("wait"); q.add_argument("--run", required=True); q.add_argument("--timeout", type=int, default=3600)
+    q = sub.add_parser("check"); q.add_argument("--run", required=True)
+    q = sub.add_parser("wait"); q.add_argument("--run", required=True); q.add_argument("--timeout", type=int, default=300)
     a = p.parse_args()
     if a.action == "init": result = initialize(a.cwd, a.request_file, a.main_pane, a.main_terminal_id, a.socket)
     elif a.action == "spawn": result = spawn(a.run, a.role, a.file, a.cwd)
@@ -547,6 +581,7 @@ def cli() -> None:
     elif a.action == "close": result = close(a.task)
     elif a.action == "release-check": result = release_check(a.task, a.reviewer)
     elif a.action == "release": result = release(a.task, a.file)
+    elif a.action == "check": result = check(a.run)
     else: result = wait(a.run, a.timeout)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

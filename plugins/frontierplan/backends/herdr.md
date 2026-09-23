@@ -107,7 +107,8 @@ python3 "$hd" send --task "$director" --file "$followup"
 ```
 Children use the shared begin/report commands embedded in their packets. Always
 collect through herdr.py to record live idle/activity evidence. Use send for the
-same Director, Worker or Reviewer; never routinely replace a retained session.
+same Director or Reviewer. Spawn fresh Workers/Design for bounded assignments by
+default; send to an existing Worker only for a justified small immediate follow-up.
 
 After a current Director Plan and actual implementation authorization:
 ```
@@ -127,39 +128,40 @@ first. Never close Main, active/uncollected work or a terminal with changed iden
 ## Release completed execution participants
 
 The authoritative role lifecycle is in [workflow.md](../core/workflow.md).
-Keep the original Worker/Design while findings require fixes and use the same
-Reviewer for re-review. Once integration and relevant review/rework are complete,
-no unresolved finding needs the Worker/Design, and Main determines it has no remaining
-role, promptly complete the following release steps when safety checks pass. Collect
-both reports through this transport, then request a read-only decision template:
+After a completed Worker/Design assignment, collect its report, integrate its work,
+and verify that no writes or owned processes remain. Review fixes may be assigned
+to a new Worker later; pending independent review does not require keeping this
+session alive. Obtain a read-only decision template:
 ```
-python3 "$hd" release-check --task "$worker" --reviewer "$reviewer"
+python3 "$hd" release-check --task "$worker"
 ```
-Save that JSON **outside the candidate checkout**, for example in the run directory.
-Preserve `binding` exactly: it includes task/request IDs, report/collection digests,
-the current candidate fingerprint, Plan, user message sequence and Reviewer evidence.
-Read the actual reports, integration and finding dispositions. Edit only `decision`:
+Save it outside the candidate checkout, for example in the run directory. Preserve
+`binding` exactly: it binds backend, current task/request, report/receipt, handle, integrated
+candidate, Plan and user input. Read the report and verify the actual state before
+setting the decision fields:
 ```
 "decision": {
   "integrated": true,
-  "unresolved_findings": [],
+  "assignment_complete": true,
+  "no_active_processes": true,
   "no_longer_needed": true,
-  "reason": "Implementation integrated; FP-001 fixed and re-reviewed; no remaining assignment."
+  "reason": "Assignment integrated and processes stopped; review fixes will use a fresh Worker."
 }
 ```
-This example is not approval for a particular Worker. Main supplies its own factual
-reason, includes any important rejected/deferred finding rationale, and must not
-empty unresolved findings simply to enable release. The helper validates explicit
-claims and freshness; it cannot infer the truth of prose review/integration evidence.
-The initial template sets both approvals false and the reason empty, so it cannot
-authorize release unchanged. Then:
+The helper cannot infer these facts from prose. Do not set them merely to free a
+pane. Then:
 ```
 python3 "$hd" release --task "$worker" --file "$release_decision"
 ```
-The same commands apply to Design. Any subsequent code/index/HEAD, Plan, input,
-request, report or recorded collection change invalidates the old binding. Recollect,
-re-review as needed, and make a fresh Main decision. Do not regenerate a template
-and carry old approvals forward without checking the new evidence.
+An active session, stale report/activity/Plan/candidate, or changed terminal fails
+before close. Inspect the cause and create a fresh decision only when it is true.
+Release archives the complete assignment evidence, not a claim of review approval.
+Candidate submission still requires an independent review of the integrated tree.
+
+For existing runs, `release-check --reviewer "$reviewer"` remains supported with
+its original reviewed-release decision (`integrated`, `unresolved_findings: []`,
+`no_longer_needed`, `reason`). Existing archived review evidence remains verifiable.
+New runs normally use assignment release above instead of retaining Workers for review.
 
 Reviewer needs no Main release-decision file; its gate is Astra's current acceptance.
 After Astra accepts the exact candidate and safety checks pass, release Reviewer
@@ -176,7 +178,7 @@ cleanup. Failed safety checks require retention and a recorded reason; do not by
 them. Never release Astra; use `close` only after finish.
 
 Successful release records `released: true, closed: false`, the Main disposition and
-a copy of the relevant review report (or Astra acceptance for Reviewer). Task files,
+assignment evidence (or the legacy release review / Astra acceptance for Reviewer). Task files,
 reports and evidence survive; later re-review cannot overwrite the archived copy.
 Released sessions reject send/begin/report and are excluded from wait pending work.
 Candidate/acceptance/finish still validate their archived evidence. Later changes
@@ -201,24 +203,37 @@ overall `finish`, and final cleanup of a released record never sends a second cl
 
 ## Waiting
 
-Use one `python3 "$hd" wait --run "$run" --timeout 3600` process per run. Retain its
-execution handle. Local two-second state checks do not invoke Main's model. The
-outer result wait must also be `yield_time_ms=3600000` where the host supports it;
-the helper timeout alone does not prevent short model wakeups. Resume the SAME handle,
-including yielded wrappers. Do not spawn duplicate waiters or repeatedly call status.
-Events/steering/process exit can return sooner; act immediately. Retained idle agents
-with collected complete reports and released participants do not count as pending.
-Pending:0 does not itself release or close anyone.
-Before waiting again, perform any release due under the shared lifecycle or record
-the specific reason for exceptional retention.
-Unchanged blocked notifications are suppressed, not resolved. Resolve each returned
-event or explicitly retain its blocker before waiting again.
+Follow [Completion reconciliation](../core/waiting.md). On entry/resume and after
+any lost result handle, inspect current conditions without consuming notifications:
+```
+python3 "$hd" check --run "$run"
+```
+`check` is read-only and may run while the one waiter is alive. It returns current
+`events` and `pending`, including already-announced but uncollected reports. It does
+not collect reports or close sessions. Inspect each returned task and collect ready
+reports through `herdr.py collect` before advancing their next action.
 
-If the host/higher-priority rules cannot honor the one-hour result wait, state the
-observed limitation; don't silently substitute short polling or label it equivalent.
-Continue independent useful work or yield to the user. Do not claim unattended
-monitoring without a live supported wait mechanism. Long-running process monitoring
-after implementation starts belongs to its Luna Worker, not repeated Main checks.
+Use one `python3 "$hd" wait --run "$run" --timeout 300` process per run (300 is also
+the default and maximum). Retain its execution handle. Its local two-second checks
+do not invoke Main's model. Await the SAME handle with the host's result-wait tool,
+including outer wrappers, and continue after host-limited yields. Set that outer wait
+within 300 seconds or a lower supported/higher-priority cap; never invent unavailable
+arguments. Do not start another waiter when the outer call yields or is interrupted.
+
+An unread complete/blocked report returns again until collected with current idle
+activity evidence. `report_waiting_idle` means publication arrived but the live
+session is not yet idle: wait before collection or closure. Unchanged collected
+blockers and other anomalies do not repeatedly wake Main inside a wait, but remain
+visible on every `check` and on the next timeout heartbeat. Resolve them or record
+the retained prerequisite before waiting again. Collected complete idle participants
+and released tasks are not pending; pending:0 alone does not release anyone.
+
+On a busy/stale lock, inspect the recorded owning PID and existing execution handle.
+Reuse the live waiter, or verify its termination before recovering its lock. Do not
+retry lock failures in a fast loop, launch a second watcher, or monitor only new files.
+A wait exit is not proof that Main read/collected its result. Keep the result-wait path
+active; a background waiter cannot guarantee waking a Main that has ended its turn.
+Long-running process monitoring after implementation starts belongs to its Worker.
 
 ## Permissions, routing and partial failures
 

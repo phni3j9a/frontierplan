@@ -26,13 +26,22 @@ route is deliberately removed. Model effort identifiers are lowercase xhigh/max.
 `scripts/frontierplan.py` provides a local cooperative ledger, packets, immutable
 Director decision archives and Git candidate freshness checks. `scripts/herdr.py`
 implements visible CLI sessions, identity-aware continuation, wait and cleanup.
-Herdr additionally separates role release from final cleanup. Main's Worker/Design
-release decision is bound to the current Plan/input, integrated snapshot, task report
-and relevant Reviewer report; Reviewer release requires current Astra acceptance.
-Released evidence stays in the shared ledger while its live pane leaves the layout.
-Native subagent retention is unchanged. The layout binds the original Main/Director
-region and only subdivides its execution area, preserving manual split ratios.
-Native tool calls stay in Main, since shell Python cannot invoke Codex agent tools.
+Both backends separate completed assignment release from final cleanup. Main's
+Worker/Design decision binds integration/assignment completion, stopped processes,
+current Plan/input, candidate, handle and collected report. Herdr verifies live
+ownership/activity before closing; native closure remains a native tool call with
+explicit returned evidence recorded by the helper. Released reports remain part of
+candidate/acceptance checks, and fixes use fresh Workers. Independent review still
+binds the integrated candidate; herdr Reviewer release requires Astra acceptance.
+Legacy herdr reviewed-release evidence remains supported.
+The layout binds the original Main/Director region and only subdivides its execution
+area, preserving manual split ratios. Native tool calls stay in Main; shell Python
+does not invoke Codex agent tools.
+
+Completion reconciliation compares current results with receipts instead of trusting
+notification delivery. Herdr offers a read-only check and one bounded 300-second
+wait; native status exposes unread reports. Notifications permit earlier returns.
+Neither a shell waiter nor a report file can guarantee restarting a stopped Main.
 
 The ledger refuses executor preparation before a current Plan + referenced user
 consent, duplicate Directors, cross-role native ID reuse, stale request reports,

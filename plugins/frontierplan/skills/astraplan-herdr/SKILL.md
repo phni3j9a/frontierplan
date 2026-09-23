@@ -42,14 +42,16 @@ and final acceptance and writes the final user report.
 
 Use the bundled local helpers for packets and freshness checks. They are cooperative
 workflow aids, not a sandbox, proof of consent, or automatic tool interception.
-Retain the Director until overall finish. Follow the shared lifecycle and herdr
-release protocol: promptly release Worker/Design when integration and relevant
-review/rework are complete, no unresolved finding requires it, Main records no
-remaining role, and the release safety checks pass. After Astra accepts the exact
-candidate, release the Reviewer before finish when those checks pass. Retention
-beyond these points is exceptional and requires Main to record a specific reason
-as described in the shared workflow. Keep released evidence and hand late fixes to
-a new Worker.
+Retain the Director through overall finish and the same Reviewer through acceptance.
+Use a fresh Worker/Design per bounded assignment by default. Follow the shared
+lifecycle and backend release protocol after Main collects the complete report,
+verifies integration/no remaining processes, and records the release decision.
+Preserve reports for later review. Release Reviewer after Astra accepts the exact
+candidate. Record concrete reasons for exceptional retention.
+Follow [Completion reconciliation](../../core/waiting.md): reconcile unread results
+on resume and at most about five minutes apart during active coordination, using
+native notifications for earlier returns. Retain the live wait handle and continue
+receiving its result; do not leave only a background process after a final response.
 Use the role layout: Main left 40%, Astra right 60%; first execution participant
 creates the lower 60% of Astra's region, and later participants split only that area.
 A returned turn, an intermediate user reply, or a context

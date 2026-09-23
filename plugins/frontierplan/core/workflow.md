@@ -54,30 +54,37 @@ Normal factual progress updates are Main's responsibility and do not need Astra.
 
 ## 3. Independent review, then Director acceptance
 
-Read review.md. Retain original Workers and the same independent Reviewer for fixes
-and re-review. In herdr, Main must promptly release a Worker/Design once its
-implementation is integrated, the relevant review/rework is complete, no unresolved
-finding needs that session, its latest complete report and idle/activity evidence
-are collected, Main has explicitly recorded that it has no remaining role for the
-current candidate, and the release safety checks pass.
-An implementation report alone is not enough. If Astra requests new changes after
-release, assign a new Worker with the original assignment, reports, findings and
-current Plan; restoring the released live session is not required. Retain/reuse the
-existing Reviewer until Astra accepts the exact candidate. In herdr, Main must then
-release the Reviewer before finish when the release safety checks pass.
-Retention beyond these points is exceptional: Main must record the participant and
-specific reason in the run's evidence or decision notes, and reassess when that
-reason no longer applies. Keeping eligible participants until finish is not the
-normal workflow. If safety checks fail, retain the participant and record the reason;
-never bypass the checks to satisfy prompt release.
-Native subagents retain implementation participants until final wrap-up as before.
+Read review.md. Start a fresh Worker/Design for each bounded implementation,
+review-fix or verification assignment by default. Reuse a retained session only for
+a small immediate follow-up, and record the concrete reason in its assignment.
+Do not rotate per tool call, or copy the entire old conversation into a fresh worker.
+Pass the current Plan/non-goals, worktree/HEAD, accepted finding IDs, expected behavior,
+sufficient tests, prior report and unfinished work. Reuse the same Issue worktree
+when appropriate; a fresh session does not require a new branch or dependency install.
+
+After an assignment is complete, Main collects the report, verifies integration and
+that no writes or owned processes remain, records that this session has no remaining
+role, and promptly releases Worker/Design using the backend protocol. Independent
+review need not have finished yet. Release never resolves findings or grants acceptance;
+later fixes go to a fresh Worker with the evidence above. A blocked/incomplete
+assignment is retained until resolved, not reported as complete to free capacity.
+
+Retain the same independent Reviewer through fixes and Director acceptance of the
+exact candidate. In herdr, release the accepted Reviewer before finish when the
+safety checks pass. Native Reviewer closure remains part of final wrap-up.
+Retention past a Worker/Design assignment's release point is exceptional: Main records
+the participant and specific reason, and reassesses it before waiting again. If
+safety checks fail, retain the participant and report the reason; never bypass them.
 Keep the same Astra throughout dialogue, planning, execution and final reporting.
 
 Release ends a live role, not its evidence: preserve task/report/decision history.
 Released reports remain part of candidate/acceptance/finish checks. A released
 Reviewer's report only satisfies review for its exact candidate and Plan; subsequent
-changes require new review as applicable. Once quiescent, submit an evidence packet
-and candidate fingerprint.
+changes require new review as applicable. Before asking Astra for final acceptance,
+collect the current reports and register the candidate/evidence packet.
+Check that the run candidate worktree is the actual
+integrated worktree, and that review, tests and packet identify that same candidate.
+Do not send an acceptance request with an unregistered or incorrectly rooted candidate.
 Astra personally checks the actual artifacts, review adjudication, criteria coverage,
 verification gaps and residual risk. It can accept or return a revised Plan; Main
 cannot convert a failure/blocker into acceptance. Acceptance is tied to the current
@@ -89,10 +96,15 @@ Director writes the final user response. `finish` returns that text only after v
 acceptance; `finish --discussion` is available only when no execution participants
 were created. Call finish only when overall work is actually wrapping up. An interim
 reply or user-input wait does not finish the session. Perform backend-specific safe
-closure after finish; never close unresolved, active or unrelated sessions. Herdr
+closure after finish; never close sessions with incomplete assignments, active work,
+or unrelated ownership. Herdr
 `release` is distinct from post-finish `close`: final cleanup records already released
 participants without trying to close their old pane IDs again. Neither operation
 closes Main, deletes reports or deletes worktrees/branches.
+
+## Waiting
+
+Follow [Completion reconciliation](waiting.md) and the selected backend instructions.
 
 ## Failures and recovery
 

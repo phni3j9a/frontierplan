@@ -4,7 +4,7 @@
 |---|---|---|
 | Director | User intent, personal research, design, dialogue, Plan, changes, final acceptance/report | Peer spawning, pane management, implementation, independent review |
 | Main | Dialogue transport, split/assign, parallelism, integration, routine review adjudication | Research before implementation, product direction, final acceptance |
-| Worker | Bounded implementation, tests, debugging, process monitoring | Requirement/design changes, delegation |
+| Worker | Fresh bounded assignments: implementation, tests, debugging, process monitoring | Requirement/design changes, delegation |
 | Design | Optional implementation-phase UI realization/refinement within the settled Plan | Pre-implementation research/design, product policy, self-review |
 | Reviewer | Fresh independent read-only review, same-session re-review | Edits, new requirements, acceptance, delegation |
 

@@ -41,7 +41,14 @@ and final acceptance and writes the final user report.
 
 Use the bundled local helpers for packets and freshness checks. They are cooperative
 workflow aids, not a sandbox, proof of consent, or automatic tool interception.
-Retain the Director for the ongoing user work, and implementation participants
-through final acceptance. A returned turn, an intermediate user reply, or a context
-compaction is not permission to close sessions. Never claim unavailable tools,
-unobserved model routing, unrun tests, or an unreturned Director decision succeeded.
+Retain the Director through overall finish and the same Reviewer through acceptance.
+Use a fresh Worker/Design per bounded assignment by default; release it after Main
+collects the complete report, verifies integration/no remaining processes, and records
+the release decision using the backend protocol. Preserve reports for later review.
+Follow [Completion reconciliation](../../core/waiting.md): reconcile unread results
+on resume and at most about five minutes apart during active coordination, using
+native notifications for earlier returns. Retain the live wait handle and continue
+receiving its result; do not leave only a background process after a final response.
+A returned turn, an intermediate user reply, or a context compaction is not itself
+permission to close sessions. Never claim unavailable tools, unobserved model routing,
+unrun tests, or an unreturned Director decision succeeded.
