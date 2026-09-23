@@ -212,11 +212,11 @@ class HerdrTransport(unittest.TestCase):
         self.assertEqual(hd.wait(self.run, timeout=0), {"events":[], "pending":0})
         self.assertFalse(fp.task_at(task)[1]["closed"])
 
-    def test_wait_suppresses_unchanged_blocker_not_resolution(self):
+    def test_wait_heartbeat_repeats_collected_blocker_without_resolving_it(self):
         task = self.director(); self.report(task, "Missing tool", status="blocked"); hd.collect(task)
         first = hd.wait(self.run, timeout=0); second = hd.wait(self.run, timeout=0)
         self.assertEqual(len(first["events"]), 1)
-        self.assertEqual(second["events"], []); self.assertEqual(second["pending"], 1)
+        self.assertEqual(second["events"], first["events"]); self.assertEqual(second["pending"], 1)
         self.assertTrue(second["timeout"])
 
     def test_duplicate_waiter_rejected(self):

@@ -62,6 +62,9 @@ current Worker/Design/Reviewer reports. Include: Plan/criteria mapping, exact pa
 and diff, commands and real test output, review IDs and Main ACCEPT/REJECT/DEFER
 reasons, unresolved verification, residual risk and any direct user instructions.
 Retain primary evidence and references so Director can check Main's summaries.
+For each review fix include its stable ID, accepted requirement, reproduction,
+expected behavior, minimum sufficient verification, and prior closure attempts.
+Released Worker reports stay in this packet; session disposal is not evidence disposal.
 Never reduce results to “implemented, tests passed” without verification evidence.
 
 Fingerprinting covers Git HEAD/index and tracked plus non-ignored untracked files,

@@ -58,8 +58,8 @@ verify the tool result before claiming the follow-up was sent.
 After actual authorization and the current Director Plan, use authorize/start.
 Prepare Worker/Design/Reviewer packets in the same manner; spawn separately and bind
 each returned identity once. Reserve concurrency for Director and Reviewer; manage
-independent work under the host limit. Use original Workers for fixes and the same
-fresh Reviewer for re-review. No Director-to-worker nested spawning.
+independent work under the host limit. Use fresh Workers for bounded fixes by default
+and the same Reviewer for re-review. No Director-to-worker nested spawning.
 
 Worker's profile requests fast separately from effort max. On schemas with the
 corresponding API field, the predecessor used service_tier="priority" for the CLI's
@@ -67,20 +67,58 @@ fast tier. Use ONLY a field/value supported by the live schema; otherwise verify
 inherited fast evidence or disclose unverified/unavailable fast while retaining the
 specified Luna/max model/effort. Do not claim fast based on the label alone.
 
-Use candidate/decision/finish from the shared helper after the integrated worktree
-and participants are quiescent. Director receives the actual evidence and writes
-acceptance/final report. Then use the host's close tool on each owned idle session;
-only after successful native closure call `close-record`. Preserve pending/lost
-handles rather than pretending they were closed. Do not close on a turn-complete event.
+### Release completed Worker/Design assignments
+
+Collect the complete report after verifying live identity and idle state. Integrate
+its work, check that no writes/owned processes remain, and get the decision template:
+```
+python3 "$fp" release-check --task "$worker"
+```
+Save the JSON outside the candidate checkout. Preserve `binding`. Set `decision`'s
+`integrated`, `assignment_complete`, `no_active_processes`, `no_longer_needed` to true
+only after checking those facts, and give a concrete `reason`. Recheck live state and
+the binding immediately before calling the host's actual close tool on the recorded
+agent ID. Save its successful result/reference in a closure file:
+```json
+{"agent_id":"<actual closed ID>","closed":true,"evidence":"<actual close tool result or reference>"}
+```
+Only after successful native closure:
+```
+python3 "$fp" release-record --task "$worker" --file "$release_decision" --closure-file "$closure"
+```
+These commands record Main-supplied evidence, not an independently verified native
+closure. They never invoke a native tool. Uncertain closure or a stale binding after
+close needs explicit inspection/recovery; keep the evidence and do not blindly retry
+close or falsely mark the assignment released. A slow/idle participant is not lost.
+If safe close is unavailable, retain the session and disclose that capability limit.
+
+Released assignments remain evidence for candidate/acceptance; they do not replace
+independent review. Use fresh Workers for later fixes, retaining the same Reviewer.
+Use candidate/decision/finish once the integrated tree and participants are quiescent.
+Director receives actual evidence and writes acceptance/final report. At final wrap-up,
+close each remaining owned idle session with the native tool, then use `close-record`.
+For an already released task, only `close-record` is needed; never close its ID again.
+Director and Reviewer cannot use assignment release to bypass final acceptance.
 
 ## Wait and recovery
 
-Retain IDs across turns/compaction. Wait on the useful pending set, not on already
-collected idle participants. On the known V2 surface use an event-aware one-hour
-upper wait (`timeout_ms=3600000`), which may return earlier on activity/steering.
-Don't repeatedly wake Main with default/short status checks. If the host has a lower
-limit, disclose it and use the supported event mechanism without pretending the
-one-hour policy is met. Never invent unavailable wait arguments or background work.
+Follow [Completion reconciliation](../core/waiting.md). Retain IDs across turns and
+compaction. On entry/resume, notifications and each heartbeat, inspect:
+```
+python3 "$fp" status --run "$run"
+```
+Its `uncollected` list compares each current request's complete/blocked result with
+its receipt and does not consume notifications. Check the host's actual live state
+before collecting. Also inspect pending/blocked tasks in `tasks`; absence from
+`uncollected` alone does not mean all work is finished or all blockers are resolved.
+
+Wait on useful pending sessions through the actual native event-aware tool, with an
+upper bound of about 300 seconds (e.g. `timeout_ms=300000` only if the live schema
+supports it). A lower host or higher-priority cap takes precedence. Receive native
+notifications immediately, reconcile on return, and continue the supported wait while
+pending work remains. A final response with a promise to monitor does not provide a
+continuation mechanism. Do not emulate native notifications with shell watchers or
+claim unattended resumption without actual host support.
 
 A lost session requires observed runtime evidence, `retire-lost`, and a replacement
 with the same role/model plus current dialogue, Plan, prior reports/findings. Merely

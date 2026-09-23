@@ -56,7 +56,7 @@ def validate(root: Path) -> list[str]:
             check((role == "worker" and data.get("service_tier") == "fast") or
                   (role != "worker" and "service_tier" not in data), f"Unexpected tier override: {path}")
         check(seen == set(expected), "Missing role profile")
-        for required in ("core/workflow.md", "core/roles.md", "core/handoff.md", "core/review.md",
+        for required in ("core/workflow.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
                          "backends/herdr.md", "backends/subagent.md", "scripts/frontierplan.py",
                          "scripts/herdr.py", "LICENSE", "THIRD_PARTY_NOTICES.md"):
             check((root / required).is_file(), f"Missing packaged resource: {required}")

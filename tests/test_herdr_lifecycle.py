@@ -291,7 +291,7 @@ class Lifecycle(unittest.TestCase):
         self.agent(worker)["state_change_seq"] += 1
         self.assert_no_close(reviewer)
 
-    def test_native_backend_retains_participants(self):
+    def test_herdr_reviewed_release_cannot_be_used_by_native_backend(self):
         director, worker, reviewer = self.reviewed()
         hd.release(worker, self.evidence(worker, reviewer))
         run_file = Path(self.run, "run.json"); state = fp.read(run_file)

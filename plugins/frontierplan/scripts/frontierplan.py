@@ -204,6 +204,72 @@ def collected(path: Path, task: dict, complete: bool = True) -> dict:
     return result
 
 
+def uncollected_reports(root: Path) -> list[dict]:
+    """Reconcile current requests, independently of notification delivery history."""
+    reports = []
+    for path, task in tasks(root):
+        if any(task.get(k) for k in ("closed", "lost", "released")):
+            continue
+        result = current_result(path, task)
+        receipt = read(path / "receipt.json") if (path / "receipt.json").exists() else {}
+        if (result and result["status"] in ("complete", "blocked")
+                and receipt.get("digest") != digest(result)):
+            reports.append({"task": str(path), "role": task["role"],
+                            "request_id": task["request_id"], "status": result["status"]})
+    return reports
+
+
+def assignment_release_decision(decision: dict) -> None:
+    require(all(decision.get(k) is True for k in
+                ("integrated", "assignment_complete", "no_active_processes", "no_longer_needed"))
+            and isinstance(decision.get("reason"), str) and decision["reason"].strip(),
+            "Confirm integration, assignment completion, no active processes and no remaining session role, with reasons.")
+
+
+def assignment_release_binding(path: Path, task: dict, state: dict) -> dict:
+    require(task["role"] in ("worker", "design"), "Only Worker/Design can finish an assignment before review.")
+    require(not any(task.get(k) for k in ("closed", "lost", "released", "closing")), "Participant is unavailable.")
+    require(state["phase"] in ("executing", "acceptance", "accepted")
+            and not state["awaiting_director"] and state.get("plan")
+            and task.get("plan_id") == state["plan"]["id"], "Release requires the current reconciled Plan.")
+    require(task.get("handle"), "Bind the actual session before release.")
+    if state["backend"] == "subagent":
+        require(task["handle"].get("agent_id"), "Bind the native agent ID before release.")
+    result = collected(path, task)
+    return {"kind": "assignment", "backend": state["backend"],
+            "task_id": task["id"], "request_id": task["request_id"],
+            "result_digest": digest(result), "receipt_digest": digest(read(path / "receipt.json")),
+            "handle_digest": digest(task["handle"]), "candidate_id": snapshot(state["cwd"])["id"],
+            "plan_id": state["plan"]["id"], "user_seq": state["user_seq"]}
+
+
+def assignment_release_check(task_path: str) -> dict:
+    path, task, _, state = task_at(task_path)
+    main_only(state)
+    return {"binding": assignment_release_binding(path, task, state),
+            "decision": {"integrated": False, "assignment_complete": False,
+                         "no_active_processes": False, "no_longer_needed": False, "reason": ""}}
+
+
+def release_record(task_path: str, file: str, closure_file: str) -> dict:
+    """Record an actual native closure; this helper never closes a native agent."""
+    path, _, root, _ = task_at(task_path)
+    evidence, closure = read(file), read(closure_file)
+    with transaction(root) as (_, state), lock(path / ".report.lock"):
+        require(state["backend"] == "subagent", "Use herdr.py release for herdr participants.")
+        task = read(path / "task.json")
+        binding = assignment_release_binding(path, task, state)
+        require(evidence.get("binding") == binding, "Release evidence is stale; inspect closure and handoff before recovery.")
+        assignment_release_decision(evidence.get("decision") or {})
+        require(closure.get("agent_id") == task["handle"].get("agent_id")
+                and closure.get("closed") is True and isinstance(closure.get("evidence"), str)
+                and closure["evidence"].strip(), "Record the actual native close result for this agent ID.")
+        task.update(released=True, release={"binding": binding, "decision": evidence["decision"],
+                                           "closure": closure})
+        atomic(path / "task.json", task)
+    return {"released_record": task["id"], "note": "Native closure is Main-supplied evidence, not independently verified."}
+
+
 def release_decision(decision: dict) -> None:
     require(decision.get("integrated") is True and decision.get("unresolved_findings") == []
             and decision.get("no_longer_needed") is True
@@ -216,11 +282,26 @@ def released_evidence(path: Path, task: dict) -> dict:
     result = collected(path, task)
     release = task.get("release") or {}
     binding = release.get("binding") or {}
+    backend = read(Path(task["run"]) / "run.json")["backend"]
+    require(backend == "herdr" or binding.get("kind") == "assignment",
+            "Native release requires assignment and native closure evidence.")
     require(task.get("released") and not task.get("closing")
             and binding.get("task_id") == task["id"]
             and binding.get("request_id") == task["request_id"]
             and binding.get("result_digest") == digest(result), "Released report changed or release evidence is missing.")
     if task["role"] in ("worker", "design"):
+        if binding.get("kind") == "assignment":
+            assignment_release_decision(release.get("decision") or {})
+            require(binding.get("backend") == backend
+                    and binding.get("handle_digest") == digest(task.get("handle"))
+                    and binding.get("plan_id") == task.get("plan_id"), "Archived assignment identity changed.")
+            if backend == "subagent":
+                closure = release.get("closure") or {}
+                require(task["handle"].get("agent_id")
+                        and closure.get("agent_id") == task["handle"]["agent_id"]
+                        and closure.get("closed") is True and isinstance(closure.get("evidence"), str)
+                        and closure["evidence"].strip(), "Native closure evidence is missing.")
+            return result
         release_decision(release.get("decision") or {})
         review = release.get("review_report") or {}
         require(digest(review) == binding.get("reviewer", {}).get("result_digest")
@@ -244,7 +325,6 @@ def executors_ready(root: Path, require_review: bool = False, candidate_id: str 
         require(not task.get("closed"), "Execution participants must remain available until final acceptance.")
         require(not task.get("closing"), "Participant closure is uncertain; inspect before continuing.")
         if task.get("released"):
-            require(state["backend"] == "herdr", "Participant release is only supported by herdr.")
             result = released_evidence(path, task)
         else:
             result = collected(path, task)
@@ -573,8 +653,9 @@ def cli() -> None:
         q = sub.add_parser(name); q.add_argument("--task", required=True); q.add_argument("--request-id", required=True)
         if name == "report":
             q.add_argument("--file", required=True); q.add_argument("--status", choices=("complete", "blocked"), required=True)
-    for name in ("collect", "decision", "close-record"):
+    for name in ("collect", "decision", "close-record", "release-check"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
+    q = sub.add_parser("release-record"); q.add_argument("--task", required=True); q.add_argument("--file", required=True); q.add_argument("--closure-file", required=True)
     q = sub.add_parser("retire-lost"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("start", "status", "finish"):
         q = sub.add_parser(name); q.add_argument("--run", required=True)
@@ -593,11 +674,13 @@ def cli() -> None:
     elif a.action == "candidate": result = candidate(a.run, a.file)
     elif a.action == "finish": result = finish(a.run, a.discussion)
     elif a.action == "close-record": result = close_record(a.task)
+    elif a.action == "release-check": result = assignment_release_check(a.task)
+    elif a.action == "release-record": result = release_record(a.task, a.file, a.closure_file)
     elif a.action == "retire-lost": result = retire_lost(a.task, a.file)
     elif a.action == "profile": result = profile(a.role)
     else:
         root, result = run_at(a.run); main_only(result)
-        result = {"state": result, "tasks": [t for _, t in tasks(root)]}
+        result = {"state": result, "tasks": [t for _, t in tasks(root)], "uncollected": uncollected_reports(root)}
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
