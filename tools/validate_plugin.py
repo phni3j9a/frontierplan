@@ -19,10 +19,12 @@ def validate(root: Path) -> list[str]:
     try:
         manifest = json.loads((root / "plugin.json").read_text())
         legacy = json.loads((root / ".codex-plugin/plugin.json").read_text())
+        claude = json.loads((root / ".claude-plugin/plugin.json").read_text())
         check(manifest.get("name") == "frontierplan", "Wrong plugin name")
         check(manifest.get("$schema") == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json", "Missing portable manifest schema")
         for key in ("name", "version", "description", "author", "repository", "license"):
             check(manifest.get(key) == legacy.get(key), f"Compatibility manifest drift: {key}")
+            check(manifest.get(key) == claude.get(key), f"Claude Code manifest drift: {key}")
         check(manifest["extensions"]["com.openai"]["interface"] == legacy["interface"], "Interface metadata drift")
         check(legacy.get("skills") == "./skills/", "Invalid legacy skills path")
         skills = {p.name for p in (root / "skills").iterdir() if p.is_dir()}
@@ -35,6 +37,9 @@ def validate(root: Path) -> list[str]:
                                  frontmatter.group(1) if frontmatter else "")
             check(triggers and set(re.findall(r"\w+", triggers.group(1))) == {"user"},
                   f"Explicit-only Devin triggers required: {skill}")
+            check(bool(re.search(r"(?m)^disable-model-invocation:[ \t]*true[ \t]*$",
+                                 frontmatter.group(1) if frontmatter else "")),
+                  f"Explicit-only Claude Code invocation required: {skill}")
             policy = (root / "skills" / skill / "agents/openai.yaml").read_text()
             check(bool(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy)), f"Explicit invocation required: {skill}")
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")

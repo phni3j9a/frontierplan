@@ -1,0 +1,17 @@
+{
+  "name": "frontierplan",
+  "owner": {
+    "name": "phni3j9a"
+  },
+  "metadata": {
+    "description": "FrontierPlan: Astra plans, Main coordinates execution and review."
+  },
+  "plugins": [
+    {
+      "name": "frontierplan",
+      "source": "./plugins/frontierplan",
+      "description": "Explicit-only AstraPlan-herdr for Claude Code as Main: Astra plans, Main coordinates Codex children in herdr panes.",
+      "category": "productivity"
+    }
+  ]
+}

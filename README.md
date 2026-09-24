@@ -2,10 +2,10 @@
 
 **Plan まではAstraが決め、実行はMainが回す。**
 
-Codex向けの明示起動専用Pluginです。[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)
+Codex向けの明示起動専用Pluginです（Claude Code・Devinにも導入できます）。[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)
 の進め方（Mainが統合・レビュー判定・完了判断を持ち、Lunaが実装し、独立したSolがレビューする）を
 土台に、実装前の調査・設計・Plan作成だけをAstraに一任します。herdr版ではMainにDevinなどの
-既存エージェントも使えます。子エージェントはCodexで起動します。
+既存エージェントやClaude Codeも使えます。子エージェントはCodexで起動します。
 
 ## 流れ
 
@@ -100,8 +100,23 @@ pluginsがfeature flagの環境では `codex --enable plugins ...` を使いま�
 導入済みCLIの `codex plugin --help` を確認してください。ユーザー設定の自動変更はしません。
 ソースをcloneして `codex plugin marketplace add /absolute/path/to/frontierplan` でも登録できます。
 
+Claude Code（herdr版のMainとして使う場合）:
+```
+/plugin marketplace add phni3j9a/frontierplan
+/plugin install frontierplan@frontierplan
+```
+CLIでは `claude plugin marketplace add phni3j9a/frontierplan` と
+`claude plugin install frontierplan@frontierplan` です。導入後の新しいセッションで
+`/frontierplan:astraplan-herdr` を明示指定します。両SKILLは `disable-model-invocation: true`
+を持つため、Claude Codeが通常の依頼で自動起動することはありません。Claude Codeは
+herdr上で `agent: "claude"` とセッションIDを報告するため、Mainの識別は現在ペインから
+自動で行われます（`FRONTIERPLAN_MAIN_*` の明示指定は不要です）。`astraplan-subagent` は
+Codex nativeツールが必要なためClaude Codeでは使えず、起動しても停止・報告します。
+Claude Code用のmanifestは `.claude-plugin/marketplace.json`（リポジトリ直下）と
+`plugins/frontierplan/.claude-plugin/plugin.json` で、`claude plugin validate --strict` で確認できます。
+
 配布物は `python3 tools/package_release.py` で生成します。単体Plugin ZIPは中に
-`plugin.json`、互換用`.codex-plugin/plugin.json`、2 SKILL、共通Core/profiles/scriptsを含みます。
+`plugin.json`、互換用`.codex-plugin/plugin.json`と`.claude-plugin/plugin.json`、2 SKILL、共通Core/profiles/scriptsを含みます。
 ZIPを展開しても、別のaxiomリポジトリを参照しません。
 
 ## 実行の境界

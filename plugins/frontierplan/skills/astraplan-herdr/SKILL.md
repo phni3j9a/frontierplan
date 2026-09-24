@@ -1,6 +1,7 @@
 ---
 name: astraplan-herdr
 description: Astra owns research and planning with Luna researchers; Main then coordinates Luna implementation, independent Sol review and Astra's one-time final check through visible herdr panes.
+disable-model-invocation: true
 triggers:
   - user
 ---

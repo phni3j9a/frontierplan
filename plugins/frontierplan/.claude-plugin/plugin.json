@@ -1,0 +1,10 @@
+{
+  "name": "frontierplan",
+  "version": "0.2.0",
+  "description": "Astra-led research and planning with Luna researchers, then axiom_for_herdr-style execution coordinated by Main with independent Sol review and Astra's one-time final check.",
+  "author": {
+    "name": "phni3j9a"
+  },
+  "repository": "https://github.com/phni3j9a/frontierplan",
+  "license": "MIT"
+}
