@@ -1,6 +1,7 @@
 ---
 name: astraplan-subagent
 description: Astra owns research and planning with Luna researchers; Main then coordinates Luna implementation, independent Sol review and Astra's one-time final check through Codex native subagents.
+disable-model-invocation: true
 triggers:
   - user
 ---
@@ -53,7 +54,9 @@ whether to continue because of review rounds or elapsed time.
 ## Environment
 
 Main inherits its existing Codex session's model and effort; this backend requires
-Codex native subagent tools. This skill never replaces Main or changes global
+Codex native subagent tools. On a host without them (such as Claude Code or Devin),
+stop and report instead of substituting the host's own agents; AstraPlan-herdr is
+the supported entry there. This skill never replaces Main or changes global
 defaults. Profiles: `profiles/director/astra.toml` and the role-specific
 `profiles/*.toml`; child effort values are lowercase.
 

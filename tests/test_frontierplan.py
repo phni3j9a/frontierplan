@@ -466,5 +466,18 @@ class Protocol(unittest.TestCase):
         self.assertEqual(len(archives), 2)
         self.assertTrue(all(p.exists() for p in archives))
 
+    def test_claude_code_marketplace_and_explicit_invocation(self):
+        market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
+        entry, = market["plugins"]
+        self.assertEqual(entry["name"], "frontierplan")
+        self.assertEqual((ROOT / ".claude-plugin" / ".." / entry["source"]).resolve(),
+                         (ROOT / "plugins/frontierplan").resolve())
+        copy = self.root / "plugin"
+        shutil.copytree(ROOT / "plugins/frontierplan", copy,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+        skill = copy / "skills/astraplan-herdr/SKILL.md"
+        skill.write_text(skill.read_text().replace("disable-model-invocation: true\n", ""))
+        self.assertIn("Explicit-only Claude Code invocation required: astraplan-herdr", validate(copy))
+
 
 if __name__ == "__main__": unittest.main()

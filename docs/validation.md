@@ -7,7 +7,11 @@ and `python3 tools/package_release.py`. Tests use temporary Git repositories and
 fake herdr command surface; no external network/model calls occur. CI runs the same
 suite on Python 3.11 and 3.13. The package validator checks both entry points,
 explicit invocation policy, manifests, lowercase role profiles, local references
-and standalone extracted-package integrity.
+and standalone extracted-package integrity. It also requires the Claude Code
+manifest to match the portable one and both SKILLs to carry
+`disable-model-invocation: true`; `claude plugin validate --strict .` and
+`claude plugin validate --strict plugins/frontierplan` check the Claude Code
+marketplace and plugin schemas when the Claude Code CLI is available (not in CI).
 
 Coverage includes Astra-only dispatch before execution, the research relay (verbatim
 requests, no duplicate researchers after a partial failure, unedited reports back to
@@ -67,7 +71,7 @@ end-to-end autonomous agent behavior. Those remain target-host checks below.
 
 ## Target-host smoke tests (not performed by the offline automated suite)
 
-1. Install from the marketplace in a fresh Codex session. Confirm exactly two skills
+1. Install from the marketplace in a fresh Codex (or Claude Code) session. Confirm exactly two skills
    appear and do not activate on ordinary requests. Confirm shared resources survive
    installation/ZIP extraction and all role profile reads work.
 2. Invoke each skill for a consultation-only task. Confirm Astra alone answers, Main

@@ -67,10 +67,12 @@ agent/session identities and ambiguous matches fail closed before pane mutation.
 Pre-existing Codex/herdr runs keep their original Codex ownership checks; there is
 no automatic owner migration. Native subagent runs still require Codex native tools.
 
-The plugin's installation metadata remains Codex-oriented. A non-Codex host must
-explicitly load this SKILL and its referenced contracts and be able to run the local
-helpers on the herdr host; this change does not install a Devin plugin or establish
-remote connectivity. Actual provider/host compatibility requires a real-host smoke
+The plugin ships Codex, Claude Code and portable (Devin) manifests. Claude Code as
+Main installs the plugin through its marketplace and invokes this SKILL explicitly;
+herdr reports its pane as `claude` with the conversation's session ID, so the
+current-pane identity path applies. Any non-Codex host must explicitly load this
+SKILL and its referenced contracts and be able to run the local helpers on the herdr
+host; FrontierPlan does not establish remote connectivity. Actual provider/host compatibility requires a real-host smoke
 test. Simulated Devin tests are not evidence of real model routing or billing.
 
 ### Role layout
