@@ -14,14 +14,15 @@ Apply this contract to both backends using their documented native operations.
   A published report with a busy session is visible but cannot yet be collected,
   re-prompted or closed. Inspect persistent discrepancies without removing idle guards.
 - Collect every ready report, read it and resolve its next action: integration,
-  bounded new assignment, review, Director decision or explicit blocker retention.
+  bounded new assignment, review, Astra's decision and its relay, or explicit
+  blocker retention.
   A collected blocker remains unresolved until its prerequisite is actually resolved.
 - Keep one supported wait per run and retain its execution handle, including outer
   wrappers. Use the host's available result-wait mechanism with a maximum of about
   300 seconds, or its lower supported limit/higher-priority cap. Resume the same
   live handle; do not launch another waiter because the outer tool yielded.
-- Before another wait, reconcile outstanding results and perform due releases or
-  record the specific retention reason. Do not spin on an unchanged blocker or
+- Before another wait, reconcile outstanding results and close participants whose
+  lifetime Main has ended. Do not spin on an unchanged blocker or
   report_waiting_idle; use the bounded wait and its next heartbeat.
 - While autonomous execution is still required and supported, keep the active
   result-wait/continuation path. A progress update must not end that path with a
@@ -31,6 +32,9 @@ Apply this contract to both backends using their documented native operations.
   that concrete limitation and retain handles/results for the next reconciliation.
   Do not promise unattended monitoring. User stop/cancel instructions still take
   priority; this contract does not authorize a daemon or synthetic user prompts.
+
+During planning, a returned Astra decision or researcher report is handled the same
+way: collect it and perform the helper's `next` step without adding judgment.
 
 Batch pending participants in one check. The five-minute interval is a reconciliation
 ceiling during active coordination, not a requirement to delay native notifications

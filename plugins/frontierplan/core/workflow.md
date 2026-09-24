@@ -1,106 +1,116 @@
 # Shared workflow
 
-## 1. Director-led understanding, research and planning
+FrontierPlan keeps axiom_for_herdr's working structure: Main coordinates, Luna
+executes, an independent Sol reviews, and Main decides when the work is done. The
+one change is planning: **Astra owns everything up to the Plan**, because that is
+where judgment matters most, and Main only relays it.
 
-Main does transport/environment setup only. Save the user's exact current message
-and relevant earlier public dialogue, known repo/worktree locations and permissions.
-Do not rewrite ambiguous intent into a conclusion before Astra receives it.
-Initialize one run using the selected backend and start one Director. Forward every
-new user message through `message` and the existing Director session, preserving
-user words separately from Main hypotheses and external evidence.
+```
+Planning   Astra judges ─┬─ research ──> Luna researchers (relayed by Main)
+                         ├─ questions ─> user (relayed verbatim by Main)
+                         └─ Plan + authorization
+Execution  Main judges: split, assign, integrate, adjudicate review (axiom_for_herdr)
+                         └─ consult Astra when stuck or the Plan no longer fits
+Final      Astra checks the result once; Main adjudicates, finishes and reports
+```
 
-Astra performs all research personally: repository inspection, authorized web or
-connected-source lookups, existing behavior checks and isolated experiments.
-No Main/Luna research delegation before implementation. Product edits, commits,
-publishing and implementation are not research. Temporary probes use an isolated
-scratch area; tests that generate files or affect services need appropriate scope.
-If required tools, permissions or facts are unavailable, Director names the blocker.
-Main may resolve transport/authorization under its existing rules, not take over
-research or silently change the backend/model. Do not auto-enable network access.
+## 1. Planning: Astra decides, Main relays
 
-The same Director drafts replies/questions in the user's language and then a Plan
-with intent, non-goals, approach, acceptance criteria, verification and replanning
-triggers. Main relays conclusions without re-deciding them. Correct actual transport
-facts or return contradictory claims to Director; do not relay fabricated results.
-Return conclusions and concise rationale, not private chain-of-thought.
+Initialize one run with the user's exact words and start Astra. Main may add a
+short file of transport facts (repository/worktree paths, available environments,
+known permissions). It must not add hypotheses, a researched approach or a Plan.
 
-Consultation-only requests stop at a Director reply/Plan. A Plan is not user consent
-to implement. Record the actual authorizing message reference with `authorize` only
-when it really authorizes implementation. Start using `start` after the current Plan.
-No unconditional human approval round: existing implementation authorization suffices.
+Astra follows [astra.md](astra.md). Each Astra turn returns one decision
+([handoff.md](handoff.md)). Main runs the helper's `decision` command and performs
+the returned `next` step mechanically:
 
-## 2. Main-led execution under the Plan
+| `next` | Main does |
+|---|---|
+| `relay` | run the backend's research relay: start Astra's researchers with her exact requests, then return their unedited reports to her |
+| `relay_to_user` | show `relay_to_user` to the user exactly as written, then wait for the user |
+| `start` / `relay_to_user_then_start` | (show the text, then) run `start` and begin execution |
+| `main_decides` | execution-phase advice or final-check results for Main's own judgment |
 
-Main splits executable work, assigns ownership, chooses useful parallelism,
-integrates and adjudicates ordinary review findings. Worker handles implementation,
-tests, debugging and repetitive monitoring. Design is optional, implementation-phase
-UI realization under the Director's already settled product/design direction.
-Neither is delegated unresolved pre-implementation design.
+A new user message during planning is stored with `message` and given to Astra
+unchanged with `forward`. Main never summarizes, reinterprets, answers for Astra
+or researches on its own before execution. It may resolve transport problems
+(permissions, unavailable tools, a stuck pane) under its existing rules.
 
-Launch independent work before waiting. No arbitrary team-size limit, but respect
-host concurrency limits and reserve capacity for the retained Director and Reviewer.
-Use disjoint write ownership or explicitly prepared worktrees; serialize overlap.
-Preserve existing user edits. Workers do not commit/publish unless specifically
-within the user-authorized scope. Main integrates into the run's candidate worktree
-before independent review. Reports from separate worktrees are evidence, not the
-integrated candidate. Never delete branches/worktrees as a side effect of cleanup.
+Implementation authorization is Astra's call: her Plan or `authorize` decision
+names the user message that authorizes implementation. When the Plan needs the
+user's agreement first, she presents it and waits. Any new user message before
+`start` voids a recorded authorization, because it may withdraw consent; Astra
+records it again if it still holds. A consultation-only request ends
+with Astra's reply; `finish --discussion` closes it.
 
-Main may fix mechanical integration within the Plan, but may not drop requirements,
-choose a different architecture, accept material risk or declare final completion.
-Return such decisions to the same Director. Director does any necessary new
-research itself. New user input pauses new dispatch until Director reconciles it;
-stop/cancel instructions are acted on immediately. Do not wait for Astra to stop work.
-Normal factual progress updates are Main's responsibility and do not need Astra.
+## 2. Execution: Main coordinates (axiom_for_herdr)
 
-## 3. Independent review, then Director acceptance
+After `start`, Main owns intent within the Plan, assignment, integration and review
+adjudication. Main is assumed capable of judging review findings.
 
-Read review.md. Start a fresh Worker/Design for each bounded implementation,
-review-fix or verification assignment by default. Reuse a retained session only for
-a small immediate follow-up, and record the concrete reason in its assignment.
-Do not rotate per tool call, or copy the entire old conversation into a fresh worker.
-Pass the current Plan/non-goals, worktree/HEAD, accepted finding IDs, expected behavior,
-sufficient tests, prior report and unfinished work. Reuse the same Issue worktree
-when appropriate; a fresh session does not require a new branch or dependency install.
+- Ordinary bounded implementation, tests, debugging and long-running monitoring go
+  to Luna Workers. Luna compute is almost free; Main context is expensive. Delegate
+  when it protects Main context or enables useful parallel work, without splitting
+  simple tasks artificially. There is no fixed worker count.
+- Unsettled visual or interaction work goes to Sol Design. Settled designs can be
+  implemented by Luna.
+- Launch independent work before waiting. Use disjoint write ownership or prepared
+  worktrees; serialize overlap; preserve existing user changes.
+- **Keep the responsible Worker through its review cycle.** Send accepted fixes to
+  that same Worker with the finding IDs, Main's decision and required verification.
+  A fresh Worker is recovery for a lost session, not the routine next step.
+- Delegate repeated CI/build/test monitoring to the responsible Luna Worker. Main
+  does not poll it; the Worker reports completion, failure or a needed decision.
+- Main may make small adjustments within the Plan. When the Plan no longer fits,
+  or the same accepted finding keeps coming back after fixes, Main consults Astra
+  (`consult`). Astra returns advice or a revised Plan; Main decides adoption.
+- A new user message during execution goes to Main. Main handles it, and consults
+  Astra when it changes the Plan's scope or design.
 
-After an assignment is complete, Main collects the report, verifies integration and
-that no writes or owned processes remain, records that this session has no remaining
-role, and promptly releases Worker/Design using the backend protocol. Independent
-review need not have finished yet. Release never resolves findings or grants acceptance;
-later fixes go to a fresh Worker with the evidence above. A blocked/incomplete
-assignment is retained until resolved, not reported as complete to free capacity.
+## 3. Independent review
 
-Retain the same independent Reviewer through fixes and Director acceptance of the
-exact candidate. In herdr, release the accepted Reviewer before finish when the
-safety checks pass. Native Reviewer closure remains part of final wrap-up.
-Retention past a Worker/Design assignment's release point is exceptional: Main records
-the participant and specific reason, and reassesses it before waiting again. If
-safety checks fail, retain the participant and report the reason; never bypass them.
-Keep the same Astra throughout dialogue, planning, execution and final reporting.
+Follow [review.md](review.md). One fresh Sol Reviewer is kept for the whole review
+cycle. There is no finding-count or round limit: convergence comes from reviewer
+continuity, stable finding IDs, evidence-bounded findings and Main's adjudication.
+Main ends review when no accepted material finding remains unaddressed.
 
-Release ends a live role, not its evidence: preserve task/report/decision history.
-Released reports remain part of candidate/acceptance/finish checks. A released
-Reviewer's report only satisfies review for its exact candidate and Plan; subsequent
-changes require new review as applicable. Before asking Astra for final acceptance,
-collect the current reports and register the candidate/evidence packet.
-Check that the run candidate worktree is the actual
-integrated worktree, and that review, tests and packet identify that same candidate.
-Do not send an acceptance request with an unregistered or incorrectly rooted candidate.
-Astra personally checks the actual artifacts, review adjudication, criteria coverage,
-verification gaps and residual risk. It can accept or return a revised Plan; Main
-cannot convert a failure/blocker into acceptance. Acceptance is tied to the current
-Plan, current user input and exact candidate. Any subsequent candidate change needs
-re-review as applicable and renewed Director acceptance, even a new commit of the
-same working files (HEAD/index are part of the fingerprint).
+## 4. Final check: Astra looks once
 
-Director writes the final user response. `finish` returns that text only after valid
-acceptance; `finish --discussion` is available only when no execution participants
-were created. Call finish only when overall work is actually wrapping up. An interim
-reply or user-input wait does not finish the session. Perform backend-specific safe
-closure after finish; never close sessions with incomplete assignments, active work,
-or unrelated ownership. Herdr
-`release` is distinct from post-finish `close`: final cleanup records already released
-participants without trying to close their old pane IDs again. Neither operation
-closes Main, deletes reports or deletes worktrees/branches.
+After review converges and executors are idle, Main runs `final-check` with an
+evidence file: Plan/criteria mapping, the diff range, real test output, review
+findings with ACCEPT/REJECT/DEFER decisions, and known gaps. Astra returns an
+acceptance-criteria table, findings and Plan divergence **once per Plan**.
+
+Main treats Astra's findings exactly like Reviewer findings: it adjudicates them,
+sends accepted fixes to the responsible Worker and has the same Reviewer re-review.
+Fixes do not go back to Astra. Astra has no veto. If Astra reports a divergence
+whose correction would change scope or cost materially, Main gives the user options
+with a recommendation.
+
+## 5. When the user hears from FrontierPlan
+
+Only these three:
+
+1. Astra's planning messages (questions, the Plan), relayed verbatim.
+2. The completion report.
+3. A branch whose answer changes scope or cost: give concrete options and a
+   recommended default. Never ask "should I continue?".
+
+Review rounds, elapsed time or a routine finding are not reasons to return to the user.
+
+## 6. Finish and cleanup
+
+`finish --file <report>` requires Astra's final check for the current Plan and
+collected reports from every live Worker/Design/Reviewer. Main writes the final
+report: results, Astra's acceptance-criteria table, key decisions, real verification,
+and remaining items (rejected/deferred findings, unverified points). Update
+repository documentation within the authorized scope. Then close remaining
+participants and Astra through the backend. Closing never deletes reports,
+worktrees or branches.
+
+Close participants when Main ends their lifetime: researchers after their reports
+return to Astra, Workers/Design/Reviewer after their review cycle, Astra after
+finish. A participant with unresolved or active work stays open.
 
 ## Waiting
 
@@ -108,18 +118,14 @@ Follow [Completion reconciliation](waiting.md) and the selected backend instruct
 
 ## Failures and recovery
 
-Do not silently substitute models, efforts or backends. Astra unavailable means
-FrontierPlan's decision path is blocked, not that Main becomes Director. Complete
-safe already-authorized housekeeping only, and report the real limitation.
-Keep blocked reports and partial-start handles visible. Avoid duplicate delivery
-after an uncertain timeout. For verified lost sessions, record `retire-lost` with
-specific runtime evidence, then rehydrate a replacement from original user messages,
-current Plan, findings and reports. Never retire a merely slow/idle session as lost.
-Replacements preserve the role/model and review independence. This helper records
-loss; it does not independently verify it or kill a process. Unresolved work carried
-by a lost task must be explicitly recovered, not silently dropped.
+Do not silently substitute models, efforts or backends. If Astra is unavailable
+during planning, planning is blocked: report it rather than planning in Main.
+During execution Main continues its own work and reports the missing consultation.
+For a verified lost session, record `retire-lost` with runtime evidence and start a
+replacement with the prior reports; the Director replacement also gets the Plan and
+user messages. Never retire a merely slow or idle session.
 
-Persist handles, current Plan and decisions in the run across turns/compaction.
-The temporary run directory is not a durable archive. Transfer important accepted
-conclusions to normal project documentation only within the authorized scope.
-No background daemon, dashboard, auto-invocation hook or automatic config mutation.
+Keep handles, the Plan and decisions in the run across turns and compaction. The
+temporary run directory is not a durable archive; keep accepted conclusions in
+project documentation. No background daemon, dashboard, auto-invocation hook or
+automatic config mutation.

@@ -1,36 +1,35 @@
 # Role contracts
 
-| Role | Owns | Does not own |
-|---|---|---|
-| Director | User intent, personal research, design, dialogue, Plan, changes, final acceptance/report | Peer spawning, pane management, implementation, independent review |
-| Main | Dialogue transport, split/assign, parallelism, integration, routine review adjudication | Research before implementation, product direction, final acceptance |
-| Worker | Fresh bounded assignments: implementation, tests, debugging, process monitoring | Requirement/design changes, delegation |
-| Design | Optional implementation-phase UI realization/refinement within the settled Plan | Pre-implementation research/design, product policy, self-review |
-| Reviewer | Fresh independent read-only review, same-session re-review | Edits, new requirements, acceptance, delegation |
+| Role | Model / effort | Owns | Does not own |
+|---|---|---|---|
+| Director (Astra) | `gpt-6-astra` / `xhigh` | Planning judgment: understanding, research, design, user questions, Plan, implementation authorization; advice; one final check | Spawning, panes, implementation, review adjudication, final acceptance |
+| Main | inherits its session | Planning relay; execution: split, assign, integrate, adjudicate review and final-check findings, finish and report | Planning judgment, research before execution |
+| Researcher | `gpt-6-luna` / `max` / fast | Read-only investigation requested by Astra | Scope, design, edits |
+| Worker | `gpt-6-luna` / `max` / fast | Bounded implementation, tests, debugging, monitoring; fixes in its review cycle | Requirement/design changes |
+| Design | `gpt-6-sol` / `max` | Optional implementation-phase UI realization | Product policy, reviewing its own work |
+| Reviewer | `gpt-6-sol` / `xhigh` | Fresh independent read-only review; same-session re-review | Edits, new requirements, adjudication |
 
-The logical decision authority is Director; the technical parent of EVERY child is
-Main. There is no two-level spawn tree. All roles, including Director, execute their
-own assignments and may not delegate via tools, CLI, another skill or another plugin.
+Main is the technical parent of every child; there is no nested spawning. Astra's
+research requests reach researchers through Main's mechanical relay. No role
+delegates through tools, CLI, another skill or another plugin.
 
-Use profiles/director/astra.toml plus main.toml, worker.toml, design.toml and
-reviewer.toml. `main.toml` describes the expected already-running Main; do not spawn
-or switch Main. Profiles are FrontierPlan data, not Codex custom-agent registrations.
-Only Worker requests fast separately from `reasoning_effort = "max"`.
-Fable is reserved for a future verified director profile/launcher, not a working alias.
+Profiles live in `profiles/director/astra.toml` and `profiles/*.toml`. They are
+FrontierPlan data, not Codex custom-agent registrations. `main.toml` describes the
+already-running Main; it is never spawned or retuned. Only the Luna roles request
+fast, separately from `reasoning_effort = "max"`. Effort values are lowercase.
 
-Director and Reviewer do not edit project content. A Director may read authorized
-files/sources and write plans, reports and isolated probes. Reviewer writes only its
-report/protocol data. These are role instructions, not a read-only sandbox claim.
-All role instructions remain subordinate to host/system/user permissions. Never
-widen filesystem/network/approval scope or assume a plan grants publishing consent.
+Astra, researchers and the Reviewer do not edit project content; they write only
+their reports, protocol data and scratch files under the run directory. These are
+role instructions, not a read-only sandbox. All roles stay subordinate to
+host/system/user permissions. Never widen filesystem, network or approval scope, or
+treat a Plan as publishing consent.
 
-Herdr requests workspace-write + never for each child (see backend compatibility
-notes). Native children inherit effective parent permissions; role prose does not
-narrow a broad parent sandbox. Verify before delegation and fail closed if the fixed
-child boundary cannot be met without unauthorized changes. Main retains its own
-existing permissions. No custom agent/config installation happens automatically.
+Herdr requests workspace-write + never for each child (see the backend notes).
+Native children inherit effective parent permissions; role text does not narrow a
+broad parent sandbox. Verify before delegation and stop if the child boundary cannot
+be met without unauthorized changes. No custom agent or config is installed.
 
-A direct user instruction to a child first invalidates its old report with `begin`.
-Include the instruction and its effect in the new report. If it changes requirements,
-Main forwards it to Director; do not independently expand scope. This cooperative
-protocol and live activity checks reduce races but do not atomically intercept typing.
+A direct user instruction to a child first invalidates its old report with `begin`;
+the new report includes the instruction and its effect. Main brings scope changes
+back to its own plan, or to Astra during planning. This cooperative protocol does
+not atomically intercept typing.

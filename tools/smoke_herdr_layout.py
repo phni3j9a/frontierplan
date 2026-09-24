@@ -65,10 +65,10 @@ def smoke(socket):
     created = None
     evidence = {"herdr_version": subprocess.check_output([real.binary, "--version"], text=True).strip(),
                 "real": ["pane creation", "layout geometry", "focus", "resize", "move", "pane close", "split collapse"],
-                "synthetic": ["agent identity", "model start", "prompts", "reports", "acceptance", "activity"],
+                "synthetic": ["agent identity", "model start", "prompts", "reports", "decisions", "activity"],
                 "models_launched": 0, "snapshots": {}}
     try:
-        created = real.call("workspace", "create", "--cwd", str(case.project), "--label", "FrontierPlan issue 4 smoke", "--no-focus")
+        created = real.call("workspace", "create", "--cwd", str(case.project), "--label", "FrontierPlan layout smoke", "--no-focus")
         main = created["root_pane"]
         api = SyntheticAgents(real, main)
         def capture(name):
@@ -76,10 +76,25 @@ def smoke(socket):
             evidence["snapshots"][name] = copy.deepcopy(layout)
             fp.require(layout["focused_pane_id"] == main["pane_id"], "Spawn stole Main focus.")
             return layout
+        final_check = lambda plan_id, criterion: (
+            hd.final_check(case.run, case.input),
+            case.decide(director, {"kind": "final_check", "plan_id": plan_id, "findings": [], "plan_divergence": [],
+                                   "ac_status": [{"criterion": criterion, "status": "met", "evidence": "SYNTHETIC"}]}))
         with patch.object(transport, "FakeHerdr", return_value=api):
-            director = case.director(); case.director_plan(director)
+            director = case.director()
             planning = capture("planning")
             fp.require(planning["splits"][0]["ratio"] == 0.4, "Main ratio is not 40/60.")
+            case.decide(director, {"kind": "research", "requests": [{"id": "r1", "assignment": "SYNTHETIC A"},
+                                                                    {"id": "r2", "assignment": "SYNTHETIC B"}]})
+            researchers = [t["task"] for t in hd.relay(case.run)["tasks"]]
+            research = capture("research")
+            fp.require([(s["direction"], s["ratio"]) for s in research["splits"]]
+                       == [("right", 0.4), ("down", 0.4), ("right", 0.5)], "Researchers escaped the role layout.")
+            for task in researchers:
+                case.report(task, "SYNTHETIC: facts"); hd.collect(task)
+            hd.relay(case.run)
+            capture("research_returned")
+            case.director_plan(director)
             worker = hd.spawn(case.run, "worker", case.input)["task"]
             design = hd.spawn(case.run, "design", case.input)["task"]
             for task in (worker, design):
@@ -92,15 +107,12 @@ def smoke(socket):
                        "Execution escaped the role layout.")
             real.call("pane", "resize", "--pane", main["pane_id"], "--direction", "right", "--amount", "0.1")
             capture("manually_resized")
-            worker_decision = case.evidence(worker, reviewer)
             real.call("pane", "move", case.task(worker)["handle"]["pane_id"], "--new-tab",
                       "--workspace", created["workspace"]["workspace_id"], "--label", "moved-owned-worker", "--no-focus")
             capture("worker_moved")
-            hd.release(worker, worker_decision)
-            hd.release(design, case.evidence(design, reviewer))
-            capture("workers_released")
-            case.accept(director); hd.release(reviewer)
-            capture("reviewer_released")
+            final_check("p1", "Works")
+            hd.close(worker); hd.close(design); hd.close(reviewer)
+            capture("review_cycle_closed")
             case.replan(director)
             new_worker = hd.spawn(case.run, "worker", case.input)["task"]
             recreated = capture("execution_recreated")
@@ -109,8 +121,8 @@ def smoke(socket):
             case.report(new_worker, "SYNTHETIC: late fix"); hd.collect(new_worker)
             new_reviewer = hd.spawn(case.run, "reviewer", case.input)["task"]
             case.report(new_reviewer, "SYNTHETIC: FINDINGS: none"); hd.collect(new_reviewer)
-            hd.release(new_worker, case.evidence(new_worker, new_reviewer))
-            case.accept(director); hd.release(new_reviewer); fp.finish(case.run)
+            final_check("p2", "Fix works")
+            fp.finish(case.run, case.write("final.md", "SYNTHETIC final report"))
             for path, _ in fp.tasks(Path(case.run)): hd.close(str(path))
             final = capture("finished")
             fp.require(len(final["panes"]) == 1, "Owned child panes remain.")
@@ -118,7 +130,7 @@ def smoke(socket):
                                         "ratio": float(c[c.index("--ratio") + 1]), "no_focus": "--no-focus" in c}
                                        for c in api.calls if c[:2] == ("pane", "split")]
             evidence["close_calls"] = [c for c in api.calls if c[:2] == ("pane", "close")]
-            fp.require(len(evidence["close_calls"]) == 6, "A released pane was closed twice or not closed.")
+            fp.require(len(evidence["close_calls"]) == 8, "A pane was closed twice or not closed.")
             evidence["result"] = "PASS"
     finally:
         case.doCleanups()
