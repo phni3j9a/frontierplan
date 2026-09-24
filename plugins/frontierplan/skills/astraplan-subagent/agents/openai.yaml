@@ -1,6 +1,6 @@
 interface:
   display_name: "AstraPlan-subagent"
-  short_description: "Astra researches and plans; Main coordinates via subagent."
+  short_description: "Astra plans; Main coordinates execution via subagent."
   default_prompt: "Use $frontierplan:astraplan-subagent for this engineering task."
 
 policy:

@@ -50,6 +50,10 @@ class MainIdentity(unittest.TestCase):
         output = contextlib.redirect_stdout(io.StringIO())
         output.__enter__(); self.addCleanup(output.__exit__, None, None, None)
 
+    def main_op(self, run):
+        """Any Main-only ledger write; storing a user message is the simplest."""
+        return fp.message(run, self.input)
+
     def explicit(self, *, session="devin-session", agent="devin"):
         env = patch.dict(os.environ, {"FRONTIERPLAN_MAIN_AGENT": agent,
                                      "FRONTIERPLAN_MAIN_SESSION_ID": session, "HERDR_PANE_ID": ""})
@@ -65,14 +69,13 @@ class MainIdentity(unittest.TestCase):
     def test_current_pane_autodetects_devin_without_codex_env(self):
         value = self.initialize()
         self.assertEqual(value["main_identity"], {"agent": "devin", "session_id": "devin-session"})
-        fp.authorize(self.run, 1)
-        fp.message(self.run, self.input)
+        self.main_op(self.run)
         self.assertEqual(fp.run_at(self.run)[1]["user_seq"], 2)
 
     def test_explicit_identity_works_without_current_pane_env(self):
         self.explicit(agent="Devin")
         self.initialize(explicit=True)
-        fp.authorize(self.run, 1)
+        self.main_op(self.run)
         self.assertFalse(any(c[:2] == ("pane", "current") for c in self.api.calls))
 
     def test_explicit_pane_pair_alone_cannot_claim_a_conversation(self):
@@ -87,14 +90,14 @@ class MainIdentity(unittest.TestCase):
         self.api.panes[0].pop("agent_session")
         with self.assertRaises(fp.Failure): self.initialize()
         self.explicit(); self.initialize(explicit=True)
-        fp.authorize(self.run, 1)
+        self.main_op(self.run)
         self.api.panes[0]["agent_session"] = "different"
-        with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.run)
 
     def test_previously_observed_session_cannot_disappear(self):
         self.explicit(); self.initialize(explicit=True)
         self.api.panes[0].pop("agent_session")
-        with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.run)
 
     def test_partial_explicit_identity_is_rejected(self):
         for env in ({"FRONTIERPLAN_MAIN_AGENT": "devin"},
@@ -141,44 +144,44 @@ class MainIdentity(unittest.TestCase):
 
     def test_reused_pane_with_other_terminal_blocks_common_ledger(self):
         self.initialize(); self.api.panes[0]["terminal_id"] = "replacement"
-        with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.run)
 
     def test_unrelated_current_pane_cannot_manage_main(self):
         self.initialize()
         other = dict(self.api.panes[0], pane_id="other", terminal_id="other-terminal")
         self.api.panes.append(other); self.api.current = "other"
         with patch.dict(os.environ, {"HERDR_PANE_ID": "other"}), self.assertRaises(fp.Failure):
-            fp.authorize(self.run, 1)
+            self.main_op(self.run)
 
     def test_ambiguous_terminal_is_rejected(self):
         self.initialize(); self.api.panes.append(dict(self.api.panes[0], pane_id="duplicate"))
-        with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.run)
 
     def test_explicit_identity_follows_manual_terminal_move(self):
         self.explicit(); self.initialize(explicit=True)
         self.api.panes[0]["pane_id"] = "moved"
-        fp.authorize(self.run, 1)
+        self.main_op(self.run)
         self.assertEqual(hd.main_pane(fp.run_at(self.run)[1], self.api)["pane_id"], "moved")
 
     def test_lost_caller_evidence_is_not_replaced_by_saved_identity(self):
         self.initialize()
         with patch.dict(os.environ, {"HERDR_PANE_ID": ""}), self.assertRaises(fp.Failure):
-            fp.authorize(self.run, 1)
+            self.main_op(self.run)
 
     def test_children_cannot_initialize_or_manage_main(self):
         self.initialize(); before = list(self.api.calls)
         for role in fp.CHILDREN:
             with self.subTest(role=role), patch.dict(os.environ, {"FRONTIERPLAN_ROLE": role}):
                 with self.assertRaises(fp.Failure): hd.initialize(str(self.project), self.input)
-                with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+                with self.assertRaises(fp.Failure): self.main_op(self.run)
         self.assertEqual(self.api.calls, before)
 
     def test_native_subagent_still_requires_codex_identity(self):
         self.explicit()
-        with self.assertRaises(fp.Failure): fp.authorize(self.native_run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.native_run)
         with self.assertRaises(fp.Failure): fp.initialize("subagent", str(self.project), self.input)
         with patch.dict(os.environ, {"CODEX_THREAD_ID": "main-test"}):
-            fp.authorize(self.native_run, 1)  # No herdr or generic-identity fallback.
+            self.main_op(self.native_run)  # No herdr or generic-identity fallback.
         self.assertEqual(self.api.calls, [])
 
     def test_legacy_codex_run_remains_usable_and_guarded(self):
@@ -188,10 +191,10 @@ class MainIdentity(unittest.TestCase):
             path = Path(self.run, "run.json"); state = fp.read(path)
             state.pop("main_identity"); state["herdr"].pop("session_verified")
             fp.atomic(path, state)
-            fp.authorize(self.run, 1); hd.main_pane(state, self.api)
+            self.main_op(self.run); hd.main_pane(state, self.api)
             self.api.panes[0]["agent_session"] = "other"
             with self.assertRaises(fp.Failure): hd.main_pane(state, self.api)
-        with self.assertRaises(fp.Failure): fp.authorize(self.run, 1)
+        with self.assertRaises(fp.Failure): self.main_op(self.run)
 
     def test_main_profile_rejects_routing_overrides(self):
         profiles = self.root / "profiles"; profiles.mkdir()
@@ -200,40 +203,46 @@ class MainIdentity(unittest.TestCase):
             with self.subTest(key=key), patch.object(fp, "ROOT", self.root), self.assertRaises(fp.Failure):
                 fp.profile("main")
 
-    def test_devin_full_execution_acceptance_and_child_routing(self):
+    def test_devin_full_execution_final_check_and_child_routing(self):
         self.initialize(); original = copy.deepcopy(self.api.panes[0])
-        director = hd.spawn(self.run, "director", self.input)["task"]
-        self.report(director, {"kind": "reply", "user_response": "Need clarification"})
-        hd.collect(director); fp.decision(director)
-        fp.message(self.run, self.input); hd.send(director, self.input)
+        director = hd.spawn(self.run, "director")["task"]
+        self.report(director, {"kind": "research", "requests": [{"id": "r1", "assignment": "Survey."}]})
+        hd.collect(director); self.assertEqual(fp.decision(director)["next"], "relay")
+        researcher = hd.relay(self.run)["tasks"][0]["task"]
+        self.report(researcher, "Facts."); hd.collect(researcher); hd.relay(self.run)
         self.report(director, {"kind": "plan", "plan_id": "p1", "user_response": "Plan",
                               "plan": "Implement", "acceptance_criteria": ["Works"], "verification": ["Tests"]})
-        hd.collect(director); fp.decision(director); fp.authorize(self.run, 2); fp.start(self.run)
+        hd.collect(director); self.assertEqual(fp.decision(director)["next"], "relay_to_user")
+        fp.message(self.run, self.input); hd.forward(self.run)
+        self.report(director, {"kind": "authorize", "plan_id": "p1", "authorization_message": 2})
+        hd.collect(director); fp.decision(director); fp.start(self.run)
         worker = hd.spawn(self.run, "worker", self.input)["task"]
         self.report(worker, "Implemented; simulated test evidence."); hd.collect(worker)
         design = hd.spawn(self.run, "design", self.input)["task"]
         self.report(design, "UI implemented; simulated test evidence."); hd.collect(design)
         reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
         self.report(reviewer, "FINDINGS: none"); hd.collect(reviewer)
-        candidate = fp.candidate(self.run, self.input)
-        hd.send(director, self.input)
-        self.report(director, {"kind": "accept", "plan_id": "p1", "candidate_id": candidate["id"],
-                              "user_response": "Astra final report"})
+        hd.final_check(self.run, self.input)
+        self.report(director, {"kind": "final_check", "plan_id": "p1",
+                              "ac_status": [{"criterion": "Works", "status": "met", "evidence": "tests"}],
+                              "findings": [], "plan_divergence": []})
         hd.collect(director); fp.decision(director)
-        self.assertEqual(fp.finish(self.run)["user_response"], "Astra final report")
+        self.assertEqual(fp.finish(self.run, self.write("final.md", "Main final report"))["user_response"],
+                         "Main final report")
         for task in (director, worker, design, reviewer): hd.close(task)
         self.assertEqual(self.api.panes, [original])
         starts = [c for c in self.api.calls if c[:2] == ("agent", "start")]
-        self.assertEqual(len(starts), 4)
+        self.assertEqual(len(starts), 5)
         self.assertTrue(all(c[c.index("--kind") + 1] == "codex" for c in starts))
-        for task, model, effort in ((director, "gpt-6-astra", "xhigh"),
+        for task, model, effort in ((director, "gpt-6-astra", "xhigh"), (researcher, "gpt-6-luna", "max"),
                                     (worker, "gpt-6-luna", "max"), (design, "gpt-6-sol", "max"),
                                     (reviewer, "gpt-6-sol", "xhigh")):
             args = fp.task_at(task)[1]["requested_codex_args"]
             self.assertEqual(args[args.index("-m") + 1], model)
             self.assertIn(f'model_reasoning_effort="{effort}"', args)
-            self.assertEqual('service_tier="fast"' in args, task == worker)
-            self.assertEqual('features.fast_mode=true' in args, task == worker)
+            luna = task in (worker, researcher)
+            self.assertEqual('service_tier="fast"' in args, luna)
+            self.assertEqual('features.fast_mode=true' in args, luna)
             self.assertIn('shell_environment_policy.set.FRONTIERPLAN_MAIN_AGENT=""', args)
             self.assertIn('shell_environment_policy.set.FRONTIERPLAN_MAIN_SESSION_ID=""', args)
 
@@ -251,7 +260,7 @@ class MainIdentity(unittest.TestCase):
         result = call("init", "--backend", "herdr", "--cwd", str(self.project), "--request-file", self.input)
         self.assertEqual(result.returncode, 0, result.stderr)
         run = json.loads(result.stdout)["run"]; self.addCleanup(shutil.rmtree, run, True)
-        self.assertEqual(call("authorize", "--run", run, "--message", "1").returncode, 0)
+        self.assertEqual(call("message", "--run", run, "--file", self.input).returncode, 0)
         wrong = dict(env, FRONTIERPLAN_MAIN_AGENT="devin", FRONTIERPLAN_MAIN_SESSION_ID="wrong")
         failure = call("status", "--run", run, environment=wrong)
         self.assertEqual(failure.returncode, 1); self.assertIn("error", json.loads(failure.stderr))

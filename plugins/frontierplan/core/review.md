@@ -1,64 +1,93 @@
-# Independent review and Director acceptance
+# Independent Sol review
 
-Start a fresh Sol / `xhigh` Reviewer after implementation/integration, independent
-from Director, Workers and Design. Use the same Reviewer for accepted fixes and
-re-review; assign fixes to a fresh Worker by default under [workflow.md](workflow.md).
-Do not use Luna or the planning Director as the independent Reviewer. Worker/Design
-sessions may be released after their completed assignment, before independent review.
-The Reviewer stays through Director acceptance of the exact candidate.
+Adapted from phni3j9a/axiom_for_herdr's MIT-licensed review guidance.
 
-Review the accepted intent, non-goals, current Plan/criteria, integrated candidate,
-existing out-of-scope changes and actual verification. Inspect read-only; no edits,
-formatters, auto-fixes, commits, publishing or tests that mutate product files.
+Start the review cycle with a fresh Reviewer (`gpt-6-sol` / `xhigh`), independent
+of Astra, Workers and Design. Keep that same session for re-review, and keep the
+Workers responsible for the candidate through the cycle so they can address
+accepted findings. Main owns adjudication, risk tolerance within the Plan, and the
+decision to end the cycle. Astra is never the independent Reviewer.
 
-Material findings need current evidence of a requirement/contract violation,
-concrete regression, correctness/security/data-integrity/compatibility defect, or a
-verification gap preventing judgment of those obligations. Preference, hypothetical
-future use and optional hardening do not create blocking requirements. Existing
-candidate code and prior reviewer suggestions do not establish user requirements.
+## Review boundary
 
-Return stable IDs, evidence, concrete impact and the smallest useful remedy:
+Supply the Plan's intent, acceptance criteria, relevant decisions and non-goals,
+the candidate diff, existing changes outside scope, and verification already
+performed. Scale this to the task; do not demand fields that add no value.
+
+Review project content read-only: no project edits, commits, formatters, auto-fixes
+or commands likely to mutate the candidate. The assigned report location is the
+only permitted output.
+
+## Admissible findings
+
+A material finding needs independent current evidence of at least one of:
+
+- a violation of the Plan's intent or an existing supported contract;
+- a concrete failure or regression in the candidate;
+- a concrete security, data-integrity, trust-boundary or compatibility defect;
+- a verification gap that materially prevents judging one of those obligations.
+
+Hypothetical future use, optional hardening, preference, style and generic advice
+are not blocking findings. Candidate-created code, tests, schemas, documentation or
+abstractions do not establish that their capability is required. Prior reviewer
+suggestions do not create requirements.
+
+**Unnecessary complexity is reviewable** when it lacks independent current
+justification and materially increases failure surface, state, concurrency,
+dependencies, migrations or maintenance. Prefer removing unjustified machinery when
+that is the smallest correction that meets the current contract. Do not redesign
+beyond the Plan unless its intent cannot otherwise be met.
+
+## Return
+
+Use stable finding IDs:
 ```
 FINDINGS:
-- FP-001 ...
-  Requirement: <existing accepted criterion/contract>
-  Evidence: <reproduction and current candidate>
-  Impact: ...
-  Remediation: <smallest useful fix>
-  Closure: <expected behavior and minimum sufficient verification>
-VERIFICATION_GAPS: ...
-RESIDUAL_RISK: ...
-DIRECT_USER_INSTRUCTIONS: none / original instruction and effect
+- FP-001 <title>
+  Evidence: <file/symbol/behavior and independent current basis>
+  Impact: <concrete consequence>
+  Remediation: <smallest useful correction>
+
+VERIFICATION_GAPS: <only material gaps>
+RESIDUAL_RISK: <concise relevant uncertainty>
+DIRECT_USER_INSTRUCTIONS: <instruction and effect, or none>
 ```
-Return FINDINGS: none when no material findings exist. A completed review is not
-release acceptance. The helper fingerprints the candidate at review assignment and
-report publication; changes during review require a blocked report and a new turn.
+Return `FINDINGS: none` when there are no material findings. A complete review is
+not a release verdict.
 
-Main applies the already-agreed criteria: ACCEPT supported fixes, REJECT unsupported
-claims, DEFER only within previously agreed risk policy, ESCALATE consequential
-uncertainty. Main cannot drop requirements, accept new material risks or choose a
-new architecture by calling it review adjudication. Director decides those questions.
-Include important rejected/deferred evidence in Director's final packet.
+## Adjudication
 
-For each accepted fix, Main supplies the requirement, reproduction, expected behavior
-and minimum sufficient verification to the assigned Worker. Preserve finding IDs and
-explicit ACCEPT/REJECT/DEFER decisions. Start the next Reviewer turn with the changed
-candidate, actual verification and that same closure checklist. Re-review the fixes
-and affected behavior; do not restart an open-ended search for unrelated improvements.
-Newly introduced/revealed material defects remain reviewable, with new evidence.
-Do not revive rejected preferences/hardening without independent new evidence.
+Main classifies each finding ACCEPT, REJECT, DEFER or ESCALATE and turns accepted
+ones into bounded fixes for the responsible Worker, with the finding IDs, the
+expected behavior and the required verification. Do not forward every suggestion
+blindly. Concrete evidence stays visible in the final report even when Main defers
+a mitigation.
 
-Aim for one initial review and one fix-verification pass in ordinary work. If the
-same accepted finding remains unresolved after two fix-verification passes, or
-acceptance conditions keep expanding, Main stops automatic rework dispatch and sends
-Director the finding history, attempted fixes, remaining evidence and proposed bounded
-next step. Director diagnoses misunderstanding, design/scope complexity and sufficient
-verification before further work. This is a convergence checkpoint, never automatic
-acceptance after a round quota. Existing authorization permits continued agreed work;
-do not add a new user approval round merely because this checkpoint was reached.
+## Finding freeze and continuity
 
-Director should reassess whether the verification machinery is proportionate to the
-user's goal. Plan wording or a prior suggestion alone does not prove every additional
-layer is necessary. Keep real correctness, privacy and data-integrity obligations;
-choose the smallest verification that establishes them. Main must not independently
-weaken requirements, accept new material risk or redefine completion.
+There is no fixed finding count and no round limit. After accepted fixes, Main
+sends the same Reviewer its adjudication, the updated candidate and verification
+evidence. Keep accepted fixes central. Do not reopen REJECT/DEFER concerns without
+materially new independent evidence. New findings remain admissible for:
+
+- material defects directly introduced or revealed by an accepted fix;
+- newly evidenced concrete correctness, security, data-integrity, trust-boundary
+  or compatibility defects, including ones missed initially;
+- independently evidenced violations of requirements already inside the boundary.
+
+Do not restart preference or optional-hardening review. If the Plan changes
+materially, Main decides whether the same session resets its boundary or a fresh
+cycle is useful.
+
+If the same accepted finding keeps returning after fixes, or fixes keep revealing
+defects of one kind, that points at the approach rather than the code: Main
+consults Astra with the finding history before sending another fix. This is not a
+user checkpoint and not a round quota.
+
+If the Reviewer session is lost, a fresh Sol replacement gets the earlier findings,
+adjudication, fixes, current candidate and evidence. Never substitute Luna.
+
+Main ends review when the candidate is sufficiently resolved and no accepted
+material finding remains unaddressed. Then Main runs Astra's final check; findings
+from it are adjudicated the same way and re-reviewed by the same Reviewer. After
+the cycle, close the Reviewer and the Workers whose work is resolved.

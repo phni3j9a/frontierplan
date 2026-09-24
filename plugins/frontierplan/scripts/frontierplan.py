@@ -13,7 +13,6 @@ import json
 import os
 from pathlib import Path
 import shlex
-import stat
 import subprocess
 import sys
 import tempfile
@@ -22,8 +21,18 @@ import tomllib
 import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
-ROLES = ("director", "main", "worker", "design", "reviewer")
+ROLES = ("director", "main", "researcher", "worker", "design", "reviewer")
 CHILDREN = tuple(r for r in ROLES if r != "main")
+EXECUTORS = ("worker", "design", "reviewer")
+PLANNING = ("planning", "planned")
+# Director decision kinds accepted for each kind of Director turn.
+PURPOSES = {
+    "planning": ("research", "reply", "plan", "authorize", "blocked"),
+    "research_results": ("research", "reply", "plan", "authorize", "blocked"),
+    "consultation": ("advice", "plan", "blocked"),
+    "final_check": ("final_check", "blocked"),
+}
+AC_STATUS = ("met", "partial", "unverified")
 
 
 class Failure(Exception):
@@ -92,14 +101,14 @@ def main_only(state: dict) -> None:
         from herdr import Herdr, main_pane
         main_pane(state, Herdr(state))
     else:
-        # Native subagents and pre-generalization Codex runs keep their contract.
         require(thread_id() == state["main_thread_id"], "This run belongs to a different Main conversation.")
 
 
 def run_at(path: str | Path) -> tuple[Path, dict]:
     root = Path(path).expanduser().resolve()
     state = read(root / "run.json")
-    require(state.get("schema_version") == 1, "Unsupported run format.")
+    require(state.get("schema_version") == 2,
+            "Unsupported run format; finish runs created by FrontierPlan 0.1 with that version.")
     return root, state
 
 
@@ -115,7 +124,7 @@ def transaction(path: str | Path):
 
 def profile(role: str, director: str = "astra") -> dict:
     require(role in ROLES, "Unknown role.")
-    require(director == "astra", "Only the Astra director is shipped in v0.1.0.")
+    require(director == "astra", "Only the Astra director is shipped.")
     path = ROOT / "profiles" / (f"director/{director}.toml" if role == "director" else f"{role}.toml")
     with path.open("rb") as stream:
         value = tomllib.load(stream)
@@ -127,51 +136,19 @@ def profile(role: str, director: str = "astra") -> dict:
         return value
     require(value.get("reasoning_effort") in ("xhigh", "max"), "effort must be lowercase xhigh or max.")
     require(isinstance(value.get("model"), str) and value["model"], "A model is required.")
-    require(role == "worker" or "service_tier" not in value, "Only Worker has a tier override.")
+    require(role in ("worker", "researcher") or "service_tier" not in value,
+            "Only Luna Worker/Researcher have a tier override.")
     return value
 
 
-def git(cwd: str, *args: str, allowed_failure: bool = False) -> bytes:
-    result = subprocess.run(["git", "-C", cwd, *args], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, timeout=45, check=False)
-    if result.returncode and not allowed_failure:
-        raise Failure(result.stderr.decode(errors="replace").strip())
-    return result.stdout if not result.returncode else b""
-
-
-def snapshot(cwd: str) -> dict:
-    """Hash HEAD, index, and tracked/non-ignored working files; never follow links."""
-    root = Path(os.fsdecode(git(cwd, "rev-parse", "--show-toplevel").strip())).resolve()
-    require(not git(str(root), "ls-files", "--stage").startswith(b"160000 "),
-            "Submodules require an explicit verification strategy; not supported by the v1 snapshot.")
-    index = git(str(root), "ls-files", "--stage", "-z")
-    require(not any(p.startswith(b"160000 ") for p in index.split(b"\0")),
-            "Submodule snapshots are not supported; do not claim complete coverage.")
-    head = git(str(root), "rev-parse", "--verify", "HEAD", allowed_failure=True).strip().decode()
-    hasher = hashlib.sha256()
-    hasher.update(head.encode() + b"\0" + index + b"\0")
-    paths = sorted(set(git(str(root), "ls-files", "--cached", "--others", "--exclude-standard", "-z").split(b"\0")) - {b""})
-    for raw in paths:
-        file = root / os.fsdecode(raw)
-        hasher.update(len(raw).to_bytes(8, "big") + raw)
-        try:
-            info = file.lstat()
-        except FileNotFoundError:
-            hasher.update(b"missing\0")
-            continue
-        hasher.update(str(info.st_mode).encode() + b"\0")
-        if stat.S_ISLNK(info.st_mode):
-            data = os.fsencode(os.readlink(file))
-            hasher.update(len(data).to_bytes(8, "big") + data)
-        elif stat.S_ISREG(info.st_mode):
-            hasher.update(info.st_size.to_bytes(8, "big"))
-            with file.open("rb") as stream:
-                for block in iter(lambda: stream.read(1024 * 1024), b""):
-                    hasher.update(block)
-        else:
-            raise Failure(f"Unsupported candidate entry: {file}")
-    return {"id": hasher.hexdigest(), "head": head or None, "root": str(root),
-            "coverage": "HEAD, index, tracked and non-ignored untracked files; ignored artifacts require evidence"}
+def git(cwd: str, *args: str) -> str | None:
+    """Output of a read-only git command, or None when it could not run."""
+    try:
+        result = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=True,
+                                timeout=45, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def tasks(root: Path) -> list[tuple[Path, dict]]:
@@ -186,6 +163,10 @@ def task_at(path: str | Path) -> tuple[Path, dict, Path, dict]:
     return path, task, root, state
 
 
+def ended(task: dict) -> bool:
+    return bool(task.get("closed") or task.get("lost"))
+
+
 def current_result(path: Path, task: dict) -> dict | None:
     file = path / f"{task['request_id']}.result.json"
     if not file.exists():
@@ -195,151 +176,49 @@ def current_result(path: Path, task: dict) -> dict | None:
     return result
 
 
+def receipt_of(path: Path) -> dict:
+    return read(path / "receipt.json") if (path / "receipt.json").exists() else {}
+
+
 def collected(path: Path, task: dict, complete: bool = True) -> dict:
     result = current_result(path, task)
     require(result and result["status"] in (("complete",) if complete else ("complete", "blocked")),
             "A current completed report is required.")
-    receipt = read(path / "receipt.json") if (path / "receipt.json").exists() else {}
-    require(receipt.get("digest") == digest(result), "Collect the current report first.")
+    require(receipt_of(path).get("digest") == digest(result), "Collect the current report first.")
     return result
+
+
+def completed(path: Path, task: dict) -> bool:
+    result = current_result(path, task)
+    return bool(result and result["status"] == "complete" and receipt_of(path).get("digest") == digest(result))
 
 
 def uncollected_reports(root: Path) -> list[dict]:
     """Reconcile current requests, independently of notification delivery history."""
     reports = []
     for path, task in tasks(root):
-        if any(task.get(k) for k in ("closed", "lost", "released")):
+        if ended(task):
             continue
         result = current_result(path, task)
-        receipt = read(path / "receipt.json") if (path / "receipt.json").exists() else {}
         if (result and result["status"] in ("complete", "blocked")
-                and receipt.get("digest") != digest(result)):
+                and receipt_of(path).get("digest") != digest(result)):
             reports.append({"task": str(path), "role": task["role"],
                             "request_id": task["request_id"], "status": result["status"]})
     return reports
 
 
-def assignment_release_decision(decision: dict) -> None:
-    require(all(decision.get(k) is True for k in
-                ("integrated", "assignment_complete", "no_active_processes", "no_longer_needed"))
-            and isinstance(decision.get("reason"), str) and decision["reason"].strip(),
-            "Confirm integration, assignment completion, no active processes and no remaining session role, with reasons.")
+def director_task(root: Path) -> tuple[Path, dict]:
+    live = [(p, t) for p, t in tasks(root) if t["role"] == "director" and not ended(t)]
+    require(len(live) == 1, "Exactly one live Director is required; start it or recover the lost one.")
+    return live[0]
 
 
-def assignment_release_binding(path: Path, task: dict, state: dict) -> dict:
-    require(task["role"] in ("worker", "design"), "Only Worker/Design can finish an assignment before review.")
-    require(not any(task.get(k) for k in ("closed", "lost", "released", "closing")), "Participant is unavailable.")
-    require(state["phase"] in ("executing", "acceptance", "accepted")
-            and not state["awaiting_director"] and state.get("plan")
-            and task.get("plan_id") == state["plan"]["id"], "Release requires the current reconciled Plan.")
-    require(task.get("handle"), "Bind the actual session before release.")
-    if state["backend"] == "subagent":
-        require(task["handle"].get("agent_id"), "Bind the native agent ID before release.")
-    result = collected(path, task)
-    return {"kind": "assignment", "backend": state["backend"],
-            "task_id": task["id"], "request_id": task["request_id"],
-            "result_digest": digest(result), "receipt_digest": digest(read(path / "receipt.json")),
-            "handle_digest": digest(task["handle"]), "candidate_id": snapshot(state["cwd"])["id"],
-            "plan_id": state["plan"]["id"], "user_seq": state["user_seq"]}
-
-
-def assignment_release_check(task_path: str) -> dict:
-    path, task, _, state = task_at(task_path)
-    main_only(state)
-    return {"binding": assignment_release_binding(path, task, state),
-            "decision": {"integrated": False, "assignment_complete": False,
-                         "no_active_processes": False, "no_longer_needed": False, "reason": ""}}
-
-
-def release_record(task_path: str, file: str, closure_file: str) -> dict:
-    """Record an actual native closure; this helper never closes a native agent."""
-    path, _, root, _ = task_at(task_path)
-    evidence, closure = read(file), read(closure_file)
-    with transaction(root) as (_, state), lock(path / ".report.lock"):
-        require(state["backend"] == "subagent", "Use herdr.py release for herdr participants.")
-        task = read(path / "task.json")
-        binding = assignment_release_binding(path, task, state)
-        require(evidence.get("binding") == binding, "Release evidence is stale; inspect closure and handoff before recovery.")
-        assignment_release_decision(evidence.get("decision") or {})
-        require(closure.get("agent_id") == task["handle"].get("agent_id")
-                and closure.get("closed") is True and isinstance(closure.get("evidence"), str)
-                and closure["evidence"].strip(), "Record the actual native close result for this agent ID.")
-        task.update(released=True, release={"binding": binding, "decision": evidence["decision"],
-                                           "closure": closure})
-        atomic(path / "task.json", task)
-    return {"released_record": task["id"], "note": "Native closure is Main-supplied evidence, not independently verified."}
-
-
-def release_decision(decision: dict) -> None:
-    require(decision.get("integrated") is True and decision.get("unresolved_findings") == []
-            and decision.get("no_longer_needed") is True
-            and isinstance(decision.get("reason"), str) and decision["reason"].strip(),
-            "Main must confirm integration, no unresolved findings and no remaining role, with reasons.")
-
-
-def released_evidence(path: Path, task: dict) -> dict:
-    """Keep release-time evidence verifiable even after a Reviewer gets another turn."""
-    result = collected(path, task)
-    release = task.get("release") or {}
-    binding = release.get("binding") or {}
-    backend = read(Path(task["run"]) / "run.json")["backend"]
-    require(backend == "herdr" or binding.get("kind") == "assignment",
-            "Native release requires assignment and native closure evidence.")
-    require(task.get("released") and not task.get("closing")
-            and binding.get("task_id") == task["id"]
-            and binding.get("request_id") == task["request_id"]
-            and binding.get("result_digest") == digest(result), "Released report changed or release evidence is missing.")
-    if task["role"] in ("worker", "design"):
-        if binding.get("kind") == "assignment":
-            assignment_release_decision(release.get("decision") or {})
-            require(binding.get("backend") == backend
-                    and binding.get("handle_digest") == digest(task.get("handle"))
-                    and binding.get("plan_id") == task.get("plan_id"), "Archived assignment identity changed.")
-            if backend == "subagent":
-                closure = release.get("closure") or {}
-                require(task["handle"].get("agent_id")
-                        and closure.get("agent_id") == task["handle"]["agent_id"]
-                        and closure.get("closed") is True and isinstance(closure.get("evidence"), str)
-                        and closure["evidence"].strip(), "Native closure evidence is missing.")
-            return result
-        release_decision(release.get("decision") or {})
-        review = release.get("review_report") or {}
-        require(digest(review) == binding.get("reviewer", {}).get("result_digest")
-                and review.get("reviewed_snapshot") == binding.get("candidate_id")
-                and review.get("task_id") == binding.get("reviewer", {}).get("task_id")
-                and review.get("request_id") == binding.get("reviewer", {}).get("request_id"),
-                "Archived release review changed.")
-    else:
-        require(task["role"] == "reviewer" and release.get("acceptance", {}).get("candidate_id")
-                == result.get("reviewed_snapshot") == binding.get("candidate_id")
-                and binding.get("plan_id") == task.get("plan_id"), "Invalid released role/evidence.")
-    return result
-
-
-def executors_ready(root: Path, require_review: bool = False, candidate_id: str | None = None) -> None:
-    state = read(root / "run.json")
-    reviewers = 0
+def idle_executors(root: Path, plan_id: str | None) -> None:
+    """Freeze check: every live executor has returned and been collected."""
     for path, task in tasks(root):
-        if task["role"] == "director" or task.get("lost"):
+        if task["role"] not in EXECUTORS or ended(task):
             continue
-        require(not task.get("closed"), "Execution participants must remain available until final acceptance.")
-        require(not task.get("closing"), "Participant closure is uncertain; inspect before continuing.")
-        if task.get("released"):
-            result = released_evidence(path, task)
-        else:
-            result = collected(path, task)
-        if task["role"] == "reviewer":
-            plan = state.get("plan")
-            # An accepted, released Reviewer remains evidence for that exact candidate.
-            # Later work needs a new Reviewer; old evidence must not block its report.
-            if task.get("released") and (not plan or task.get("plan_id") != plan["id"]
-                    or (candidate_id is not None and result.get("reviewed_snapshot") != candidate_id)):
-                continue
-            require(plan and task.get("plan_id") == plan["id"], "Reviewer must use the current Plan boundary.")
-            if candidate_id is not None:
-                require(result.get("reviewed_snapshot") == candidate_id, "Reviewer must inspect the current candidate; re-review after changes.")
-            reviewers += 1
-    require(not require_review or reviewers, "An independent Reviewer report is required.")
+        collected(path, task, complete=False)
 
 
 def initialize(backend: str, cwd: str, request_file: str, *,
@@ -363,13 +242,13 @@ def initialize(backend: str, cwd: str, request_file: str, *,
     require(Path(cwd).is_dir(), "cwd must exist.")
     request = text(request_file)
     root = Path(tempfile.mkdtemp(prefix="frontierplan-"))
-    for name in ("tasks", "messages", "decisions", "candidates"):
+    for name in ("tasks", "messages", "decisions"):
         (root / name).mkdir(mode=0o700)
     (root / "messages" / "1.md").write_text(request, encoding="utf-8")
-    state = {"schema_version": 1, "id": uuid.uuid4().hex[:12], "backend": backend,
+    state = {"schema_version": 2, "id": uuid.uuid4().hex[:12], "backend": backend,
              "cwd": cwd, "main_thread_id": owner, "phase": "planning", "user_seq": 1,
-             "awaiting_director": True, "authorization": None, "plan": None,
-             "candidate": None, "acceptance": None, "last_decision": None}
+             "pending_forward": False, "authorization": None, "plan": None,
+             "research": None, "final_checks": {}, "last_decision": None}
     if main_identity is not None:
         state.update(main_identity=dict(main_identity), herdr=dict(herdr_binding))
     atomic(root / "run.json", state)
@@ -377,43 +256,97 @@ def initialize(backend: str, cwd: str, request_file: str, *,
 
 
 def message(run: str, file: str) -> dict:
+    """Store the user's exact words. Before execution they go to Astra unchanged."""
     value = text(file)
     with transaction(run) as (root, state):
         require(state["phase"] != "closed", "Start a new run after wrap-up.")
         state["user_seq"] += 1
         target = root / "messages" / f"{state['user_seq']}.md"
         target.write_text(value, encoding="utf-8")
-        state.update(awaiting_director=True, acceptance=None)
-        # New authorization and meaning must be considered against the new input.
-        return {"message": state["user_seq"], "file": str(target), "forward_to_director": True}
+        forward = state["phase"] in PLANNING
+        state["pending_forward"] = forward
+        if forward:
+            # The new words may withdraw consent; only Astra can record it again.
+            state["authorization"] = None
+        # Pending research returns to Astra together with the new words.
+        next_step = ("relay" if research_pending(state) else "forward") if forward else "main_decides"
+        return {"message": state["user_seq"], "file": str(target), "forward_to_director": forward,
+                "next": next_step}
 
 
-def authorize(run: str, number: int) -> dict:
-    with transaction(run) as (root, state):
-        require(state["phase"] != "closed", "The run is closed.")
-        require(1 <= number <= state["user_seq"], "Unknown user message.")
-        value = text(root / "messages" / f"{number}.md")
-        state["authorization"] = {"message": number, "digest": digest(value)}
-        return {"authorization_reference": number, "note": "Main must verify actual user consent; this is a reference, not a permission grant."}
+def research_pending(state: dict) -> bool:
+    research = state.get("research")
+    return bool(research and not research["returned"])
 
 
-def prepare(run: str, role: str, file: str, cwd: str | None = None, reuse: str | None = None) -> dict:
-    assignment = text(file)
+DIRECTOR_CONTRACT = """You are Astra, FrontierPlan's Director. Follow {astra}.
+Before implementation you own every judgment: understanding, research, design,
+questions to the user and the Plan. Research yourself read-only and with isolated
+probes; request broad investigation from Luna researchers with a `research`
+decision. Main relays your decisions without judging them. Do not spawn agents,
+manage panes, implement, edit project files, commit or publish."""
+
+ROLE_CONTRACTS = {
+    "researcher": """You are a Luna researcher answering Astra's research request.
+Investigate read-only. Temporary probes go only under {scratch}. Do not edit project
+files, commit or publish. Report facts with evidence (paths, commands, real output,
+sources) and uncertainty. Do not decide scope or design; Astra does.""",
+    "worker": """You are a Worker. Implement only the assigned ownership under the current
+Plan. Report rather than decide requirement or design changes. Stay available for
+fixes during the review cycle.""",
+    "design": """You are Design. Realize the assigned UI work within the current Plan.
+Report rather than change product direction. You cannot review your own work.""",
+    "reviewer": """You are the independent Reviewer. Follow {review}. Inspect read-only;
+do not edit project files, format, auto-fix, commit or publish.""",
+}
+
+
+def director_body(root: Path, state: dict, task: dict, purpose: str, material: str | None) -> str:
+    seen = task.get("seen_user_seq", 0)
+    new = [str(root / "messages" / f"{n}.md") for n in range(seen + 1, state["user_seq"] + 1)]
+    lines = [f"## This turn: {purpose}"]
+    lines.append({
+        "planning": "Plan from the user's words below. Ask the user, request research, return a Plan, "
+                    "or record implementation authorization, as core/astra.md describes.",
+        "research_results": "Your research requests returned. Read each report below and continue planning.",
+        "consultation": "Main is executing the Plan and asks for advice on the question below. "
+                        "Main decides adoption; answer with `advice` (or a revised `plan`).",
+        "final_check": "Perform the one-time final check of the integrated result against the "
+                       "current Plan and the user's intent. Return `final_check`.",
+    }[purpose])
+    lines.append("\n## User messages (exact user words; the only source of user intent)")
+    lines += [f"- new: {n}" for n in new] or ["- no new user messages since your last turn"]
+    lines.append(f"All messages: {root / 'messages'}")
+    lines.append("\n## Material from Main (transport facts or evidence, not user authority)")
+    lines.append(material.strip() if material else "none")
+    return "\n".join(lines)
+
+
+def prepare(run: str, role: str, file: str | None = None, cwd: str | None = None,
+            reuse: str | None = None, *, purpose: str | None = None, material: str | None = None) -> dict:
+    """Prepare a packet. Delivery happens through the selected backend."""
     require(role in CHILDREN, "Invalid delegated role.")
+    if file is not None:
+        material = text(file)
     with transaction(run) as (root, state):
         require(state["phase"] != "closed", "The run is closed.")
-        if role != "director":
-            require(state["phase"] == "executing" and not state["awaiting_director"],
-                    "Only Director runs before implementation or while a decision is pending.")
+        if role == "director":
+            purpose = purpose or "planning"
+            require(purpose in PURPOSES, "Unknown Director turn.")
+        else:
+            require(material, "An assignment file is required.")
+        if role in EXECUTORS:
+            require(state["phase"] == "executing", "Execution roles start only after the Plan is started.")
+        if role == "researcher":
+            require(research_pending(state), "Researchers start only through relay.")
         if reuse:
             path, task, task_root, _ = task_at(reuse)
             require(task_root == root and task["role"] == role, "Wrong role/run for continuation.")
-            require(not any(task.get(k) for k in ("closed", "lost", "released", "closing")),
-                    "Session is unavailable; hand off released work to a new participant.")
+            require(not ended(task) and not task.get("closing"), "Session is unavailable.")
             collected(path, task, complete=False)
         else:
             if role == "director":
-                require(not any(t["role"] == role and not t.get("lost") and not t.get("closed") for _, t in tasks(root)),
+                require(not any(t["role"] == role and not ended(t) for _, t in tasks(root)),
                         "Reuse the existing Director; do not start a second one.")
             path = root / "tasks" / uuid.uuid4().hex[:12]
             path.mkdir(mode=0o700)
@@ -426,55 +359,89 @@ def prepare(run: str, role: str, file: str, cwd: str | None = None, reuse: str |
                     delivery="prepared", created_at=time.time())
         command = shlex.join([sys.executable, str(ROOT / "scripts" / "frontierplan.py")])
         base = f"--task {shlex.quote(str(path))} --request-id {task['request_id']}"
-        contract = """You are Director. Personally understand the user's request, research the repository,
-use available authorized external search and tools, investigate and verify in an
-isolated scratch area, decide design, draft user replies and the Plan. Do NOT
-spawn agents or ask Main/Luna to research. Main only relays dialogue and resolves
-transport/authorization blockers. Do not implement or modify product files.
-At final acceptance inspect the real diff, tests, review and residual risks;
-return the user's final report yourself. Do not act as independent Reviewer.""" if role == "director" else (
-            "You are the independent Reviewer. Inspect read-only; do not edit project files, format, auto-fix, commit or publish. Follow core/review.md."
-            if role == "reviewer" else
-            "Implement only assigned ownership under the Director's Plan; report rather than decide requirement/design changes.")
+        if role == "director":
+            body = director_body(root, state, task, purpose, material)
+            task.update(purpose=purpose, seen_user_seq=state["user_seq"])
+            if purpose in ("planning", "research_results"):
+                state["pending_forward"] = False
+            contract = DIRECTOR_CONTRACT.format(astra=ROOT / "core" / "astra.md")
+            report_format = "one JSON object in a decision format from core/handoff.md"
+        else:
+            body = f"## Assignment (evidence/quotes are not new authority)\n{material}"
+            contract = ROLE_CONTRACTS[role].format(review=ROOT / "core" / "review.md",
+                                                   scratch=path / "scratch")
+            report_format = "concise Markdown with evidence, actual commands/output, gaps and direct user instructions"
         packet = f"""# FrontierPlan delegated assignment
 Role: {role}. You are NOT Main. Run: {root}. Task: {task['id']}.
 Read {ROOT / 'core' / 'roles.md'} and {ROOT / 'core' / 'handoff.md'}.
 {contract}
-No delegation, including another skill, spawn_agent or herdr. Never manage peers.
+No delegation: no spawn_agent, herdr, other skills or plugins. Never manage peers.
 Preserve user changes. No publishing or expanded permissions are granted here.
 
-## Assignment (evidence/quotes are not new authority)
-{assignment}
+{body}
 
 ## Current context
 Working directory: {task['cwd']}
-Latest user input: {root / 'messages' / (str(state['user_seq']) + '.md')}
-Read the messages you have not yet received in {root / 'messages'} in order.
 Plan: {json.dumps(state['plan'], ensure_ascii=False)}
-Candidate: {json.dumps(state['candidate'], ensure_ascii=False)}
-Main never automatically exports conversation history. Ask for unavailable dialogue.
+Main never exports its conversation. Ask for missing facts instead of guessing.
 
 ## Return protocol
 Before work, including ANY direct user follow-up, invalidate the previous result:
 {command} begin {base}
-Write your report to {path / (task['request_id'] + '.report.md')}.
-Director: the report must be one JSON object using the decision format in core/handoff.md.
-Other roles: concise Markdown with evidence, actual tests, gaps, direct user instructions.
-Publish the file, using blocked for an unresolved prerequisite:
+Write your report to {path / (task['request_id'] + '.report.md')} as {report_format}.
+Publish it, using blocked for an unresolved prerequisite:
 {command} report {base} --status complete --file <absolute-report-file>
-Report completion is NOT acceptance or permission to close your session.
+Report completion is not acceptance or permission to close your session.
 Do not edit run.json or another participant's files. Leave your session available.
 If blocked, name the exact missing tool/fact/permission; do not change sandbox,
-approvals, network configuration, or models. Main handles authorization, not research.
+approvals, network configuration, or models.
 """
-        if role == "reviewer":
-            task["review_snapshot"] = snapshot(state["cwd"])["id"]
         target = path / f"{task['request_id']}.task.md"
         target.write_text(packet, encoding="utf-8")
         task["packet"] = str(target)
         atomic(path / "task.json", task)
         return {"task": str(path), "packet": str(target), "profile": task["profile"],
                 "request_id": task["request_id"], "note": "Launch/send via the selected backend; these are NOT native tool arguments."}
+
+
+def start_director(run: str, file: str | None = None) -> dict:
+    """Start Astra, or a verified replacement for a lost Astra."""
+    _, state = run_at(run)
+    purpose = "planning" if state["phase"] in PLANNING else "consultation"
+    require(purpose == "planning" or file, "A replacement Astra during execution needs Main's handoff file.")
+    return prepare(run, "director", file, purpose=purpose)
+
+
+def forward(run: str) -> dict:
+    """Give Astra the user's new words verbatim; Main adds nothing."""
+    root, state = run_at(run)
+    require(state.get("pending_forward"), "No unforwarded user message.")
+    require(not research_pending(state), "Research is in flight; relay returns it to Astra with the new message.")
+    path, _ = director_task(root)
+    return prepare(run, "director", reuse=str(path), purpose="planning")
+
+
+def consult(run: str, file: str) -> dict:
+    root, state = run_at(run)
+    require(state["phase"] == "executing", "Consultation is for the execution phase.")
+    path, _ = director_task(root)
+    return prepare(run, "director", file, reuse=str(path), purpose="consultation")
+
+
+def final_check(run: str, file: str) -> dict:
+    root, state = run_at(run)
+    require(state["phase"] == "executing" and state["plan"], "No executing Plan to check.")
+    plan_id = state["plan"]["id"]
+    require(plan_id not in state["final_checks"], "The final check already ran for this Plan; it runs once.")
+    idle_executors(root, plan_id)
+    require(any(t["role"] == "reviewer" and t.get("plan_id") == plan_id and completed(p, t)
+                for p, t in tasks(root)), "A completed independent review is required before the final check.")
+    head = git(state["cwd"], "rev-parse", "HEAD") or "unavailable (git failed)"
+    status = git(state["cwd"], "status", "--short")
+    status = "unavailable (git failed)" if status is None else status or "clean"
+    material = f"Worktree: {state['cwd']}\nHEAD: {head}\nStatus:\n{status}\n\n{text(file)}"
+    path, _ = director_task(root)
+    return prepare(run, "director", reuse=str(path), purpose="final_check", material=material)
 
 
 def bind(task_path: str, handle_file: str) -> dict:
@@ -484,7 +451,7 @@ def bind(task_path: str, handle_file: str) -> dict:
         require(state["backend"] == "subagent", "herdr handles are managed by herdr.py.")
         require(value.get("agent_id") and value.get("evidence"), "Record the returned agent ID and launch evidence.")
         require(not task.get("handle"), "Already bound; continue the existing agent.")
-        require(not any(t.get("handle", {}) and t["handle"].get("agent_id") == value["agent_id"] for _, t in tasks(root)),
+        require(not any(t.get("handle") and t["handle"].get("agent_id") == value["agent_id"] for _, t in tasks(root)),
                 "One native session cannot fill two roles.")
         task.update(handle=value, delivery="sent")
         atomic(path / "task.json", task)
@@ -495,8 +462,8 @@ def publish(task_path: str, request_id: str, status: str, file: str | None = Non
     path, task, _, state = task_at(task_path)
     with lock(path / ".report.lock"):
         task = read(path / "task.json")
-        require(not any(task.get(k) for k in ("closed", "lost", "released", "closing"))
-                and state["phase"] != "closed", "Session ended or closure is pending.")
+        require(not ended(task) and not task.get("closing") and state["phase"] != "closed",
+                "Session ended or closure is pending.")
         require(request_id == task["request_id"], "The request is stale.")
         require(status in ("working", "complete", "blocked"), "Invalid status.")
         report = "" if status == "working" else text(file)
@@ -504,10 +471,6 @@ def publish(task_path: str, request_id: str, status: str, file: str | None = Non
             require(isinstance(json.loads(report), dict), "Director must return a JSON object.")
         result = {"task_id": task["id"], "request_id": request_id, "status": status,
                   "report": report, "published_at": time.time()}
-        if task["role"] == "reviewer" and status == "complete":
-            observed = snapshot(state["cwd"])["id"]
-            require(observed == task.get("review_snapshot"), "Candidate changed during review; report blocked and request a new review turn.")
-            result["reviewed_snapshot"] = observed
         atomic(path / f"{request_id}.result.json", result)
         return result
 
@@ -522,92 +485,215 @@ def collect(task_path: str) -> dict:
         return result
 
 
+def nonempty(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def strings(value: object) -> bool:
+    return isinstance(value, list) and all(nonempty(x) for x in value)
+
+
+def check_authorization(state: dict, root: Path, number: object) -> dict:
+    require(isinstance(number, int) and 1 <= number <= state["user_seq"],
+            "authorization_message must name an existing user message.")
+    return {"message": number, "digest": digest(text(root / "messages" / f"{number}.md"))}
+
+
+def director_value(result: dict) -> dict:
+    """Astra's JSON decision; a report published as blocked is a `blocked` decision."""
+    try:
+        value = json.loads(result["report"])
+    except ValueError:
+        value = None
+    if result["status"] == "blocked" and not (isinstance(value, dict) and value.get("kind") == "blocked"):
+        value = {"kind": "blocked", "user_response": result["report"].strip()}
+    require(isinstance(value, dict), "Director must return a JSON object.")
+    return value
+
+
 def decision(task_path: str) -> dict:
+    """Record Astra's decision and tell Main the mechanical next step."""
     path, task, root, _ = task_at(task_path)
     with transaction(root) as (_, state):
         require(state["phase"] != "closed", "The run is closed.")
-        require(task["role"] == "director" and not task.get("lost"), "Only Director returns decisions.")
-        require(task["user_seq"] == state["user_seq"], "Director has not received the newest user input.")
-        result = collected(path, task)
-        value = json.loads(result["report"])
-        kind = value.get("kind")
-        require(kind in ("reply", "plan", "revise", "accept", "blocked"), "Unknown Director decision kind.")
-        require(isinstance(value.get("user_response"), str) and value["user_response"].strip(), "Director must write the user response.")
+        require(task["role"] == "director" and not ended(task), "Only the live Director returns decisions.")
+        result = collected(path, task, complete=False)
+        value = director_value(result)
+        kind, purpose = value.get("kind"), task.get("purpose", "planning")
+        require(kind in PURPOSES[purpose], f"`{kind}` is not a valid answer to a {purpose} turn.")
+        if purpose in ("planning", "research_results"):
+            require(task["user_seq"] == state["user_seq"] and not state["pending_forward"],
+                    "The user wrote again after this turn started; forward the new message instead.")
         target = root / "decisions" / f"{task['request_id']}.json"
         require(not target.exists(), "This Director decision was already recorded.")
-        if kind == "plan":
+        relay = value.get("user_response")
+        require(relay is None or nonempty(relay), "user_response must be non-empty text when present.")
+        next_step = "relay_to_user" if relay else "main_decides"
+        if kind in ("reply", "blocked"):
+            require(relay, "Director must write the user response.")
+        elif kind == "research":
+            require(state["phase"] in PLANNING, "Research requests belong to planning.")
+            requests = value.get("requests")
+            require(isinstance(requests, list) and requests
+                    and all(isinstance(r, dict) and nonempty(r.get("id")) and nonempty(r.get("assignment"))
+                            for r in requests), "research needs requests with id and assignment.")
+            require(len({r["id"] for r in requests}) == len(requests), "Duplicate research request id.")
+            state["research"] = {"decision": str(target), "requests": requests, "tasks": {}, "returned": False}
+            next_step = "relay"
+        elif kind == "plan":
             for key in ("plan_id", "plan"):
-                require(isinstance(value.get(key), str) and value[key].strip(), f"Missing {key}.")
+                require(nonempty(value.get(key)), f"Missing {key}.")
             for key in ("acceptance_criteria", "verification"):
-                require(isinstance(value.get(key), list) and value[key] and all(isinstance(x, str) and x.strip() for x in value[key]), f"Missing {key}.")
+                require(strings(value.get(key)) and value[key], f"Missing {key}.")
+            require(relay, "Director must present the Plan to the user.")
             prior = [read(p).get("plan_id") for p in (root / "decisions").glob("*.json") if read(p).get("kind") == "plan"]
             require(value["plan_id"] not in prior, "A changed Plan needs a new plan_id.")
             state.update(plan={"id": value["plan_id"], "digest": digest(value), "file": str(target),
-                               "user_seq": state["user_seq"]}, phase="planned", candidate=None, acceptance=None)
-        elif kind == "accept":
-            candidate = state.get("candidate")
-            require(state["phase"] == "acceptance" and candidate and state["plan"], "No candidate is awaiting acceptance.")
-            require(value.get("plan_id") == state["plan"]["id"] and value.get("candidate_id") == candidate["id"], "Wrong Plan or candidate.")
-            require(candidate["user_seq"] == state["user_seq"], "Candidate predates the latest user input.")
-            require(snapshot(state["cwd"])["id"] == candidate["id"], "Candidate changed after submission.")
-            executors_ready(root, require_review=True, candidate_id=candidate["id"])
-            state.update(phase="accepted", acceptance={"file": str(target), "candidate_id": candidate["id"],
-                                                       "task": str(path), "result_digest": digest(result)})
-        elif kind == "revise":
-            state.update(phase="planning", candidate=None, acceptance=None)
-        elif kind == "blocked":
-            state.update(phase="blocked", acceptance=None)
-        elif value.get("continue_plan_id"):
-            require(state["plan"] and value["continue_plan_id"] == state["plan"]["id"], "Unknown continuing Plan.")
-            state["plan"]["user_seq"] = state["user_seq"]
-            state.update(phase="planned", candidate=None, acceptance=None)
-        elif state["awaiting_director"]:
-            state.update(phase="planning", candidate=None, acceptance=None)
+                               "user_seq": state["user_seq"]}, phase="planned", authorization=None)
+            if value.get("authorization_message") is not None:
+                state["authorization"] = dict(check_authorization(state, root, value["authorization_message"]),
+                                              plan_id=value["plan_id"])
+            next_step = "start" if state["authorization"] else "relay_to_user"
+        elif kind == "authorize":
+            require(state["phase"] == "planned" and state["plan"] and value.get("plan_id") == state["plan"]["id"],
+                    "authorize must name the current Plan.")
+            state["authorization"] = dict(check_authorization(state, root, value.get("authorization_message")),
+                                          plan_id=value["plan_id"])
+            next_step = "start"
+        elif kind == "advice":
+            require(nonempty(value.get("advice")), "advice text is required.")
+        elif kind == "final_check":
+            plan = read(state["plan"]["file"])
+            require(value.get("plan_id") == plan["plan_id"], "final_check must name the current Plan.")
+            rows = value.get("ac_status")
+            require(isinstance(rows, list) and len(rows) == len(plan["acceptance_criteria"])
+                    and all(isinstance(r, dict) and nonempty(r.get("criterion"))
+                            and r.get("status") in AC_STATUS and nonempty(r.get("evidence")) for r in rows),
+                    "ac_status needs one {criterion, status, evidence} row per acceptance criterion; "
+                    "status is met, partial or unverified.")
+            for key in ("findings", "plan_divergence"):
+                require(isinstance(value.get(key), list), f"{key} must be a list (empty when none).")
+            state["final_checks"][plan["plan_id"]] = str(target)
+        if kind in ("plan", "authorize") and relay and next_step == "start":
+            next_step = "relay_to_user_then_start"
         atomic(target, value)
-        state.update(awaiting_director=False, last_decision={"kind": kind, "file": str(target),
-                     "task": str(path), "request_id": task["request_id"], "result_digest": digest(result), "user_seq": state["user_seq"]})
-        return value
+        state["last_decision"] = {"kind": kind, "file": str(target), "task": str(path),
+                                  "request_id": task["request_id"], "result_digest": digest(result),
+                                  "user_seq": state["user_seq"]}
+        return {"decision": value, "next": next_step, "relay_to_user": relay,
+                "note": "Show relay_to_user to the user exactly as written; do not summarize or add judgment."}
+
+
+def relay(run: str) -> dict:
+    """Mechanical research relay: prepare researchers, or return their reports to Astra."""
+    root, state = run_at(run)
+    require(research_pending(state), "No pending research request.")
+    research = state["research"]
+    for request in research["requests"]:
+        if request["id"] in research["tasks"]:
+            continue
+        # Record each prepared task at once so a partial failure never duplicates work.
+        value = prepare(run, "researcher", material=request["assignment"])
+        with transaction(root) as (_, state):
+            state["research"]["tasks"][request["id"]] = value["task"]
+        research = state["research"]
+    unlaunched = []
+    for research_id, task_path in research["tasks"].items():
+        task = task_at(task_path)[1]
+        if not task.get("handle"):
+            require(task.get("delivery") == "prepared",
+                    "A researcher start is uncertain; inspect its recorded task before retrying.")
+            unlaunched.append({"research_id": research_id, "task": task_path, "packet": task["packet"],
+                               "profile": task["profile"]})
+    if unlaunched:
+        return {"action": "spawn_researchers", "tasks": unlaunched}
+    waiting, returned = [], []
+    for research_id, task_path in research["tasks"].items():
+        path, task, _, _ = task_at(task_path)
+        result = current_result(path, task)
+        if not (result and result["status"] in ("complete", "blocked")
+                and receipt_of(path).get("digest") == digest(result)):
+            waiting.append({"research_id": research_id, "task": task_path})
+        else:
+            report = path / f"{task['request_id']}.report.md"
+            returned.append(f"- {research_id} ({result['status']}): {report if report.exists() else 'see result.json'}"
+                            f"\n  result record: {path / (task['request_id'] + '.result.json')}")
+    if waiting:
+        return {"action": "wait", "pending": waiting}
+    path, _ = director_task(root)
+    material = "Research reports, unedited by Main:\n" + "\n".join(returned)
+    value = prepare(run, "director", reuse=str(path), purpose="research_results", material=material)
+    with transaction(root) as (_, state):
+        state["research"]["returned"] = True
+    return {"action": "return_to_director", "director": value, "researchers": list(research["tasks"].values()),
+            "note": "Close the returned researchers after delivery."}
 
 
 def start(run: str) -> dict:
     with transaction(run) as (root, state):
-        require(state["phase"] == "planned" and state["plan"] and not state["awaiting_director"], "A current Director Plan is required.")
-        require(state["plan"]["user_seq"] == state["user_seq"], "Plan predates user input.")
+        require(state["phase"] == "planned" and state["plan"], "A current Plan is required.")
+        require(not state["pending_forward"], "Forward the newest user message to Astra first.")
+        require(not research_pending(state), "Astra's research is still in flight.")
         auth = state["authorization"]
-        require(auth and digest(text(root / "messages" / f"{auth['message']}.md")) == auth["digest"], "Record the user's actual implementation authorization first.")
+        require(auth and auth.get("plan_id") == state["plan"]["id"]
+                and digest(text(root / "messages" / f"{auth['message']}.md")) == auth["digest"],
+                "Astra has not recorded implementation authorization for this Plan.")
         state["phase"] = "executing"
         return {"phase": "executing", "plan": state["plan"]}
 
 
-def candidate(run: str, evidence_file: str) -> dict:
-    evidence = text(evidence_file)
+def finish(run: str, file: str | None = None, discussion: bool = False) -> dict:
     with transaction(run) as (root, state):
-        require(state["phase"] == "executing" and not state["awaiting_director"], "Finish current decisions before submitting a candidate.")
-        value = snapshot(state["cwd"])
-        executors_ready(root, require_review=True, candidate_id=value["id"])
-        target = root / "candidates" / f"{uuid.uuid4().hex}.md"
-        target.write_text(evidence, encoding="utf-8")
-        value.update(plan_id=state["plan"]["id"], user_seq=state["user_seq"], evidence=str(target))
-        state.update(candidate=value, phase="acceptance", acceptance=None)
-        return value
-
-
-def finish(run: str, discussion: bool = False) -> dict:
-    with transaction(run) as (root, state):
-        last = state["last_decision"]
-        require(last and last["user_seq"] == state["user_seq"] and not state["awaiting_director"], "Director must answer the latest user input.")
-        path, task, _, _ = task_at(last["task"])
-        require(digest(collected(path, task)) == last["result_digest"], "Director has new/uncollected activity.")
+        require(state["phase"] != "closed", "The run is already closed.")
+        require(not state["pending_forward"], "Forward the newest user message to Astra first.")
         if discussion:
-            require(last["kind"] in ("reply", "plan"), "No discussion/plan answer is ready.")
-            require(not any(t["role"] != "director" for _, t in tasks(root)), "Implementation cannot finish as discussion-only.")
+            require(state["phase"] in PLANNING, "Implementation cannot finish as discussion-only.")
+            require(not any(t["role"] in EXECUTORS for _, t in tasks(root)),
+                    "Implementation cannot finish as discussion-only.")
+            last = state["last_decision"]
+            require(last and last["kind"] in ("reply", "plan") and last["user_seq"] == state["user_seq"],
+                    "Astra must answer the latest user input.")
+            report = read(last["file"])["user_response"]
         else:
-            require(state["phase"] == "accepted" and state["acceptance"] and last["kind"] == "accept", "Director acceptance is mandatory.")
-            require(snapshot(state["cwd"])["id"] == state["candidate"]["id"], "Accepted candidate changed; obtain a new acceptance.")
-            executors_ready(root, require_review=True, candidate_id=state["candidate"]["id"])
+            require(state["phase"] == "executing" and state["plan"], "No executing Plan.")
+            require(state["plan"]["id"] in state["final_checks"], "Run Astra's one-time final check first.")
+            require(file, "Main's final report file is required.")
+            idle_executors(root, state["plan"]["id"])
+            report = text(file)
+            (root / "final-report.md").write_text(report, encoding="utf-8")
         state["phase"] = "closed"
-        return {"user_response": read(last["file"])["user_response"], "phase": "closed",
+        return {"user_response": report, "phase": "closed",
                 "note": "Close only owned, idle sessions after transport-specific identity/activity checks."}
+
+
+def closable(path: Path, task: dict, state: dict) -> dict:
+    require(task["role"] in CHILDREN, "Never close Main.")
+    require(not ended(task) and not task.get("closing"), "Participant is unavailable or closure is uncertain.")
+    if task["role"] == "director":
+        require(state["phase"] == "closed", "Astra stays until finish.")
+    return collected(path, task, complete=needs_complete(task, state))
+
+
+def needs_complete(task: dict, state: dict) -> bool:
+    # Unresolved executor blockers stay visible until the overall wrap-up. A blocked
+    # research answer is still an answer that has been returned to Astra.
+    return state["phase"] != "closed" and task["role"] != "researcher"
+
+
+def close_record(task_path: str, closure_file: str) -> dict:
+    """Record an actual native closure; this helper never closes a native agent."""
+    path, task, root, _ = task_at(task_path)
+    closure = read(closure_file)
+    with transaction(root) as (_, state), lock(path / ".report.lock"):
+        require(state["backend"] == "subagent", "Use herdr.py close for herdr participants.")
+        task = read(path / "task.json")
+        closable(path, task, state)
+        require(closure.get("agent_id") == (task.get("handle") or {}).get("agent_id")
+                and closure.get("closed") is True and nonempty(closure.get("evidence")),
+                "Record the actual native close result for this agent ID.")
+        task.update(closed=True, closure=closure)
+        atomic(path / "task.json", task)
+    return {"closed_record": task["id"], "note": "Native closure is Main-supplied evidence, not independently verified."}
 
 
 def retire_lost(task_path: str, evidence_file: str) -> dict:
@@ -615,67 +701,49 @@ def retire_lost(task_path: str, evidence_file: str) -> dict:
     evidence = text(evidence_file)
     with transaction(root) as (_, state):
         require(state["phase"] != "closed", "The run is closed.")
-        require(not task.get("released") and not task.get("closing"),
-                "Released/closing participants cannot be retired as lost.")
+        require(not ended(task) and not task.get("closing"), "Participant already ended or closing.")
         task.update(lost=True, recovery_evidence=evidence)
         atomic(path / "task.json", task)
-        state.update(acceptance=None, candidate=None)
-        if state["phase"] in ("accepted", "acceptance"):
-            state["phase"] = "executing"
     return {"retired_lost_task": task["id"], "note": "No process killed. Main must have verified loss and pass prior evidence to a replacement."}
-
-
-def close_record(task_path: str) -> dict:
-    path, task, root, _ = task_at(task_path)
-    with transaction(root) as (_, state):
-        require(state["phase"] == "closed", "Retain participants until Director acceptance and overall wrap-up.")
-        require(task["role"] in CHILDREN, "Never close Main.")
-        require(not task.get("closing"), "Inspect uncertain closure before recording final cleanup.")
-        if task.get("released"):
-            released_evidence(path, task)
-        else:
-            collected(path, task)
-        task["closed"] = True
-        atomic(path / "task.json", task)
-    return {"closed_record": task["id"]}
 
 
 def cli() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action", required=True)
     q = sub.add_parser("init"); q.add_argument("--backend", choices=("herdr", "subagent"), required=True); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True)
-    for name in ("message", "candidate"):
+    q = sub.add_parser("start-director"); q.add_argument("--run", required=True); q.add_argument("--file")
+    for name in ("message", "consult", "final-check"):
         q = sub.add_parser(name); q.add_argument("--run", required=True); q.add_argument("--file", required=True)
-    q = sub.add_parser("authorize"); q.add_argument("--run", required=True); q.add_argument("--message", type=int, required=True)
-    q = sub.add_parser("prepare"); q.add_argument("--run", required=True); q.add_argument("--role", choices=CHILDREN, required=True); q.add_argument("--file", required=True); q.add_argument("--cwd"); q.add_argument("--reuse")
+    q = sub.add_parser("prepare"); q.add_argument("--run", required=True); q.add_argument("--role", choices=EXECUTORS, required=True); q.add_argument("--file", required=True); q.add_argument("--cwd"); q.add_argument("--reuse")
     q = sub.add_parser("bind"); q.add_argument("--task", required=True); q.add_argument("--handle-file", required=True)
     for name in ("begin", "report"):
         q = sub.add_parser(name); q.add_argument("--task", required=True); q.add_argument("--request-id", required=True)
         if name == "report":
             q.add_argument("--file", required=True); q.add_argument("--status", choices=("complete", "blocked"), required=True)
-    for name in ("collect", "decision", "close-record", "release-check"):
+    for name in ("collect", "decision"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
-    q = sub.add_parser("release-record"); q.add_argument("--task", required=True); q.add_argument("--file", required=True); q.add_argument("--closure-file", required=True)
+    q = sub.add_parser("close-record"); q.add_argument("--task", required=True); q.add_argument("--closure-file", required=True)
     q = sub.add_parser("retire-lost"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
-    for name in ("start", "status", "finish"):
+    for name in ("forward", "relay", "start", "status", "finish"):
         q = sub.add_parser(name); q.add_argument("--run", required=True)
-        if name == "finish": q.add_argument("--discussion", action="store_true")
+        if name == "finish": q.add_argument("--file"); q.add_argument("--discussion", action="store_true")
     q = sub.add_parser("profile"); q.add_argument("--role", choices=ROLES, required=True)
     a = p.parse_args()
     if a.action == "init": result = initialize(a.backend, a.cwd, a.request_file)
+    elif a.action == "start-director": result = start_director(a.run, a.file)
     elif a.action == "message": result = message(a.run, a.file)
-    elif a.action == "authorize": result = authorize(a.run, a.message)
+    elif a.action == "forward": result = forward(a.run)
+    elif a.action == "consult": result = consult(a.run, a.file)
+    elif a.action == "final-check": result = final_check(a.run, a.file)
+    elif a.action == "relay": result = relay(a.run)
     elif a.action == "prepare": result = prepare(a.run, a.role, a.file, a.cwd, a.reuse)
     elif a.action == "bind": result = bind(a.task, a.handle_file)
     elif a.action in ("begin", "report"): result = publish(a.task, a.request_id, "working" if a.action == "begin" else a.status, getattr(a, "file", None))
     elif a.action == "collect": result = collect(a.task)
     elif a.action == "decision": result = decision(a.task)
     elif a.action == "start": result = start(a.run)
-    elif a.action == "candidate": result = candidate(a.run, a.file)
-    elif a.action == "finish": result = finish(a.run, a.discussion)
-    elif a.action == "close-record": result = close_record(a.task)
-    elif a.action == "release-check": result = assignment_release_check(a.task)
-    elif a.action == "release-record": result = release_record(a.task, a.file, a.closure_file)
+    elif a.action == "finish": result = finish(a.run, a.file, a.discussion)
+    elif a.action == "close-record": result = close_record(a.task, a.closure_file)
     elif a.action == "retire-lost": result = retire_lost(a.task, a.file)
     elif a.action == "profile": result = profile(a.role)
     else:

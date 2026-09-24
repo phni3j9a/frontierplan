@@ -40,6 +40,7 @@ def validate(root: Path) -> list[str]:
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
         profiles = sorted((root / "profiles").rglob("*.toml"))
         expected = {"director": ("gpt-6-astra", "xhigh"), "main": (None, None),
+                    "researcher": ("gpt-6-luna", "max"),
                     "worker": ("gpt-6-luna", "max"), "design": ("gpt-6-sol", "max"),
                     "reviewer": ("gpt-6-sol", "xhigh")}
         seen = set()
@@ -53,10 +54,11 @@ def validate(root: Path) -> list[str]:
                       not {"model", "reasoning_effort", "service_tier"} & data.keys(),
                       "Main must inherit the existing session without routing overrides")
             check((data.get("model"), data.get("reasoning_effort")) == expected.get(role), f"Model/effort mismatch: {path}")
-            check((role == "worker" and data.get("service_tier") == "fast") or
-                  (role != "worker" and "service_tier" not in data), f"Unexpected tier override: {path}")
+            luna = role in ("worker", "researcher")
+            check((luna and data.get("service_tier") == "fast") or
+                  (not luna and "service_tier" not in data), f"Unexpected tier override: {path}")
         check(seen == set(expected), "Missing role profile")
-        for required in ("core/workflow.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
+        for required in ("core/workflow.md", "core/astra.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
                          "backends/herdr.md", "backends/subagent.md", "scripts/frontierplan.py",
                          "scripts/herdr.py", "LICENSE", "THIRD_PARTY_NOTICES.md"):
             check((root / required).is_file(), f"Missing packaged resource: {required}")

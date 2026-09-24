@@ -1,15 +1,34 @@
 # FrontierPlan
 
-**Astra researches, designs, plans and accepts. Main coordinates execution.**
+**Plan まではAstraが決め、実行はMainが回す。**
 
-Codex向けの明示起動専用Pluginです。herdr版ではMainにDevinなどの既存エージェントも
-使用でき、子エージェントは引き続きCodexで起動します。実装に入るまでは、要求理解・コードや外部情報の
-調査・必要な隔離検証・ユーザーへの回答・設計・Plan作成を同じAstraが単独で担当します。
-Mainはその間、会話と環境情報の受け渡し・セッション管理だけを行います。
-実装開始後はMainがタスク分割・担当割当・統合・通常のレビュー判定を進め、最後に
-Astraが成果物を確認して最終受理とユーザーへの報告を行います。
+Codex向けの明示起動専用Pluginです。[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)
+の進め方（Mainが統合・レビュー判定・完了判断を持ち、Lunaが実装し、独立したSolがレビューする）を
+土台に、実装前の調査・設計・Plan作成だけをAstraに一任します。herdr版ではMainにDevinなどの
+既存エージェントも使えます。子エージェントはCodexで起動します。
 
-## 2つの入口、1つの共通ルール
+## 流れ
+
+| フェーズ | 判断する人 | Mainの役割 |
+|---|---|---|
+| 調査〜Plan確定 | **Astra**。Lunaへの調査依頼とユーザーへの質問もAstraが決める | 判断せずに中継する（Astraの文面はそのまま表示、ユーザーの返事はそのままAstraへ） |
+| 実装〜レビュー | **Main**（axiom_for_herdrと同じ） | 分割・割当・統合・指摘の採否。担当Workerはレビューサイクルの最後まで残す |
+| 詰まったとき | MainがAstraに相談し、採否はMainが決める | 相談の材料を用意する |
+| 最終確認 | **Astraが1回だけ**AC表・指摘・Planとのずれを返す | 指摘をReviewerの指摘と同じく判定し、完了報告を書く |
+
+ユーザーに返すのは、Astraの質問やPlanの提示、完了報告、範囲やコストが変わる分岐
+（推奨案つきの選択肢）の3つだけです。レビューの回数や経過時間では返しません。
+
+Astraは、解釈によってコストが大きく変わる場合、Issueにない受入条件を足す場合、
+新しい設計や重い検証が必要な場合に、Planの段階でユーザーに尋ねます。Planは
+IssueのACを基準にし、より単純な代替案と2段の検証（反復中は絞った確認、最後に1回だけフル実行）
+を書き、内部実装の細部は書きません。詳しくは [Astraの規約](plugins/frontierplan/core/astra.md)。
+
+v0.1ではAstraが最終受入の門番で、ユーザーへ戻る経路もありませんでした。実案件で
+作業が収束しなかったため、v0.2でこの形に作り直しました（[Issue #11](https://github.com/phni3j9a/frontierplan/issues/11)）。
+v0.1で作ったrunはv0.2のhelperでは続けられません。v0.1のまま終えてください。
+
+## 2つの入口
 
 | SKILL | 実行方式 |
 |---|---|
@@ -21,39 +40,29 @@ $frontierplan:astraplan-herdr
 この機能を調査・設計して実装まで進めてください。
 ```
 
-```
-$frontierplan:astraplan-subagent
-この機能の設計を相談したいです。まだ実装しないでください。
-```
-
 各SKILLは `allow_implicit_invocation: false`。呼び出した作業とその続きだけに適用し、
-通常の小さなタスクでは自動起動しません。明示起動後はAstraを省略しません。
-Axiomとは別Pluginで、既存リポジトリ・設定を変更せず併存できます。同じ作業で混用しません。
+通常の小さなタスクでは自動起動しません。Axiomとは別Pluginで、同じ作業で混用しません。
 
 ## 役割とモデル
 
 | 役割 | モデル | effort | 責務 |
 |---|---|---|---|
-| Director | `gpt-6-astra` | `xhigh` | 調査・対話・設計・Plan・方針変更・最終受理・最終報告 |
-| Main | 起動済みセッションを継承 | 起動元を継承 | 受け渡し・分割・割当・統合・通常のレビュー判定 |
-| Worker | `gpt-6-luna` | `max` | 実装・テスト・修正・監視。fastは別設定 |
-| Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当。重要な事前設計はAstra |
-| Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで再レビュー |
+| Director (Astra) | `gpt-6-astra` | `xhigh` | 調査・設計・ユーザーへの質問・Plan・実装許可の記録、実行中の相談、1回の最終確認 |
+| Main | 起動済みセッションを継承 | 起動元を継承 | Plan前は中継、実行中は分割・割当・統合・レビュー判定・完了報告 |
+| Researcher | `gpt-6-luna` | `max` + fast | Astraの依頼による読み取り専用の調査 |
+| Worker | `gpt-6-luna` | `max` + fast | 実装・テスト・修正・監視 |
+| Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当 |
+| Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで回数上限なく再レビュー |
 
-`profiles/director/astra.toml` と `main.toml / worker.toml / design.toml / reviewer.toml`
-で役割別に管理します。両SKILLは同じprofiles/coreを共有します。
-profilesはFrontierPlan内部の設定で、Codexのカスタムエージェント登録ではありません。
-GPT-6 Sol / Lunaへの更新は両backendで新しく作る子タスクに適用されます。
-既存タスクの継続では、作成時に保存したprofileと同じセッションを使います。
-モデルIDと対応effortは [GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol) /
-[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) の公式資料で確認しています。
-Mainのprofileは `inherit_session = true` のみで、モデル・effort・tierを指定しません。
-Mainのモデルは実行中に変更しません。将来のFableはDirector profile/接続処理を追加する
-拡張点だけを確保し、未対応SKILLや架空の接続方法は登録していません。
+`profiles/director/astra.toml` と `profiles/*.toml` で役割別に管理します。profilesは
+FrontierPlan内部の設定で、Codexのカスタムエージェント登録ではありません。Mainのprofileは
+`inherit_session = true` のみで、モデル・effort・tierを指定しません。
+subagent版では子が孫を起動できない（`agents.max_depth` 既定1）ため、Astraの調査依頼は
+両backendともMainの中継で起動します。
 
 ## インストール
 
-必要条件: **Python 3.11+**、Git（実装成果物の検証）、対応するCodexとモデルへのアクセス。
+必要条件: **Python 3.11+**、対応するCodexとモデルへのアクセス（Gitは最終確認の材料にHEADを記録するためだけに使います）。
 herdr版は同一ホストのherdrが必要です。subagent版はCodex上でモデル/effort指定、同一セッション
 継続、待機、終了のnativeツールが必要です。こちらの会話のコネクタが子へ自動移植される
 わけではありません。Astraが必要な調査ツールを使えるかも確認してください。
@@ -97,27 +106,23 @@ ZIPを展開しても、別のaxiomリポジトリを参照しません。
 
 ## 実行の境界
 
-- 実装前にWorker/Design/Reviewerは起動しません。調査はAstra自身が行います。
-- Planと実装許可は別です。相談のみならDirectorの返答で完結します。
-- Mainは合意済み基準に沿うレビュー判定だけを行い、要求変更や重大なリスクはAstraへ戻します。
-- 実装差分・検証結果・却下/保留を含むレビュー証拠をAstraへ返します。古い候補の受理を流用しません。
-- Worker/Designは、限定した実装・修正・検証の割当てごとに原則フレッシュで起動します。直前の小修正だけ再利用する場合は理由を記録します。同じIssueのworktreeは継続利用できます。
-- Mainが完了報告を回収し、統合・書込み/所有プロセスの終了・そのセッションの役割終了を確認して記録したら、レビュー前でもWorker/Designを解放します。報告は残し、修正は新Workerへ現在のPlan・finding・完了条件・検証・前報告を引き継ぎます。
-- 独立Reviewerは同じセッションで再レビューし、Astraの最終受理まで維持します。herdr版では受理後に安全を確認して`finish`前に解放し、native版では最終整理で閉じます。保持が必要な場合は具体的な理由を記録します。
-- レビューは通常、初回と修正確認を目安にします。同じ指摘が2回の修正確認後も残る、または受入条件が増え続ける場合は、次の修正を自動で回さずDirectorが設計・範囲・十分な検証を整理します。回数による自動合格にはしません。
-- Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合し、対応するnative通知では早めに処理します。herdrの`check`は通知履歴に依存せず状態を確認し、`wait`は既定・最大300秒で未回収報告または現在の状態を返します。native版の`status`には`uncollected`一覧があります。
-- 待機の外側もホストが対応する方法・上限で同じ実行handleを待ち続けます。バックグラウンドwaitだけ残してMainのターンを終えても自動再開は保証されません。実ホストで未検証の通知・復帰を「監視継続中」と断定しません。
-- Astraは途中の返答や待機では閉じず、全体の`finish`まで維持します。Mainは閉じません。
+- Plan確定前は、AstraとAstraが依頼したResearcher以外は起動しません。Mainは調査も要約もしません。
+- 実装許可はAstraが記録します（許可にあたるユーザー発言の番号）。記録がなければ `start` できません。
+- Plan作成中にユーザーが書き込んだら、その発言をAstraへ渡すまで古い判断は採用されません。
+- 最終確認はPlanごとに1回です。修正はAstraに戻さず、担当Workerと同じReviewerで確認します。
+- Worker/Design/Reviewerはレビューサイクルが終わったら閉じます。Astraは`finish`まで残します。
+  未解決のブロッカーを持つ参加者は、全体の終了まで閉じません。
+- Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合します。herdrの`check`は通知履歴に
+  依存せず状態を確認し、`wait`は既定・最大300秒です。native版の`status`には`uncollected`一覧があります。
+  バックグラウンドwaitだけ残してMainのターンを終えても自動再開は保証されません。
 
-herdr版の配置はMainが左40%、Astraが右60%。実装開始時に右側をAstra上40%・
-実行領域下60%へ分け、以降のWorker/Design/Reviewerは実行領域内で左右に分割します。
-手動リサイズを維持し、役割の領域や端末の識別が崩れた場合は操作を停止します。
-実行中の解放には `release-check` / `release`、全体終了後の後片付けには `close` を使います。
-詳しくは[herdr手順](plugins/frontierplan/backends/herdr.md#release-completed-execution-participants)。
+herdr版の配置はMainが左40%、Astraが右60%。ResearcherやWorkerが入ると右側をAstra上40%・
+実行領域下60%へ分け、以降は実行領域内で左右に分割します。手動リサイズを維持し、役割の領域や
+端末の識別が崩れた場合は操作を停止します。
 
 herdr操作とnative tool呼び出しは別のbackendです。native版のPython helperは
 モデルを起動するランタイムではなく、Mainが実際のnativeツールを呼び出すための
-packet/receipt管理です。動かないPython-to-spawn_agentブリッジは用意していません。
+packet/receipt管理です。
 
 ## 検証と制限
 
@@ -128,21 +133,19 @@ python3 tools/package_release.py
 ```
 
 GitHub Actionsにも同じ検証を登録しています。詳細は [検証手順](docs/validation.md)。
-自動テストはローカルの状態遷移・Git差分・模擬herdrを検証するもので、実モデルの
-ルーティング・課金・実機UI・権限・nativeツール互換性の実証ではありません。
-`tests/test_main_identity.py` は模擬Devin Main、識別失敗時の停止、Codex互換性、
-CLIの別プロセス実行と共通ledgerの一連の操作を検証します。Devin＋herdrの実機検証とは区別します。
+自動テストはローカルの状態遷移と模擬herdrを検証するもので、実モデルのルーティング・課金・
+Planの適切さ・実機UI・権限・nativeツール互換性の実証ではありません。実herdr（0.9.1）での
+ペイン配置は合成エージェントのsmokeで確認済みです（[証跡](docs/evidence/issue-11-herdr-layout.json)）。
 
 子の方針はworkspace-write + never。herdrは起動時に要求しますが、実効値は環境で
 確認が必要です。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
 扱いません。必要条件を満たせない場合は停止・報告し、勝手に権限拡大/モデル変更しません。
 
-helperは協調的な手順/鮮度チェックで、認証・sandbox・ユーザー同意の自動判定ではありません。
-候補のfingerprintはHEAD/index/追跡対象/非ignoredの未追跡ファイルを含み、ignored成果物や
-外部状態は別途証拠が必要です。v1ではsubmoduleの候補検証を明示的に拒否します。
+helperは協調的な手順チェックで、認証・sandbox・ユーザー同意の自動判定ではありません。
 runは一時ディレクトリに保存します。永続成果物は必要に応じて通常のプロジェクトへ残してください。
 
 [設計](docs/architecture.md) / [共通ルール](plugins/frontierplan/core/workflow.md) /
+[Astra](plugins/frontierplan/core/astra.md) / [レビュー](plugins/frontierplan/core/review.md) /
 [herdr手順](plugins/frontierplan/backends/herdr.md) /
 [subagent手順](plugins/frontierplan/backends/subagent.md) /
 [ライセンス・参考元](plugins/frontierplan/THIRD_PARTY_NOTICES.md)

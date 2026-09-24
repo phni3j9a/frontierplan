@@ -14,6 +14,10 @@ surface these were spawn_agent with model/reasoning_effort/fork_turns, followup_
 and wait_agent; other versions may differ. These names are examples, not registered
 tools created by FrontierPlan. Refuse unspecified model inheritance or backend fallback.
 
+Codex limits nesting with `agents.max_depth` (default 1): a child cannot be relied on
+to spawn its own children. That is why Astra's research requests go through Main's
+relay. Do not change the user's depth setting to work around this.
+
 Require effective children to meet the intended workspace-write + never boundary.
 Native children may inherit the parent's live permission overrides, even over a
 custom profile. If the existing parent/session cannot meet the boundary, report it
@@ -22,83 +26,97 @@ or install a custom agent to pretend it overrides live permissions. The helper c
 sandbox or authenticate native children. Verify effective model/effort and completion
 from real runtime evidence. Preserve the evidence with the returned agent handle.
 
-## First Director
-```
-fp=<plugin-root>/scripts/frontierplan.py
-python3 "$fp" init --backend subagent --cwd "$project" --request-file "$request"
-python3 "$fp" prepare --run "$run" --role director --file "$assignment"
-```
-Read the returned profile and packet. Call the actual spawn tool with Astra /
-`xhigh` and the packet as its assignment, using no conversation fork when supported
-(e.g. `fork_turns="none"` on the known V2 surface). Do not fork Main's hidden reasoning
-or full tool history as a substitute for user dialogue. No tier override for Director.
-Only one Director is created; no Worker/Design/Reviewer before implementation.
+## Spawning and binding
 
-After successful native spawn, write a handle file from the actual tool result:
+Every new child follows the same steps. The helper prints a `packet` and `profile`.
+Call the actual spawn tool with that profile's model and effort and the packet as
+the assignment, with no conversation fork when supported (e.g. `fork_turns="none"`
+on the known V2 surface). Then record the returned identity once:
 ```
 {"agent_id":"<returned-id>","evidence":"<launch/runtime evidence reference>"}
 ```
-Then `python3 "$fp" bind --task "$director" --handle-file "$handle"`.
+```
+python3 "$fp" bind --task "$task" --handle-file "$handle"
+```
 This records evidence supplied by Main, not an independently verified model claim.
+Luna roles request fast separately from effort max. Use ONLY a field/value the live
+schema supports (the predecessor used `service_tier="priority"` for the CLI fast
+tier); otherwise disclose unverified fast while keeping Luna/max.
 
-The child reads the packet and uses its begin/report commands. Wait via the host's
-native event-aware wait, then verify idle state and collect:
+A continuation prepares a packet for an existing task; send it through the host's
+same-session follow-up tool to the recorded ID. Do not spawn again or rebind. The
+helper preparation is not delivery; verify the tool result before claiming it was sent.
+
+## Planning relay
+
+```
+fp=<plugin-root>/scripts/frontierplan.py
+python3 "$fp" init --backend subagent --cwd "$project" --request-file "$request"
+python3 "$fp" start-director --run "$run" [--file "$transport_facts"]
+```
+Spawn Astra from the packet (Astra / `xhigh`, no tier override) and bind it. When her
+turn returns, verify idle state and record her decision:
 ```
 python3 "$fp" collect --task "$director"
 python3 "$fp" decision --task "$director"
 ```
-Forward every new user message with `message`, then prepare its next request with
-`prepare --run "$run" --role director --file "$followup" --reuse "$director"`.
-Send the new packet through the host's same-session follow-up tool to the recorded
-ID. Do NOT call spawn again or rebind. The helper preparation is not actual delivery;
-verify the tool result before claiming the follow-up was sent.
+Do exactly what `next` says, without adding judgment:
 
-## Implementation and return
+- `relay`: run `python3 "$fp" relay --run "$run"`. `spawn_researchers` lists packets
+  to spawn and bind as researchers (Luna / `max`). Wait for them, collect each, and
+  run `relay` again. `return_to_director` gives a prepared Astra packet: send it as a
+  follow-up to Astra, then close the listed researchers (see closing below).
+- `relay_to_user`: show `relay_to_user` to the user exactly as written. When the user
+  answers:
+  ```
+  python3 "$fp" message --run "$run" --file "$user_message"
+  python3 "$fp" forward --run "$run"
+  ```
+  and send the prepared packet to Astra as a follow-up.
+- `start` / `relay_to_user_then_start`: show the text if present, then
+  `python3 "$fp" start --run "$run"`.
 
-After actual authorization and the current Director Plan, use authorize/start.
-Prepare Worker/Design/Reviewer packets in the same manner; spawn separately and bind
-each returned identity once. Reserve concurrency for Director and Reviewer; manage
-independent work under the host limit. Use fresh Workers for bounded fixes by default
-and the same Reviewer for re-review. No Director-to-worker nested spawning.
+If the user writes during research, `message` answers `next: relay`: finish the relay
+and the new words reach Astra together with the reports. A consultation-only request
+ends with `python3 "$fp" finish --run "$run" --discussion`.
 
-Worker's profile requests fast separately from effort max. On schemas with the
-corresponding API field, the predecessor used service_tier="priority" for the CLI's
-fast tier. Use ONLY a field/value supported by the live schema; otherwise verify
-inherited fast evidence or disclose unverified/unavailable fast while retaining the
-specified Luna/max model/effort. Do not claim fast based on the label alone.
+## Execution
 
-### Release completed Worker/Design assignments
-
-Collect the complete report after verifying live identity and idle state. Integrate
-its work, check that no writes/owned processes remain, and get the decision template:
 ```
-python3 "$fp" release-check --task "$worker"
+python3 "$fp" prepare --run "$run" --role worker --file "$assignment" [--cwd "$worktree"]
+python3 "$fp" prepare --run "$run" --role reviewer --file "$review_request"
+python3 "$fp" prepare --run "$run" --role worker --file "$accepted_fixes" --reuse "$worker"
+python3 "$fp" consult --run "$run" --file "$question"
 ```
-Save the JSON outside the candidate checkout. Preserve `binding`. Set `decision`'s
-`integrated`, `assignment_complete`, `no_active_processes`, `no_longer_needed` to true
-only after checking those facts, and give a concrete `reason`. Recheck live state and
-the binding immediately before calling the host's actual close tool on the recorded
-agent ID. Save its successful result/reference in a closure file:
+New tasks are spawned and bound; `--reuse` and `consult` produce follow-ups for the
+existing session. Reserve concurrency for Astra and the Reviewer and manage
+independent work under the host limit. After `consult`, collect and run `decision`.
+
+When review has converged and every Worker/Design/Reviewer is idle and collected:
+```
+python3 "$fp" final-check --run "$run" --file "$evidence"
+```
+Send the packet to Astra, collect, and run `decision`. It runs once per Plan;
+accepted fixes go to the responsible Worker and the same Reviewer. Then:
+```
+python3 "$fp" finish --run "$run" --file "$final_report"
+```
+
+## Closing participants
+
+Close a researcher after its report returned to Astra, a Worker/Design/Reviewer
+when Main ends its review cycle, and Astra only after finish. Verify live idle state
+and the collected current report, call the host's actual close tool on the recorded
+agent ID, and save its result:
 ```json
 {"agent_id":"<actual closed ID>","closed":true,"evidence":"<actual close tool result or reference>"}
 ```
-Only after successful native closure:
 ```
-python3 "$fp" release-record --task "$worker" --file "$release_decision" --closure-file "$closure"
+python3 "$fp" close-record --task "$task" --closure-file "$closure"
 ```
-These commands record Main-supplied evidence, not an independently verified native
-closure. They never invoke a native tool. Uncertain closure or a stale binding after
-close needs explicit inspection/recovery; keep the evidence and do not blindly retry
-close or falsely mark the assignment released. A slow/idle participant is not lost.
-If safe close is unavailable, retain the session and disclose that capability limit.
-
-Released assignments remain evidence for candidate/acceptance; they do not replace
-independent review. Use fresh Workers for later fixes, retaining the same Reviewer.
-Use candidate/decision/finish once the integrated tree and participants are quiescent.
-Director receives actual evidence and writes acceptance/final report. At final wrap-up,
-close each remaining owned idle session with the native tool, then use `close-record`.
-For an already released task, only `close-record` is needed; never close its ID again.
-Director and Reviewer cannot use assignment release to bypass final acceptance.
+This records Main-supplied evidence; it never invokes a native tool. Uncertain
+closure needs explicit inspection; do not blindly retry or mark it closed. If safe
+close is unavailable, keep the session and disclose that capability limit.
 
 ## Wait and recovery
 
@@ -121,6 +139,6 @@ continuation mechanism. Do not emulate native notifications with shell watchers 
 claim unattended resumption without actual host support.
 
 A lost session requires observed runtime evidence, `retire-lost`, and a replacement
-with the same role/model plus current dialogue, Plan, prior reports/findings. Merely
-idle is not lost. An unavailable Astra is a blocked Director path, not permission
-for Main/Luna to take over research/planning/acceptance.
+with the same role/model plus the current user messages, Plan and prior reports.
+Merely idle is not lost. An unavailable Astra blocks planning; Main does not take
+over research or planning.

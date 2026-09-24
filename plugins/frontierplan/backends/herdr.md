@@ -1,8 +1,9 @@
 # herdr backend
 
-Requires Python 3.11+, Git for candidate verification, herdr and Codex on the same
-host. Main is an existing session inside herdr, not necessarily Codex: a recognized
-Devin or another agent can coordinate while all children still run through Codex.
+Requires Python 3.11+ and herdr plus Codex on the same host; Git only labels the
+final-check packet. Main is an existing session inside herdr, not necessarily
+Codex: a recognized Devin or another agent can coordinate while all children still
+run through Codex.
 Main keeps its existing agent, model, effort and permissions. FrontierPlan never
 launches, switches or retunes Main, and never edits user configuration automatically.
 Set absolute helper paths from this installed plugin, not a guessed checkout path:
@@ -11,17 +12,18 @@ fp=<plugin-root>/scripts/frontierplan.py
 hd=<plugin-root>/scripts/herdr.py
 ```
 
-## Initialize and start ONLY Director
+## Initialize and start Astra
 
-Save the original user request to a UTF-8 file, then:
+Save the user's exact request to a UTF-8 file, then:
 ```
 python3 "$hd" init --cwd "$project" --request-file "$request"
-python3 "$hd" spawn --run "$run" --role director --file "$assignment"
+python3 "$hd" spawn --run "$run" --role director [--file "$transport_facts"]
 ```
-Retain returned run/task handles and `main_identity`. Assignment contains original
-dialogue references, known repository/worktree locations and permissions, not Main's
-researched Plan. The common `frontierplan.py init --backend herdr` entry point also
-uses the same binding procedure; it cannot create an unbound herdr run.
+Retain the returned run/task handles and `main_identity`. The optional file holds
+transport facts only (repository/worktree paths, available environments, known
+permissions), never Main's research or a Plan. The common
+`frontierplan.py init --backend herdr` entry point uses the same binding procedure;
+it cannot create an unbound herdr run.
 
 ### Main identity: agent kind + session ID + terminal ID
 
@@ -54,7 +56,7 @@ If live session metadata is absent, an independently verified explicit identity 
 be used with the verified agent kind and terminal; this is cooperative identity
 checking, not authentication. A session ID observed at initialization must remain
 available and equal on later commands. The shared ledger also verifies live identity
-before Main-only operations such as message, authorize, prepare, decision and finish.
+before Main-only operations such as message, forward, prepare, decision and finish.
 
 Main's original terminal remains the anchor after moves/swaps. With an explicit or
 Codex session identity, its current pane is located by terminal ID. Auto-detection
@@ -74,9 +76,8 @@ test. Simulated Devin tests are not evidence of real model routing or billing.
 ### Role layout
 
 The Director splits Main `right / 0.4`: Main retains the left 40%, Astra gets the
-right 60%. The first Worker/Design (or Reviewer if it is the first execution role)
-splits Astra `down / 0.4`: Astra retains the upper 40% of that right region and the
-execution area receives the lower 60%. Subsequent Worker/Design/Reviewer spawns
+right 60%. The first researcher or Worker/Design/Reviewer splits Astra `down / 0.4`: Astra retains the upper 40% of that right region and the
+execution area receives the lower 60%. Subsequent researcher/Worker/Design/Reviewer spawns
 split the widest owned execution pane `right / 0.5`, with leftmost pane then ID
 breaking ties. These subdivisions need not produce equal columns.
 
@@ -90,7 +91,7 @@ managed region may require manual restoration of the layout before dispatch resu
 Failed preparation leaves its task handle visible; inspect before retrying.
 
 Removing execution panes lets Herdr collapse the vacated split naturally. Once all
-execution panes are released, Astra occupies the right region again. If new work is
+execution panes are closed, Astra occupies the right region again. If new work is
 authorized before finish, its first execution pane recreates `down / 0.4` from the
 verified Astra anchor. Retained Reviewer panes also count as execution panes.
 Runs started before role-layout metadata existed cannot guess an execution region;
@@ -98,108 +99,83 @@ finish/clean up those runs with their existing participants before starting a ne
 A lost Director anchor likewise requires explicit layout/session recovery; the helper
 does not split Main to silently replace it.
 
-## Reports and continuation
+## Planning relay
+
+After Astra's turn returns, collect it and record the decision:
 ```
 python3 "$hd" collect --task "$director"
 python3 "$fp" decision --task "$director"
-python3 "$fp" message --run "$run" --file "$new_user_message"
-python3 "$hd" send --task "$director" --file "$followup"
 ```
-Children use the shared begin/report commands embedded in their packets. Always
-collect through herdr.py to record live idle/activity evidence. Use send for the
-same Director or Reviewer. Spawn fresh Workers/Design for bounded assignments by
-default; send to an existing Worker only for a justified small immediate follow-up.
+Do exactly what `next` says, without adding judgment:
 
-After a current Director Plan and actual implementation authorization:
-```
-python3 "$fp" authorize --run "$run" --message 1
-python3 "$fp" start --run "$run"
-python3 "$hd" spawn --run "$run" --role worker --file "$bounded_assignment"
-```
-The example message number is not blanket permission: use the real authorizing
-message. Optional design and later independent reviewer use the same spawn command.
-Candidate, decision and finish use frontierplan.py. Before candidate/finish ensure
-all participating live terminals are idle and no direct user activity is outstanding.
-After finish, use `python3 "$hd" close --task "$task"` for each owned participant,
-including released records (which need no further pane operation).
-Closed records are not evidence of actual closure; the transport verifies and closes
-first. Never close Main, active/uncollected work or a terminal with changed identity.
+- `relay`: `python3 "$hd" relay --run "$run"` starts one researcher per request with
+  Astra's exact text. Wait, collect each researcher, then run `relay` again. When all
+  reports are collected it sends Astra their unedited report paths and closes the
+  researchers. A `wait` result lists the researchers still pending.
+- `relay_to_user`: show `relay_to_user` to the user exactly as written. When the user
+  answers, store and forward the words:
+  ```
+  python3 "$fp" message --run "$run" --file "$user_message"
+  python3 "$hd" forward --run "$run"
+  ```
+- `start` / `relay_to_user_then_start`: show the text if present, then
+  `python3 "$fp" start --run "$run"`.
 
-## Release completed execution participants
+If the user writes while Astra is working, store it with `message`; after her turn
+returns and is collected, `decision` rejects a stale planning decision and you run
+`forward`. If research is in flight, `message` answers `next: relay`: finish the
+relay and the new words reach Astra together with the reports. A consultation-only request ends with `python3 "$fp" finish --run "$run" --discussion`.
 
-The authoritative role lifecycle is in [workflow.md](../core/workflow.md).
-After a completed Worker/Design assignment, collect its report, integrate its work,
-and verify that no writes or owned processes remain. Review fixes may be assigned
-to a new Worker later; pending independent review does not require keeping this
-session alive. Obtain a read-only decision template:
-```
-python3 "$hd" release-check --task "$worker"
-```
-Save it outside the candidate checkout, for example in the run directory. Preserve
-`binding` exactly: it binds backend, current task/request, report/receipt, handle, integrated
-candidate, Plan and user input. Read the report and verify the actual state before
-setting the decision fields:
-```
-"decision": {
-  "integrated": true,
-  "assignment_complete": true,
-  "no_active_processes": true,
-  "no_longer_needed": true,
-  "reason": "Assignment integrated and processes stopped; review fixes will use a fresh Worker."
-}
-```
-The helper cannot infer these facts from prose. Do not set them merely to free a
-pane. Then:
-```
-python3 "$hd" release --task "$worker" --file "$release_decision"
-```
-An active session, stale report/activity/Plan/candidate, or changed terminal fails
-before close. Inspect the cause and create a fresh decision only when it is true.
-Release archives the complete assignment evidence, not a claim of review approval.
-Candidate submission still requires an independent review of the integrated tree.
+## Execution
 
-For existing runs, `release-check --reviewer "$reviewer"` remains supported with
-its original reviewed-release decision (`integrated`, `unresolved_findings: []`,
-`no_longer_needed`, `reason`). Existing archived review evidence remains verifiable.
-New runs normally use assignment release above instead of retaining Workers for review.
-
-Reviewer needs no Main release-decision file; its gate is Astra's current acceptance.
-After Astra accepts the exact candidate and safety checks pass, release Reviewer
-before finish:
 ```
-python3 "$hd" release --task "$reviewer"
+python3 "$hd" spawn --run "$run" --role worker --file "$assignment" [--cwd "$worktree"]
+python3 "$hd" spawn --run "$run" --role reviewer --file "$review_request"
+python3 "$hd" send --task "$worker" --file "$accepted_fixes"
+python3 "$hd" send --task "$reviewer" --file "$rereview_request"
+python3 "$hd" consult --run "$run" --file "$question"
 ```
-This requires unchanged accepted candidate, collected acceptance and idle/fresh live
-participants. Release eligible Workers before Reviewer when both are ready. Retaining
-participants beyond their release point requires an explicit exception and a specific
-reason recorded in the run's evidence or decision notes, as required by the shared
-workflow. Participants retained for such exceptions remain subject to safe post-finish
-cleanup. Failed safety checks require retention and a recorded reason; do not bypass
-them. Never release Astra; use `close` only after finish.
+Roles: `worker` (Luna MAX fast), `design` (Sol MAX), `reviewer` (Sol XHIGH).
+Children use the begin/report commands embedded in their packets. Always collect
+through herdr.py to record live idle/activity evidence. `send` continues the same
+Worker/Design/Reviewer session; Astra's turns use `forward`, `relay`, `consult` and
+`final-check`. After `consult`, collect and run `decision`; the advice is Main's to
+adopt (`next: main_decides`) unless it carries a `user_response` to relay.
 
-Successful release records `released: true, closed: false`, the Main disposition and
-assignment evidence (or the legacy release review / Astra acceptance for Reviewer). Task files,
-reports and evidence survive; later re-review cannot overwrite the archived copy.
-Released sessions reject send/begin/report and are excluded from wait pending work.
-Candidate/acceptance/finish still validate their archived evidence. Later changes
-can use a new Worker with the preserved history; the existing live Reviewer continues
-if retained. After an accepted Reviewer has been released, new review needs a new
-Reviewer and must not reuse an old report for a different candidate/Plan.
+When review has converged and every Worker/Design/Reviewer is idle and collected:
+```
+python3 "$hd" final-check --run "$run" --file "$evidence"
+python3 "$hd" collect --task "$director"
+python3 "$fp" decision --task "$director"
+```
+It runs once per Plan. Adjudicate its findings like Reviewer findings; accepted
+fixes go to the responsible Worker and the same Reviewer, not back to Astra. Then:
+```
+python3 "$fp" finish --run "$run" --file "$final_report"
+```
 
-Both release and close verify ownership, unique original terminal, current pane
-occupant, complete collected report and unchanged `state_change_seq`. A moved owned
-terminal can be closed only at its independently verified current pane, never by
-blindly reusing its original pane ID. Report/run locks prevent competing helper
-writes during closure. Herdr's pane lookup and close are separate API calls: these
-cooperative checks do not atomically intercept direct user typing or pane swaps.
-Avoid manual input/movement during the close operation.
+## Closing participants
 
-Before closing, the helper persists a `closing` record with the intended operation,
-pane/terminal identity and release evidence. A lost response or crash leaves that
-record and blocks retry/dispatch/finish; it is not success. Inspect that exact
-terminal and whether closure occurred before manually recovering the record; do not
-clear it automatically or retry against a reused pane ID. `close` still requires
-overall `finish`, and final cleanup of a released record never sends a second close.
+```
+python3 "$hd" close --task "$task"
+```
+Close a researcher once `relay` has returned its report (relay does this), a
+Worker/Design/Reviewer when Main ends its review cycle, and Astra only after finish.
+Close requires the participant's current report to be collected and unchanged
+activity since collection; unresolved Worker/Design/Reviewer blockers stay open until
+finish. Never close Main.
+
+Close verifies ownership, the unique original terminal, the current pane occupant,
+the collected report and unchanged `state_change_seq`. A moved owned terminal is
+closed only at its verified current pane, never by reusing its original pane ID.
+Herdr's pane lookup and close are separate calls; these cooperative checks do not
+atomically intercept direct typing or pane swaps. Avoid manual input during closure.
+
+Before closing, the helper persists a `closing` record with the pane/terminal
+identity. A lost response or crash leaves that record and blocks retry; it is not
+success. Inspect that terminal and whether closure occurred before recovering the
+record manually; never retry against a reused pane ID. Closing keeps task files,
+reports and evidence.
 
 ## Waiting
 
@@ -226,7 +202,7 @@ session is not yet idle: wait before collection or closure. Unchanged collected
 blockers and other anomalies do not repeatedly wake Main inside a wait, but remain
 visible on every `check` and on the next timeout heartbeat. Resolve them or record
 the retained prerequisite before waiting again. Collected complete idle participants
-and released tasks are not pending; pending:0 alone does not release anyone.
+and closed tasks are not pending; pending:0 alone does not close anyone.
 
 On a busy/stale lock, inspect the recorded owning PID and existing execution handle.
 Reuse the live waiter, or verify its termination before recovering its lock. Do not
@@ -241,12 +217,12 @@ Each child requests workspace-write + never and `default_permissions=":workspace
 matching the predecessor's CLI 0.154.0/shared app-server 0.153.4 workaround. This is
 NOT a cross-version permission guarantee. Verify effective permissions and model /
 effort from session evidence, not launch args or a child's self-report. Only Worker
-adds fast overrides. No role enables network access; Director's research uses only
-already available authorized search/connector/command tools. Missing tools are blockers.
+adds fast overrides. No role enables network access; Astra and researchers use only already available
+authorized search/connector/command tools. Missing tools are blockers.
 Main's explicit identity variables are cleared in child pane and Codex shell
 configuration; the child-role guard still prevents children from managing the run.
 
 Starting/sending persists the task and uncertain-delivery state before mutation.
 Inspect the recorded terminal after failures; don't duplicate prompts or start another
-Director to bypass an error. Wait/collect fail closed on identity mismatch. The
+Director or researcher to bypass an error. Wait/collect fail closed on identity mismatch. The
 protocol is cooperative and cannot atomically intercept direct typing.

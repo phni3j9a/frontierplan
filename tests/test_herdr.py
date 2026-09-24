@@ -112,17 +112,22 @@ class HerdrTransport(unittest.TestCase):
 
     def director(self):
         self.setup_api()
-        return hd.spawn(self.run, "director", self.input)["task"]
+        return hd.spawn(self.run, "director")["task"]
+
+    def decide(self, task, value):
+        self.report(task, value); hd.collect(task)
+        return fp.decision(task)
 
     def director_plan(self, task):
-        self.report(task, {"kind":"plan", "plan_id":"p1", "user_response":"Plan", "plan":"Implement.",
-                           "acceptance_criteria":["Works"], "verification":["Tests"]})
-        hd.collect(task); fp.decision(task); fp.authorize(self.run, 1); fp.start(self.run)
+        self.decide(task, {"kind":"plan", "plan_id":"p1", "user_response":"Plan", "plan":"Implement.",
+                           "acceptance_criteria":["Works"], "verification":["Tests"],
+                           "authorization_message": 1})
+        fp.start(self.run)
 
     def discussion_finished(self):
         task = self.director()
-        self.report(task, {"kind":"reply", "user_response":"Advice"})
-        hd.collect(task); fp.decision(task); fp.finish(self.run, discussion=True)
+        self.decide(task, {"kind":"reply", "user_response":"Advice"})
+        fp.finish(self.run, discussion=True)
         return task
 
     def test_main_pair_must_match(self):
@@ -167,26 +172,98 @@ class HerdrTransport(unittest.TestCase):
         self.assertIn('service_tier="fast"', args)
         self.assertIn('model_reasoning_effort="max"', args)
 
-    def test_followup_reuses_session(self):
+    def test_forward_reuses_astra_session(self):
         task = self.director(); original = fp.task_at(task)[1]["handle"]
-        self.report(task, {"kind":"reply", "user_response":"Need more context"}); hd.collect(task)
-        hd.send(task, self.input)
+        self.decide(task, {"kind":"reply", "user_response":"Need more context"})
+        fp.message(self.run, self.write("m2.md", "Here is the context."))
+        result = hd.forward(self.run)
+        self.assertEqual(result["purpose"], "planning")
         self.assertEqual(fp.task_at(task)[1]["handle"], original)
         self.assertEqual(sum(c[:2] == ("agent", "start") for c in self.api.calls), 1)
+        self.assertEqual(sum(c[:2] == ("agent", "prompt") for c in self.api.calls), 2)
+
+    def test_send_is_only_for_executors(self):
+        task = self.director(); self.decide(task, {"kind":"reply", "user_response":"x"})
+        with self.assertRaises(fp.Failure): hd.send(task, self.input)
 
     def test_busy_session_not_prompted(self):
-        task = self.director(); data = fp.task_at(task)[1]
-        self.api.registered[data["name"]]["agent_status"] = "working"
-        before = len(self.api.calls)
-        with self.assertRaises(fp.Failure): hd.send(task, self.input)
-        self.assertEqual(len(self.api.calls), before+1)  # Only Main identity inspection.
+        task = self.director(); self.decide(task, {"kind":"reply", "user_response":"x"})
+        fp.message(self.run, self.write("m2.md", "More."))
+        self.api.registered[fp.task_at(task)[1]["name"]]["agent_status"] = "working"
+        with self.assertRaises(fp.Failure): hd.forward(self.run)
+        self.assertEqual(sum(c[:2] == ("agent", "prompt") for c in self.api.calls), 1)
+
+    def test_research_relay_spawns_below_astra_and_returns_reports(self):
+        director = self.director()
+        out = self.decide(director, {"kind":"research", "requests":[{"id":"r1", "assignment":"Survey A."},
+                                                                     {"id":"r2", "assignment":"Survey B."}]})
+        self.assertEqual(out["next"], "relay")
+        spawned = hd.relay(self.run)
+        self.assertEqual(spawned["action"], "spawned")
+        researchers = [t["task"] for t in spawned["tasks"]]
+        splits = [c for c in self.api.calls if c[:2] == ("pane", "split")]
+        self.assertEqual(splits[1][2], fp.task_at(director)[1]["handle"]["pane_id"])
+        args = fp.task_at(researchers[0])[1]["requested_codex_args"]
+        self.assertEqual(args[args.index("-m")+1], "gpt-6-luna"); self.assertIn('service_tier="fast"', args)
+        self.assertEqual(hd.relay(self.run)["action"], "wait")
+        for task in researchers:
+            self.report(task, "Facts with evidence."); hd.collect(task)
+        back = hd.relay(self.run)
+        self.assertEqual(back["action"], "returned_to_director")
+        self.assertEqual(len(back["closed"]), 2)
+        self.assertTrue(all(fp.task_at(t)[1]["closed"] for t in researchers))
+        self.assertEqual(fp.task_at(director)[1]["purpose"], "research_results")
+        self.assertEqual(hd.wait(self.run, timeout=0)["pending"], 1)  # Astra's new turn.
+
+    def test_relay_waits_for_idle_astra_before_marking_returned(self):
+        director = self.director()
+        self.decide(director, {"kind":"research", "requests":[{"id":"r1", "assignment":"Survey A."}]})
+        researcher = hd.relay(self.run)["tasks"][0]["task"]
+        self.report(researcher, "Facts."); hd.collect(researcher)
+        self.api.registered[fp.task_at(director)[1]["name"]]["agent_status"] = "working"
+        with self.assertRaises(fp.Failure): hd.relay(self.run)
+        self.assertFalse(fp.run_at(self.run)[1]["research"]["returned"])
+        self.api.registered[fp.task_at(director)[1]["name"]]["agent_status"] = "idle"
+        self.assertEqual(hd.relay(self.run)["action"], "returned_to_director")
+
+    def test_researcher_cannot_be_spawned_directly(self):
+        self.director()
+        with self.assertRaises(fp.Failure): hd.spawn(self.run, "researcher", self.input)
+
+    def test_final_check_and_finish_flow(self):
+        director = self.director(); self.director_plan(director)
+        worker = hd.spawn(self.run, "worker", self.input)["task"]
+        self.report(worker, "Implemented."); hd.collect(worker)
+        reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
+        self.report(reviewer, "FINDINGS: none"); hd.collect(reviewer)
+        hd.final_check(self.run, self.write("evidence.md", "Criteria map and test output."))
+        self.assertEqual(fp.task_at(director)[1]["purpose"], "final_check")
+        out = self.decide(director, {"kind":"final_check", "plan_id":"p1",
+                                     "ac_status":[{"criterion":"Works", "status":"met", "evidence":"tests"}],
+                                     "findings":[], "plan_divergence":[]})
+        self.assertEqual(out["next"], "main_decides")
+        with self.assertRaises(fp.Failure): hd.close(director)  # Astra stays until finish.
+        hd.close(worker); hd.close(reviewer)
+        fp.finish(self.run, self.write("final.md", "Main's report."))
+        hd.close(director)
+        closed = [c[2] for c in self.api.calls if c[:2] == ("pane", "close")]
+        self.assertEqual(len(closed), 3); self.assertNotIn("main-pane", closed)
+
+    def test_worker_fix_reuses_same_session(self):
+        director = self.director(); self.director_plan(director)
+        worker = hd.spawn(self.run, "worker", self.input)["task"]
+        self.report(worker, "Implemented."); hd.collect(worker)
+        original = fp.task_at(worker)[1]["handle"]
+        hd.send(worker, self.write("fix.md", "FP-001 accepted: fix it."))
+        self.assertEqual(fp.task_at(worker)[1]["handle"], original)
+        self.assertEqual(sum(c[:2] == ("agent", "start") for c in self.api.calls), 2)
 
     def test_partial_delivery_is_recorded_not_duplicated(self):
         self.setup_api(); self.api.fail_prompt = True
-        with self.assertRaises(fp.Failure): hd.spawn(self.run, "director", self.input)
+        with self.assertRaises(fp.Failure): hd.spawn(self.run, "director")
         saved = fp.tasks(Path(self.run))
         self.assertEqual(len(saved), 1); self.assertEqual(saved[0][1]["delivery"], "uncertain")
-        with self.assertRaises(fp.Failure): hd.spawn(self.run, "director", self.input)
+        with self.assertRaises(fp.Failure): hd.spawn(self.run, "director")
         self.assertEqual(sum(c[:2] == ("pane", "split") for c in self.api.calls), 1)
 
     def test_close_rejects_activity_after_collection(self):

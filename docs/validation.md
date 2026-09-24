@@ -9,31 +9,34 @@ suite on Python 3.11 and 3.13. The package validator checks both entry points,
 explicit invocation policy, manifests, lowercase role profiles, local references
 and standalone extracted-package integrity.
 
-Coverage includes pre-implementation Director-only dispatch, authorization separation,
-current-message reconciliation, same-session follow-up, independent review freshness,
-stale acceptance rejection (tracked, staged and untracked changes), premature close,
-wrong Main identity, no-focus layout, fixed launch policy, unread-report reconciliation and
-partial delivery failures. Tests do not establish reasoning quality or real routing.
+Coverage includes Astra-only dispatch before execution, the research relay (verbatim
+requests, no duplicate researchers after a partial failure, unedited reports back to
+Astra), verbatim user relay and forwarding, stale planning decisions after new user
+input, Astra-recorded implementation authorization, decision kinds per turn,
+consultation and Plan revision, the once-per-Plan final check and its shape, finish
+preconditions, same-session Worker fixes and Reviewer re-review, close guards, lost
+Astra recovery, wrong Main identity, no-focus layout, fixed launch policy,
+unread-report reconciliation and partial delivery failures. Tests do not establish
+reasoning quality, Plan proportionality or real routing.
 
-Role-routing checks cover the native helper's prepared/stored profiles and simulated
-herdr launch arguments: Director uses `gpt-6-astra` / `xhigh`, Worker uses
+Role-routing checks cover the native helper's profiles and simulated herdr launch
+arguments: Director uses `gpt-6-astra` / `xhigh`, Researcher and Worker use
 `gpt-6-luna` / `max` with fast requested, Design uses `gpt-6-sol` / `max`, and
 Reviewer uses `gpt-6-sol` / `xhigh`. Main still inherits its existing session.
-GPT-6 Sol / Luna runtime routing and effective Worker tier require target-host
-evidence; the offline suite does not launch these models.
+Runtime routing and effective Luna tier require target-host evidence; the offline
+suite does not launch these models.
 
-`tests/test_herdr_lifecycle.py` exercises 40/60 role layout with a split-tree fake,
-inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
-legacy same-session fixes/re-review, explicit release decisions and stale/active/identity
-guards; archived evidence, late Astra revisions, empty execution area recreation,
-Reviewer acceptance gating, wait exclusion and final cleanup without duplicate close.
-Uncertain close responses must preserve the intent and stop automatic retry.
+`tests/test_herdr_lifecycle.py` exercises the 40/60 role layout with a split-tree
+fake, inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
+researchers sharing and then vacating the execution region; same-session fixes and
+re-review; close guards for activity, identity, occupant, reused pane IDs, blockers
+and Astra before finish; execution-area recreation and final cleanup. Uncertain close
+responses must preserve the intent and stop automatic retry.
 
 `tests/test_completion.py` covers unread complete/blocked replay after lost wait output,
 read-only reconciliation while a waiter is alive, same-file publication, idle gating,
-old requests, the five-minute heartbeat, assignment release before review, fresh fixes
-with the same Reviewer, archived evidence and native closure-record guards. The clock,
-herdr and native closure evidence are simulated; no model is launched by these tests.
+old requests and the five-minute heartbeat. The clock and herdr are simulated; no
+model is launched by these tests.
 
 ## Herdr pane smoke (real transport, synthetic agents)
 
@@ -43,17 +46,20 @@ and cleans up that workspace. Its owner must stop the disposable server afterwar
 Use an isolated `XDG_CONFIG_HOME` and `HERDR_CONFIG_PATH` with a simple `/bin/sh`
 terminal config when starting that server; do not point it at an active user server.
 It calls the real pane/layout/resize/move/close APIs, but replaces agent identity,
-start/prompt, status, reports and acceptance with explicit synthetic fixtures. It
-never launches a model or sends a real agent a prompt. The source checkout's tests
-are required to run this optional tool; it is not a plugin runtime dependency.
+start/prompt, status, reports and Astra decisions with explicit synthetic fixtures.
+It never launches a model or sends a real agent a prompt. The source checkout's tests
+are required to run this optional tool; it is not a plugin runtime dependency. Keep
+the server's socket path short (Unix sockets allow about 107 bytes).
 
-On 2026-09-20, Herdr 0.9.0 passed this smoke on an isolated local server. The saved
-[JSON evidence](evidence/issue-4-herdr-layout.json) contains eight actual layout
-snapshots: planning (Main 48/Astra 72 columns), execution (Astra 16/executors 24 rows),
-manual Main resize to 60 columns, Worker movement to another tab, Worker/Design
-release, Reviewer release, recreation of execution below Astra while preserving the
-manual width, and final Main-only layout. Focus stayed on Main; six owned child
-panes were closed exactly once. The disposable workspace and server were cleaned up.
+On 2026-09-24, Herdr 0.9.1 passed the v0.2 smoke on an isolated local server. The
+saved [JSON evidence](evidence/issue-11-herdr-layout.json) has nine layout snapshots:
+planning, two researchers below Astra, research returned (researchers closed),
+execution, manual Main resize, Worker moved to another tab, review cycle closed after
+the final check, execution recreated below Astra with the manual width preserved, and
+the final Main-only layout. Focus stayed on Main; eight owned child panes were closed
+exactly once. The disposable workspace and server were cleaned up. The earlier
+2026-09-20 Herdr 0.9.0 run of the v0.1 flow is kept as
+[issue-4 evidence](evidence/issue-4-herdr-layout.json).
 
 This establishes real Herdr geometry and pane operations with the helper, not real
 Astra/Worker/Reviewer session lifecycle, model routing, effective permissions or
@@ -63,32 +69,28 @@ end-to-end autonomous agent behavior. Those remain target-host checks below.
 
 1. Install from the marketplace in a fresh Codex session. Confirm exactly two skills
    appear and do not activate on ordinary requests. Confirm shared resources survive
-   installation/ZIP extraction and both role profile reads work.
-2. Invoke each skill for a consultation-only task. Confirm ONLY Astra starts, reads
-   code/uses required authorized research tools itself, drafts the response and Plan,
-   and no Main/Luna research or implementation takes place.
-3. Check actual child runtime model/effort, effective permission and Worker tier
+   installation/ZIP extraction and all role profile reads work.
+2. Invoke each skill for a consultation-only task. Confirm Astra alone answers, Main
+   relays her text verbatim, and no Worker/Design/Reviewer starts.
+3. Ask for a task where Astra requests research. Confirm Main starts the researchers
+   with her exact requests, returns the unedited report paths, and closes them; on
+   the subagent backend confirm nothing nests below Astra.
+4. Check actual child runtime model/effort, effective permission and Luna tier
    evidence; launch args alone and a child's self-report are insufficient. Native
    permission inheritance needs separate validation from the herdr CLI route.
-4. Authorize a small implementation in a disposable repository. Confirm the Plan,
-   fresh Worker assignments, separate retained Reviewer, bounded fix/re-review, evidence packet,
-   Astra acceptance and Astra-authored final reply are all visible.
-5. Add user input after a Plan, alter a candidate after acceptance, interrupt a child,
-   move herdr panes, or remove a session. Confirm the appropriate stale/identity guard
-   prevents old results from being accepted or unrelated panes from being closed.
-6. Without sending `continue`, confirm child publication → Main result delivery →
-   collection → next assignment/review actually runs on each target host. Record
-   publish/receive/collect/next-action timestamps and the host's supported wait limit.
-   Exercise a report already present before waiting, working→complete in the same
-   file, lost/interrupted outer wait then resume, and an old request that must not
-   satisfy a new assignment. Confirm periodic reconciliation within about 300 seconds
-   while Main is actively coordinating, earlier native notification where supported,
-   and truthful disclosure when a stopped Main cannot be resumed by the host.
-7. Release a completed integrated Worker before independent review, retain its report,
-   then assign a discovered fix to a fresh Worker and re-review with the same Reviewer.
-   Confirm active processes/changed activity/uncollected reports prevent release and
-   final cleanup does not close an already released session again. Native tests must
-   use actual close-tool evidence; a helper record alone is not a real closure.
+5. Authorize a small implementation in a disposable repository. Confirm the Plan
+   (with its simpler alternative and two-stage verification), Main's assignments,
+   the same Worker receiving accepted fixes, the same Reviewer re-reviewing, one
+   Astra final check, and Main's final report are all visible, and that the user is
+   not asked to continue because of review rounds.
+6. Add user input during planning and during execution, interrupt a child, move
+   herdr panes, or remove a session. Confirm stale planning decisions are rejected,
+   execution input stays with Main, and identity guards prevent closing unrelated panes.
+7. Without sending `continue`, confirm child publication → Main result delivery →
+   collection → next action actually runs on each target host. Record timestamps and
+   the host's supported wait limit. Exercise a report already present before waiting,
+   working→complete in the same file, a lost/interrupted outer wait then resume, and
+   an old request that must not satisfy a new assignment.
 
 Do not publish a claim that live Astra/herdr/native integration has passed until
 these target-host checks have actually been executed and their versions/evidence
