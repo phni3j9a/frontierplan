@@ -80,6 +80,41 @@ This establishes real Herdr geometry and pane operations with the helper, not re
 Astra/Worker/Reviewer session lifecycle, model routing, effective permissions or
 end-to-end autonomous agent behavior. Those remain target-host checks below.
 
+## SWE-2 variant smoke (real Devin children, synthetic Codex seats)
+
+`tools/smoke_swe2_devin.py` is opt-in and consumes the account's Devin/SWE-2 usage.
+Run it from a recognized agent's pane in a herdr tab that holds only that pane; the
+pane becomes Main through the normal current-pane identity check. Researcher and
+Worker are real `devin --sandbox --model swe-2-max` sessions working in a disposable
+Git repository through the real packets and report protocol. Astra and the Reviewer
+are Codex seats that stay shells; the script publishes their decisions and reviews
+as explicit fixtures, so no Codex model starts. Pane, layout, wait, collect, send and
+close go through the real helper and herdr. The run and scratch repository are
+removed on success and left in place for inspection on failure.
+
+On 2026-09-25 (Devin CLI 3000.11.3, herdr 0.9.1, Ubuntu 24.04 with `bwrap` 0.9.0 and
+`socat`), with Claude Code as Main, the smoke passed; see the
+[JSON evidence](evidence/issue-15-swe2-devin-smoke.json). The researcher read the
+repository and returned its report in about 30 seconds; relay returned it to the
+synthetic Astra and closed its pane. The Worker added `subtract` and a unittest, then
+applied the fixture finding in the same Devin session, making every change with shell
+heredocs as instructed. Devin's session exports recorded `swe-2-max` for every agent
+step of both children, and the unittest run by the smoke itself passed. The layout
+was Main left with Astra above the execution pane on the right, and returned to Main
+alone after all children were closed.
+
+Before that run, manual probes on the same host established the permission design:
+`--sandbox` ignores `--permission-mode dangerous` and selects autonomous mode; without
+`socat` the session cannot start; the edit/write tools prompt in autonomous mode even
+with allow rules in `--config` or `.devin/config.local.json`; denying them makes
+the call fail at once (and ends that turn); shell writes succeed in the workspace,
+`/tmp` and `Write(...)` scopes and fail elsewhere (for example `$HOME`) with a
+read-only filesystem error; and `--config` is honored (its model setting applied).
+
+This does not establish real Astra/Reviewer behavior in this variant, network
+restrictions (none are configured), behavior under a project `.devin/config*.json`,
+or results on other hosts.
+
 ## Target-host smoke tests (not performed by the offline automated suite)
 
 1. Install from the marketplace in a fresh Codex (or Claude Code) session. Confirm exactly three skills

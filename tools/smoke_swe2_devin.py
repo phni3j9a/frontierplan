@@ -14,7 +14,7 @@ all go through the real helper and Herdr. Prints JSON evidence to stdout.
 from __future__ import annotations
 
 import argparse
-import copy
+import contextlib
 import json
 from pathlib import Path
 import shutil
@@ -183,7 +183,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=float, default=1200, help="seconds allowed per Devin report")
     try:
-        print(json.dumps(smoke(parser.parse_args().limit), ensure_ascii=False, indent=2))
+        # The helper prints prepared-task lines; keep stdout for the evidence document only.
+        with contextlib.redirect_stdout(sys.stderr):
+            evidence = smoke(parser.parse_args().limit)
+        print(json.dumps(evidence, ensure_ascii=False, indent=2))
     except fp.Failure as exc:
         print(json.dumps({"error": str(exc), "events": EVENTS}, ensure_ascii=False, indent=2))
         sys.exit(1)
