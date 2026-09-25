@@ -78,6 +78,7 @@ class FakeHerdr:
         if args[:2] == ("agent", "start"):
             pane_id = args[args.index("--pane")+1]
             pane = next(p for p in self.panes if p["pane_id"] == pane_id)
+            pane["agent"] = args[args.index("--kind")+1]
             self.registered[args[2]] = dict(pane, name=args[2], agent_status="idle", state_change_seq=1, launch_pending=False)
             return {"argv":list(args[args.index("--")+1:])}
         if args[:2] == ("agent", "prompt"):

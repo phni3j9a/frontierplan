@@ -10,7 +10,7 @@
     {
       "name": "frontierplan",
       "source": "./plugins/frontierplan",
-      "description": "Explicit-only AstraPlan-herdr for Claude Code as Main: Astra plans, Main coordinates Codex children in herdr panes.",
+      "description": "Explicit-only AstraPlan-herdr and AstraPlan-herdr-swe2 for Claude Code as Main: Astra plans, Main coordinates Codex (or Devin SWE-2) children in herdr panes.",
       "category": "productivity"
     }
   ]

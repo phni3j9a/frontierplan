@@ -127,7 +127,8 @@ def main_pane(state: dict, api: Herdr) -> dict:
 
 
 def initialize(cwd: str, request_file: str, pane_id: str | None = None,
-               terminal_id: str | None = None, socket: str | None = None) -> dict:
+               terminal_id: str | None = None, socket: str | None = None,
+               variant: str = "standard") -> dict:
     fp.require(os.environ.get("FRONTIERPLAN_ROLE") not in fp.CHILDREN, "Children cannot initialize runs.")
     fp.require(bool(pane_id) == bool(terminal_id), "Supply both Main pane and terminal IDs.")
     identity = caller_identity()
@@ -151,16 +152,23 @@ def initialize(cwd: str, request_file: str, pane_id: str | None = None,
     binding = {"binary": str(api.binary), "socket": api.env.get("HERDR_SOCKET_PATH"),
                "main_pane_id": pane["pane_id"], "main_terminal_id": pane["terminal_id"],
                "session_verified": session_id(pane) is not None}
-    value = fp.initialize("herdr", cwd, request_file, main_identity=identity, herdr_binding=binding)
-    return {"run": value["run"], "main_pane": pane["pane_id"], "main_identity": identity}
+    value = fp.initialize("herdr", cwd, request_file, main_identity=identity, herdr_binding=binding,
+                          variant=variant)
+    return {"run": value["run"], "main_pane": pane["pane_id"], "main_identity": identity,
+            "variant": variant}
+
+
+def child_agent(task: dict) -> str:
+    """The agent kind this participant was launched as; fixed by its profile."""
+    return task["profile"].get("agent", "codex")
 
 
 def live(task: dict, agents: dict) -> dict:
     handle = task.get("handle") or {}
     agent = agents.get(task["name"])
     fp.require(agent and agent.get("terminal_id") == handle.get("terminal_id")
-               and str(agent.get("agent", "")).lower() == "codex",
-               "The original Codex session is unavailable; inspect recorded handles, do not guess.")
+               and str(agent.get("agent", "")).lower() == child_agent(task),
+               "The original child session is unavailable; inspect recorded handles, do not guess.")
     return agent
 
 
@@ -179,7 +187,7 @@ def owned_pane(task: dict, state: dict, api: Herdr) -> dict:
                "Participant terminal is missing, moved inconsistently or ambiguous.")
     pane = api.call("pane", "get", agent["pane_id"])["pane"]
     fp.require(pane.get("pane_id") == agent["pane_id"] and pane.get("terminal_id") == terminal
-               and str(pane.get("agent", "")).lower() == "codex",
+               and str(pane.get("agent", "")).lower() == child_agent(task),
                "Pane occupant changed; no pane modified.")
     return agent
 
@@ -292,6 +300,25 @@ def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
                    "--add-dir", str(root), "--no-alt-screen"]
 
 
+def devin_args(task: dict, path: Path) -> list[str]:
+    # No OS sandbox: Devin's bypass mode auto-approves every tool (edits, shell, fetch,
+    # MCP) with the user's own permissions; see backends/herdr.md.
+    return ["--permission-mode", "dangerous", "--model", task["profile"]["model"],
+            "--export", str(path / "devin-session.json")]
+
+
+def devin_evidence(path: Path) -> dict:
+    """Models recorded in Devin's own session export; absent evidence is reported as such."""
+    export = path / "devin-session.json"
+    try:
+        value = json.loads(export.read_text(encoding="utf-8"))
+        models = sorted({s["model_name"] for s in value.get("steps", [])
+                         if s.get("source") == "agent" and s.get("model_name")})
+        return {"export": str(export), "session_id": value.get("session_id"), "observed_models": models}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {"export": str(export), "observed_models": None, "note": "Session export unavailable."}
+
+
 def deliver(path: Path, task: dict, api: Herdr) -> None:
     fp.require(ready(live(task, api.agents())), "Agent must be idle before delivery.")
     task.update(delivery="uncertain", submitted_at=time.time())
@@ -306,6 +333,11 @@ def launch(root: Path, path: Path, api: Herdr) -> dict:
     task = fp.read(path / "task.json")
     fp.require(not task.get("handle") and task.get("delivery") == "prepared",
                "Participant start is uncertain or already done; inspect the recorded task.")
+    kind = child_agent(task)
+    if kind == "devin":
+        # Fail before any pane mutation when the child cannot be launched as profiled.
+        fp.require(shutil.which("devin"), "devin is not on PATH on this host; no pane changed.")
+        args = devin_args(task, path)
     # Expose the task before any terminal mutation for partial-failure recovery.
     print(json.dumps({"prepared_task": str(path), "name": task["name"]}), flush=True)
     with fp.transaction(root) as (_, state):
@@ -318,11 +350,14 @@ def launch(root: Path, path: Path, api: Herdr) -> dict:
         task["delivery"] = "starting"
         fp.atomic(path / "task.json", task)
         state["herdr"]["layout"] = binding
-    args = codex_args(task, root, pane, api)
-    task["requested_codex_args"] = args
+    if kind == "devin":
+        task["requested_devin_args"] = args
+    else:
+        args = codex_args(task, root, pane, api)
+        task["requested_codex_args"] = args
     fp.atomic(path / "task.json", task)
     api.call("pane", "rename", pane["pane_id"], f"FrontierPlan · {task['role']}")
-    started = api.call("agent", "start", task["name"], "--kind", "codex", "--pane", pane["pane_id"],
+    started = api.call("agent", "start", task["name"], "--kind", kind, "--pane", pane["pane_id"],
                        "--timeout", "30000", "--", *args)
     task["launched_argv"] = started.get("argv")
     fp.atomic(path / "task.json", task)
@@ -416,6 +451,10 @@ def collect(task_path: str) -> dict:
     result = fp.collect(task_path)
     receipt = fp.read(path / "receipt.json")
     receipt.update(state_change_seq=agent["state_change_seq"], terminal_id=agent["terminal_id"])
+    if child_agent(task) == "devin":
+        evidence = devin_evidence(path)
+        receipt["session_evidence"] = evidence
+        result = dict(result, session_evidence=evidence, profile_model=task["profile"]["model"])
     fp.atomic(path / "receipt.json", receipt)
     return result
 
@@ -455,7 +494,7 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
             raise fp.Failure("Participant closure is uncertain; inspect the saved closing record.")
         agent = agents.get(task["name"])
         if agent and (agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id")
-                      or agent.get("agent") != "codex"):
+                      or str(agent.get("agent", "")).lower() != child_agent(task)):
             agent = None
         result = fp.current_result(path, task)
         receipt = fp.read(path / "receipt.json") if (path / "receipt.json").exists() else {}
@@ -517,7 +556,7 @@ def wait(run: str, timeout: int = 300) -> dict:
 def cli() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action", required=True)
-    q = sub.add_parser("init"); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True); q.add_argument("--main-pane"); q.add_argument("--main-terminal-id"); q.add_argument("--socket")
+    q = sub.add_parser("init"); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True); q.add_argument("--main-pane"); q.add_argument("--main-terminal-id"); q.add_argument("--socket"); q.add_argument("--variant", choices=fp.VARIANTS, default="standard")
     q = sub.add_parser("spawn"); q.add_argument("--run", required=True); q.add_argument("--role", choices=("director", *fp.EXECUTORS), required=True); q.add_argument("--file"); q.add_argument("--cwd")
     q = sub.add_parser("send"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("collect", "close"):
@@ -528,7 +567,7 @@ def cli() -> None:
         q = sub.add_parser(name); q.add_argument("--run", required=True)
     q = sub.add_parser("wait"); q.add_argument("--run", required=True); q.add_argument("--timeout", type=int, default=300)
     a = p.parse_args()
-    if a.action == "init": result = initialize(a.cwd, a.request_file, a.main_pane, a.main_terminal_id, a.socket)
+    if a.action == "init": result = initialize(a.cwd, a.request_file, a.main_pane, a.main_terminal_id, a.socket, a.variant)
     elif a.action == "spawn": result = spawn(a.run, a.role, a.file, a.cwd)
     elif a.action == "send": result = send(a.task, a.file)
     elif a.action == "collect": result = collect(a.task)

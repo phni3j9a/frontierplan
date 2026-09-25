@@ -1,7 +1,7 @@
 # herdr backend
 
-Requires Python 3.11+ and herdr plus Codex on the same host; Git only labels the
-final-check packet. Main is an existing session inside herdr, not necessarily
+Requires Python 3.11+ and herdr plus Codex on the same host (the swe2 variant also
+needs Devin CLI); Git only labels the final-check packet. Main is an existing session inside herdr, not necessarily
 Codex: a recognized Devin or another agent can coordinate while all children still
 run through Codex.
 Main keeps its existing agent, model, effort and permissions. FrontierPlan never
@@ -137,7 +137,8 @@ python3 "$hd" send --task "$worker" --file "$accepted_fixes"
 python3 "$hd" send --task "$reviewer" --file "$rereview_request"
 python3 "$hd" consult --run "$run" --file "$question"
 ```
-Roles: `worker` (Luna MAX fast), `design` (Sol MAX), `reviewer` (Sol XHIGH).
+Roles: `worker` (Luna MAX fast; SWE-2 Max in the swe2 variant), `design` (Sol MAX),
+`reviewer` (Sol XHIGH).
 Children use the begin/report commands embedded in their packets. Always collect
 through herdr.py to record live idle/activity evidence. `send` continues the same
 Worker/Design/Reviewer session; Astra's turns use `forward`, `relay`, `consult` and
@@ -213,6 +214,41 @@ A wait exit is not proof that Main read/collected its result. Keep the result-wa
 active; a background waiter cannot guarantee waking a Main that has ended its turn.
 Long-running process monitoring after implementation starts belongs to its Worker.
 
+## SWE-2 variant (`astraplan-herdr-swe2`)
+
+`init --variant swe2` records the variant in the run; it cannot change later and the
+subagent backend rejects it. Researchers and Workers then load `profiles/swe2/*.toml`
+and start with `herdr agent start --kind devin`; Astra, Design and the Reviewer are
+still Codex. Every other command, the layout and the relay are unchanged. `live`,
+`collect`, `close`, `check` and `wait` compare each child with the agent kind of its
+own profile, so a Codex pane never stands in for a Devin task or the reverse.
+
+Launch arguments are `devin --permission-mode dangerous --model swe-2-max --export
+<task>/devin-session.json`. Before any pane changes, the helper requires `devin` on
+PATH. Devin loads the user's own configuration unchanged (including herdr's Devin
+integration hooks); FrontierPlan adds no config file or rules.
+
+**This is a deliberate, wider permission than the Codex children.** Devin's bypass
+mode (`dangerous`) auto-approves every tool without an OS sandbox: file edits and
+shell commands anywhere the user can write, web fetches, network access and any MCP
+tools configured in Devin. Role instructions (read-only Researcher, no publishing,
+no commits unless assigned) are the only boundary; they are instructions, not
+enforcement. The user chose this over Devin's `--sandbox` mode because, in autonomous
+mode, the edit/write tools still stop at an approval prompt, and working around that
+(denying them and editing only through shell) left a stall path and degraded edits.
+Use this variant only where that trust is acceptable, and never read the Devin
+children's permissions as the Codex `workspace-write` boundary.
+
+Other differences from the Codex children:
+- Effort is part of the model name (`swe-2-max`); there is no fast tier.
+- Devin project configuration (`.devin/config*.json`, rules, hooks) in the workspace
+  applies to the child as usual.
+- SWE-2 usage is subject to the account's Devin plan and quotas.
+
+`collect` on a Devin child adds `session_evidence` (the export path, Devin session
+ID and the model names Devin recorded for agent steps) and `profile_model` to its
+result and receipt. Treat missing evidence as unverified routing.
+
 ## Permissions, routing and partial failures
 
 Each child requests workspace-write + never and `default_permissions=":workspace"`,
@@ -223,6 +259,8 @@ adds fast overrides. No role enables network access; Astra and researchers use o
 authorized search/connector/command tools. Missing tools are blockers.
 Main's explicit identity variables are cleared in child pane and Codex shell
 configuration; the child-role guard still prevents children from managing the run.
+
+Devin children in the swe2 variant run in Devin's bypass mode instead, as described above.
 
 Starting/sending persists the task and uncertain-delivery state before mutation.
 Inspect the recorded terminal after failures; don't duplicate prompts or start another
