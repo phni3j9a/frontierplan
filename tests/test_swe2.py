@@ -3,10 +3,8 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import os
 from pathlib import Path
 import shutil
-import stat
 import unittest
 from unittest.mock import patch
 
@@ -26,14 +24,6 @@ class Swe2Variant(unittest.TestCase):
 
     def setUp(self):
         th.base.Protocol.setUp(self)
-        self.home = self.root / "home"
-        self.user_config = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "herdr-hook"}]}]},
-                            "agent": {"model": "adaptive"},
-                            "permissions": {"allow": ["Exec(git status)"], "deny": ["Exec(sudo)"]}}
-        (self.home / ".config/devin").mkdir(parents=True)
-        self.config_file = self.home / ".config/devin/config.json"
-        self.config_file.write_text(json.dumps(self.user_config))
-        home = patch.dict(os.environ, {"HOME": str(self.home)}); home.start(); self.addCleanup(home.stop)
         which = patch.object(hd.shutil, "which", side_effect=lambda name: f"/usr/bin/{name}")
         which.start(); self.addCleanup(which.stop)
 
@@ -85,47 +75,15 @@ class Swe2Variant(unittest.TestCase):
         for task in (researcher, worker):
             data = fp.task_at(task)[1]
             self.assertNotIn("requested_codex_args", data)
-            args = data["requested_devin_args"]
-            self.assertIn("--sandbox", args)
-            self.assertEqual(args[args.index("--model") + 1], "swe-2-max")
-            self.assertEqual(args[args.index("--export") + 1], str(Path(task) / "devin-session.json"))
-            self.assertFalse(any("permission-mode" in a or "fast" in a for a in args))
-            packet = Path(data["packet"]).read_text()
-            self.assertIn("edit and write tools\ndisabled", packet)
+            # Exactly the bypass-mode launch; no sandbox, derived config or fast tier.
+            self.assertEqual(data["requested_devin_args"],
+                             ["--permission-mode", "dangerous", "--model", "swe-2-max",
+                              "--export", str(Path(task) / "devin-session.json")])
+            self.assertFalse((Path(task) / "devin-config.json").exists())
         for task in (director, design, reviewer):
             data = fp.task_at(task)[1]
             self.assertNotIn("requested_devin_args", data)
-            self.assertNotIn("Devin session", Path(data["packet"]).read_text())
             self.assertFalse(any('service_tier="fast"' == a for a in data["requested_codex_args"]))
-
-    def test_devin_config_copies_user_config_and_adds_child_rules(self):
-        director = self.director(); self.director_plan(director)
-        worker = hd.spawn(self.run, "worker", self.input)["task"]
-        args = fp.task_at(worker)[1]["requested_devin_args"]
-        target = Path(args[args.index("--config") + 1])
-        self.assertEqual(target, Path(worker) / "devin-config.json")
-        config = json.loads(target.read_text())
-        self.assertEqual(config["hooks"], self.user_config["hooks"])
-        self.assertEqual(config["agent"], self.user_config["agent"])
-        self.assertEqual(config["permissions"]["allow"], ["Exec(git status)", f"Write({Path(self.run).resolve()}/**)"])
-        self.assertEqual(config["permissions"]["deny"], ["Exec(sudo)", "edit", "write"])
-        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
-        self.assertEqual(json.loads(self.config_file.read_text()), self.user_config)  # never modified
-
-    def test_missing_user_config_still_denies_edit_tools(self):
-        self.config_file.unlink()
-        director = self.director(); self.director_plan(director)
-        worker = hd.spawn(self.run, "worker", self.input)["task"]
-        config = json.loads((Path(worker) / "devin-config.json").read_text())
-        self.assertEqual(config["permissions"]["deny"], ["edit", "write"])
-        self.assertFalse(self.config_file.exists())
-
-    def test_unparseable_user_config_stops_before_pane_change(self):
-        director = self.director(); self.director_plan(director)
-        self.config_file.write_text('{ // comment\n "agent": {} }')
-        splits = sum(c[:2] == ("pane", "split") for c in self.api.calls)
-        with self.assertRaises(fp.Failure): hd.spawn(self.run, "worker", self.input)
-        self.assertEqual(sum(c[:2] == ("pane", "split") for c in self.api.calls), splits)
 
     def test_missing_devin_stops_before_pane_change(self):
         director = self.director(); self.director_plan(director)
@@ -194,7 +152,7 @@ class Swe2Variant(unittest.TestCase):
         self.assertEqual({self.kind(c) for c in self.starts()}, {"codex"})
         args = fp.task_at(worker)[1]["requested_codex_args"]
         self.assertEqual(args[args.index("-m") + 1], "gpt-6-luna")
-        self.assertFalse((Path(worker) / "devin-config.json").exists())
+        self.assertNotIn("requested_devin_args", fp.task_at(worker)[1])
 
 
 if __name__ == "__main__": unittest.main()

@@ -57,8 +57,10 @@ whether to continue because of review rounds or elapsed time.
 ## Environment
 
 Main inherits its existing host agent, model and effort; Codex and Devin CLI are
-required for children, not Main. Devin children run in Devin's OS sandbox, which on
-Linux needs `bwrap` and `socat`; FrontierPlan does not install them. Verify Main's
+required for children, not Main. Devin children run in Devin's bypass mode
+(`--permission-mode dangerous`) with no OS sandbox: every tool is auto-approved with
+the user's own permissions, and role instructions are the only boundary. Keep
+assignments within the project and never describe these children as sandboxed. Verify Main's
 agent/session/terminal identity as documented in the herdr backend. This skill never
 replaces Main or changes global defaults or the user's Devin configuration.
 Profiles: `profiles/director/astra.toml`, `profiles/swe2/*.toml` for Researcher and

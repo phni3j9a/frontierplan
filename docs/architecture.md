@@ -44,11 +44,10 @@ role runtime data; `backends/` defines the real transport steps.
 `astraplan-herdr-swe2` is a variant of the herdr backend, not a third backend. The
 run records `variant: swe2` at init; Researcher and Worker then load
 `profiles/swe2/*.toml` (`agent = "devin"`, `swe-2-max`) and start as Devin CLI
-sessions in Devin's OS sandbox, while every other role, the ledger and the layout
-are shared. Each child's agent kind comes from its own profile, so identity checks
-compare Codex tasks with Codex panes and Devin tasks with Devin panes. The Devin
-child gets a per-task copy of the user's Devin config with FrontierPlan's rules added;
-the user's file is only read. See [herdr backend](../plugins/frontierplan/backends/herdr.md).
+sessions in Devin's bypass mode (no OS sandbox, every tool auto-approved), while
+every other role, the ledger and the layout are shared. Each child's agent kind comes
+from its own profile, so identity checks compare Codex tasks with Codex panes and
+Devin tasks with Devin panes. See [herdr backend](../plugins/frontierplan/backends/herdr.md).
 
 `scripts/frontierplan.py` is a cooperative ledger: run state, verbatim user
 messages, packets, Astra decision validation with a mechanical `next` step, the

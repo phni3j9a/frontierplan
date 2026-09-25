@@ -300,36 +300,11 @@ def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
                    "--add-dir", str(root), "--no-alt-screen"]
 
 
-def devin_config(root: Path, path: Path) -> Path:
-    """Per-task copy of the user's Devin config plus FrontierPlan's child rules.
-
-    The user's file is only read, never changed. Keeping its hooks preserves herdr's
-    Devin state integration; the added rules let the sandbox write the run directory
-    and refuse the edit/write tools, which the sandbox cannot bound and would
-    otherwise stop the pane at an approval prompt.
-    """
-    source = Path.home() / ".config" / "devin" / "config.json"
-    try:
-        config = json.loads(source.read_text(encoding="utf-8")) if source.exists() else {}
-    except ValueError as exc:
-        raise fp.Failure(f"Cannot derive the Devin child config from {source} (plain JSON required); "
-                         "no pane changed.") from exc
-    fp.require(isinstance(config, dict), f"Unexpected Devin config: {source}")
-    rules = config.get("permissions") or {}
-    fp.require(isinstance(rules, dict) and all(isinstance(rules.get(k, []), list) for k in ("allow", "deny")),
-               f"Unexpected Devin permissions in {source}; no pane changed.")
-    rules = dict(rules, allow=[*rules.get("allow", []), f"Write({root}/**)"],
-                 deny=[*rules.get("deny", []), *(t for t in ("edit", "write") if t not in rules.get("deny", []))])
-    target = path / "devin-config.json"
-    fp.atomic(target, dict(config, permissions=rules))  # mkstemp keeps it 0600.
-    return target
-
-
-def devin_args(task: dict, root: Path, path: Path) -> list[str]:
-    # --sandbox selects Devin's autonomous mode: shell commands auto-run, and writes
-    # are limited to the workspace plus granted Write(...) scopes.
-    return ["--sandbox", "--model", task["profile"]["model"],
-            "--config", str(devin_config(root, path)), "--export", str(path / "devin-session.json")]
+def devin_args(task: dict, path: Path) -> list[str]:
+    # No OS sandbox: Devin's bypass mode auto-approves every tool (edits, shell, fetch,
+    # MCP) with the user's own permissions; see backends/herdr.md.
+    return ["--permission-mode", "dangerous", "--model", task["profile"]["model"],
+            "--export", str(path / "devin-session.json")]
 
 
 def devin_evidence(path: Path) -> dict:
@@ -362,7 +337,7 @@ def launch(root: Path, path: Path, api: Herdr) -> dict:
     if kind == "devin":
         # Fail before any pane mutation when the child cannot be launched as profiled.
         fp.require(shutil.which("devin"), "devin is not on PATH on this host; no pane changed.")
-        args = devin_args(task, root, path)
+        args = devin_args(task, path)
     # Expose the task before any terminal mutation for partial-failure recovery.
     print(json.dumps({"prepared_task": str(path), "name": task["name"]}), flush=True)
     with fp.transaction(root) as (_, state):

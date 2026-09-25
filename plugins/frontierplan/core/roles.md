@@ -28,8 +28,10 @@ role instructions, not a read-only sandbox. All roles stay subordinate to
 host/system/user permissions. Never widen filesystem, network or approval scope, or
 treat a Plan as publishing consent.
 
-Herdr requests workspace-write + never for each Codex child; swe2 Devin children use
-Devin's OS sandbox with edit/write tools denied (see the backend notes).
+Herdr requests workspace-write + never for each Codex child. The one explicit
+exception is the swe2 variant, whose Devin children run in Devin's bypass mode
+without an OS sandbox because the user chose that trade-off; roles must not widen
+anything beyond it (see the backend notes).
 Native children inherit effective parent permissions; role text does not narrow a
 broad parent sandbox. Verify before delegation and stop if the child boundary cannot
 be met without unauthorized changes. No custom agent or config is installed.

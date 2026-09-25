@@ -6,7 +6,8 @@ pane becomes Main through the helper's normal current-pane identity check. The r
 splits Main's pane like a real run, so start it from a tab that holds only Main.
 
 Researcher and Worker are launched with `herdr agent start --kind devin` and do their
-work through the real packets, sandbox and report protocol. Astra and the Reviewer
+work through the real packets and report protocol in Devin's bypass mode (no sandbox;
+every tool auto-approved), so run it only where that is acceptable. Astra and the Reviewer
 never start a model: their panes stay shells, and this script publishes their
 decisions/reports as explicit fixtures. Pane, layout, wait, collect and close calls
 all go through the real helper and Herdr. Prints JSON evidence to stdout.
@@ -163,7 +164,6 @@ def smoke(limit: float) -> dict:
         data = fp.task_at(worker)[1]
         evidence["worker"]["requested_devin_args"] = data["requested_devin_args"]
         evidence["worker"]["launched_argv"] = data.get("launched_argv")
-        evidence["worker"]["devin_permissions"] = fp.read(Path(worker) / "devin-config.json")["permissions"]
         evidence["project"] = {"status": git("status", "--short"), "diff": git("diff"),
                                "untracked_test": (project / "test_calc.py").read_text()
                                if (project / "test_calc.py").exists() else None,

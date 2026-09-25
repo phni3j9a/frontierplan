@@ -136,26 +136,27 @@ $frontierplan:astraplan-herdr-swe2
 Mainは `herdr.py init --variant swe2` でrunを作り、以降は通常のherdr版と同じ手順です。
 variantはrunに記録され、途中で変更やフォールバックはしません（subagent backendでは使えません）。
 
-- 必要条件: herdr版の条件に加えて Devin CLI（SWE-2を使えるアカウント）と、Linuxでは
-  Devin sandbox用の `bwrap` と `socat`。FrontierPlanはこれらを導入しません。
-- 起動: `devin --sandbox --model swe-2-max --config <task>/devin-config.json --export <task>/devin-session.json`。
-  `--sandbox` ではDevinは常にautonomousモード（`--permission-mode` は無視されます）で、
-  シェルコマンドは確認なしに実行され、書き込みはworkspace（子のcwd）と許可した
-  `Write(...)` の範囲に制限されます（`/tmp` も書き込み可）。
-- 設定: ユーザーの `~/.config/devin/config.json` をタスクごとにコピーし、`Write(<run>/**)` の許可と
-  `edit`/`write` ツールの拒否を足したものを `--config` で渡します。ユーザー設定は変更しません。
-  herdrのDevin連携フックもコピーに含まれます。コメント付きJSONなど読めない設定では起動前に止まります。
-- ファイル編集: sandboxの外で動く `edit`/`write` ツールは、許可ルールがあっても確認待ちになり
-  ペインが止まるため拒否し、子には「ファイル変更はシェルで行う」と指示します。拒否された
-  ツールを使うとそのターンは終わり、`check` に `idle_without_report` が出ます。
+- 必要条件: herdr版の条件に加えて Devin CLI（SWE-2を使えるアカウント）。
+- 起動: `devin --permission-mode dangerous --model swe-2-max --export <task>/devin-session.json`。
+  Devinはユーザー自身の設定をそのまま読み込みます（herdrのDevin連携フックも含む）。
+  FrontierPlanは設定ファイルやルールを追加しません。
 - 実効モデル: `collect` がDevin自身のsession exportから記録された `observed_models` を
   `session_evidence` として返します。起動引数や子の自己申告では確認扱いにしません。
 
-Codex版との違い（隠さずに扱うもの）:
-- Devin sandboxのネットワーク制限は設定していないため、Devinの子はネットワークに出られます
-  （Codexの `workspace-write` は既定で遮断）。発行・公開の禁止は役割の指示として残ります。
-- sandboxはDevin側でResearch Previewです。workspaceに `.devin/config*.json` があると、
-  Devinはそれをタスク設定より優先してマージします。
+**権限はCodex版より広くなります（意図した選択です）。** Devinのbypassモード（`dangerous`）は
+OS sandboxなしで全ツールを自動承認します。ユーザーが書ける場所ならどこでもファイルを編集・
+シェル実行でき、Web取得・ネットワーク・Devinに設定したMCPツールも確認なしで使えます。
+Researcherが読むだけであること、公開やcommitをしないことは役割の指示で、強制ではありません。
+この信頼を置ける環境でだけ使ってください。
+
+Devinの `--sandbox` モードを使わない理由: sandboxではファイル編集ツールが許可ルールを置いても
+確認待ちになり、herdrのペインが止まります。編集ツールを拒否してシェルだけで編集させる方法も
+試しましたが、止まる経路が残り、大きな編集の品質も落ちやすいため採用しませんでした
+（[検証手順](docs/validation.md)）。
+
+その他の違い:
+- effortはモデル名に含まれ（`swe-2-max`）、fast枠はありません。
+- workspaceのDevinプロジェクト設定（`.devin/config*.json` やルール・フック）は通常どおり子にも効きます。
 - SWE-2の利用はDevinのプランと利用枠に従います。
 
 実herdrでの確認結果は[検証手順](docs/validation.md)を参照してください。

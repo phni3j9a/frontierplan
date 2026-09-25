@@ -32,12 +32,10 @@ suite does not launch these models.
 
 `tests/test_swe2.py` covers the `astraplan-herdr-swe2` variant against the fake herdr:
 the variant is recorded at init and rejected on the subagent backend; only Researcher
-and Worker load `profiles/swe2/*.toml` and start with `--kind devin`, `--sandbox`,
-`--model swe-2-max`, a per-task `--config` and `--export`, while Astra, Design and the
-Reviewer keep their Codex arguments; the per-task Devin config keeps the user's hooks
-and rules, adds `Write(<run>/**)` and denies `edit`/`write`, is mode 0600 and leaves the
-user's file unchanged; a missing `devin` binary or a non-JSON user config stops before
-any pane split; `collect` records the models from Devin's session export (or reports
+and Worker load `profiles/swe2/*.toml` and start with `--kind devin` and exactly
+`--permission-mode dangerous --model swe-2-max --export <task>/devin-session.json`
+(no derived config), while Astra, Design and the Reviewer keep their Codex arguments;
+a missing `devin` binary stops before any pane split; `collect` records the models from Devin's session export (or reports
 them as unavailable); a Codex pane cannot stand in for a Devin task; and a full
 fix/re-review/final-check/close cycle works. A standard run is unchanged.
 
@@ -85,35 +83,35 @@ end-to-end autonomous agent behavior. Those remain target-host checks below.
 `tools/smoke_swe2_devin.py` is opt-in and consumes the account's Devin/SWE-2 usage.
 Run it from a recognized agent's pane in a herdr tab that holds only that pane; the
 pane becomes Main through the normal current-pane identity check. Researcher and
-Worker are real `devin --sandbox --model swe-2-max` sessions working in a disposable
-Git repository through the real packets and report protocol. Astra and the Reviewer
+Worker are real `devin --permission-mode dangerous --model swe-2-max` sessions (no
+sandbox) working in a disposable Git repository through the real packets and report
+protocol, so run it only where that trust is acceptable. Astra and the Reviewer
 are Codex seats that stay shells; the script publishes their decisions and reviews
 as explicit fixtures, so no Codex model starts. Pane, layout, wait, collect, send and
 close go through the real helper and herdr. The run and scratch repository are
 removed on success and left in place for inspection on failure.
 
-On 2026-09-25 (Devin CLI 3000.11.3, herdr 0.9.1, Ubuntu 24.04 with `bwrap` 0.9.0 and
-`socat`), with Claude Code as Main, the smoke passed; see the
+On 2026-09-25 (Devin CLI 3000.11.3, herdr 0.9.1, Ubuntu 24.04), with Claude Code as
+Main, the smoke passed in bypass mode; see the
 [JSON evidence](evidence/issue-15-swe2-devin-smoke.json). The researcher read the
-repository and returned its report in about 30 seconds; relay returned it to the
+repository and returned its report in under a minute; relay returned it to the
 synthetic Astra and closed its pane. The Worker added `subtract` and a unittest, then
-applied the fixture finding in the same Devin session, making every change with shell
-heredocs as instructed. Devin's session exports recorded `swe-2-max` for every agent
-step of both children, and the unittest run by the smoke itself passed. The layout
-was Main left with Astra above the execution pane on the right, and returned to Main
-alone after all children were closed.
+applied the fixture finding in the same Devin session. Devin's session exports
+recorded `swe-2-max` for every agent step of both children, and the unittest run by
+the smoke itself passed. The layout was Main left with Astra above the execution
+pane on the right, and returned to Main alone after all children were closed.
 
-Before that run, manual probes on the same host established the permission design:
-`--sandbox` ignores `--permission-mode dangerous` and selects autonomous mode; without
-`socat` the session cannot start; the edit/write tools prompt in autonomous mode even
-with allow rules in `--config` or `.devin/config.local.json`; denying them makes
-the call fail at once (and ends that turn); shell writes succeed in the workspace,
-`/tmp` and `Write(...)` scopes and fail elsewhere (for example `$HOME`) with a
-read-only filesystem error; and `--config` is honored (its model setting applied).
+Why not Devin's `--sandbox`: manual probes on the same host showed that `--sandbox`
+ignores `--permission-mode dangerous` and selects autonomous mode (and needs `bwrap`
+and `socat`); shell writes are then confined to the workspace, `/tmp` and `Write(...)`
+scopes, but the edit/write tools prompt even with allow rules in `--config` or
+`.devin/config.local.json`, which would stop a herdr pane. Denying those tools and
+editing only through shell worked in an earlier sandboxed smoke of this branch, but a
+denied call ends the Devin turn without a report, so the user chose bypass mode.
 
-This does not establish real Astra/Reviewer behavior in this variant, network
-restrictions (none are configured), behavior under a project `.devin/config*.json`,
-or results on other hosts.
+This does not establish real Astra/Reviewer behavior in this variant, behavior under a
+project `.devin/config*.json`, or results on other hosts. It does not test what a
+bypass-mode child could reach outside the project; that boundary does not exist.
 
 ## Target-host smoke tests (not performed by the offline automated suite)
 

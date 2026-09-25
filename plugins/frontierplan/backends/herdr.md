@@ -223,33 +223,26 @@ still Codex. Every other command, the layout and the relay are unchanged. `live`
 `collect`, `close`, `check` and `wait` compare each child with the agent kind of its
 own profile, so a Codex pane never stands in for a Devin task or the reverse.
 
-Launch arguments are `devin --sandbox --model swe-2-max --config <task>/devin-config.json
---export <task>/devin-session.json`. Before any pane changes, the helper requires
-`devin` on PATH and writes that per-task config: a copy of the user's
-`~/.config/devin/config.json` (hooks such as herdr's Devin integration included) with
-`Write(<run>/**)` added to `permissions.allow` and `edit`/`write` added to
-`permissions.deny`. The user's file is never modified; a config that is not plain
-JSON stops the launch. The copy stays under the run directory with mode 0600.
+Launch arguments are `devin --permission-mode dangerous --model swe-2-max --export
+<task>/devin-session.json`. Before any pane changes, the helper requires `devin` on
+PATH. Devin loads the user's own configuration unchanged (including herdr's Devin
+integration hooks); FrontierPlan adds no config file or rules.
 
-Why these rules: with `--sandbox`, Devin always uses its autonomous mode (it ignores
-`--permission-mode`). Shell commands run without prompts, confined by the OS sandbox
-to the workspace (the child's cwd) and granted `Write(...)` scopes; `/tmp` also stays
-writable. The edit/write tools run outside that sandbox and prompt even when an allow
-rule matches, which would stop the pane. Denying them makes a call fail immediately,
-and each packet tells the Devin child to change files, including its report, through
-shell commands only. A denied tool call ends that Devin turn; the child then reports
-nothing and `check` shows `idle_without_report`. Send a follow-up restating the shell
-rule rather than approving access in the pane.
+**This is a deliberate, wider permission than the Codex children.** Devin's bypass
+mode (`dangerous`) auto-approves every tool without an OS sandbox: file edits and
+shell commands anywhere the user can write, web fetches, network access and any MCP
+tools configured in Devin. Role instructions (read-only Researcher, no publishing,
+no commits unless assigned) are the only boundary; they are instructions, not
+enforcement. The user chose this over Devin's `--sandbox` mode because, in autonomous
+mode, the edit/write tools still stop at an approval prompt, and working around that
+(denying them and editing only through shell) left a stall path and degraded edits.
+Use this variant only where that trust is acceptable, and never read the Devin
+children's permissions as the Codex `workspace-write` boundary.
 
-Differences from the Codex children that Main must not paper over:
-- Devin's sandbox needs `bwrap` and `socat` on Linux and is a research preview; if
-  it cannot start, Devin refuses to run and the helper fails at `agent start`.
-- Sandbox network filtering is not configured, so Devin children keep network
-  access, unlike Codex `workspace-write`. Do not treat this as a grant; role
-  instructions still forbid publishing.
-- A project `.devin/config.json` or `.devin/config.local.json` in the workspace is
-  merged by Devin with higher precedence than the per-task user config.
+Other differences from the Codex children:
 - Effort is part of the model name (`swe-2-max`); there is no fast tier.
+- Devin project configuration (`.devin/config*.json`, rules, hooks) in the workspace
+  applies to the child as usual.
 - SWE-2 usage is subject to the account's Devin plan and quotas.
 
 `collect` on a Devin child adds `session_evidence` (the export path, Devin session
@@ -267,7 +260,7 @@ authorized search/connector/command tools. Missing tools are blockers.
 Main's explicit identity variables are cleared in child pane and Codex shell
 configuration; the child-role guard still prevents children from managing the run.
 
-Devin children in the swe2 variant use the sandbox rules described above instead.
+Devin children in the swe2 variant run in Devin's bypass mode instead, as described above.
 
 Starting/sending persists the task and uncertain-delivery state before mutation.
 Inspect the recorded terminal after failures; don't duplicate prompts or start another
