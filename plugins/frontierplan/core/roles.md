@@ -9,6 +9,10 @@
 | Design | `gpt-6-sol` / `max` | Optional implementation-phase UI realization | Product policy, reviewing its own work |
 | Reviewer | `gpt-6-sol` / `xhigh` | Fresh independent read-only review; same-session re-review | Edits, new requirements, adjudication |
 
+In the swe2 variant (`astraplan-herdr-swe2`), Researcher and Worker are Devin CLI
+`swe-2-max` (`profiles/swe2/*.toml`) with the same ownership; Director, Design and
+Reviewer are unchanged. Devin has no fast tier.
+
 Main is the technical parent of every child; there is no nested spawning. Astra's
 research requests reach researchers through Main's mechanical relay. No role
 delegates through tools, CLI, another skill or another plugin.
@@ -24,7 +28,8 @@ role instructions, not a read-only sandbox. All roles stay subordinate to
 host/system/user permissions. Never widen filesystem, network or approval scope, or
 treat a Plan as publishing consent.
 
-Herdr requests workspace-write + never for each child (see the backend notes).
+Herdr requests workspace-write + never for each Codex child; swe2 Devin children use
+Devin's OS sandbox with edit/write tools denied (see the backend notes).
 Native children inherit effective parent permissions; role text does not narrow a
 broad parent sandbox. Verify before delegation and stop if the child boundary cannot
 be met without unauthorized changes. No custom agent or config is installed.

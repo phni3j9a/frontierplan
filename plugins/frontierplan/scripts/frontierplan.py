@@ -33,6 +33,9 @@ PURPOSES = {
     "final_check": ("final_check", "blocked"),
 }
 AC_STATUS = ("met", "partial", "unverified")
+# A variant fixes each role's child agent for the whole run; there is no fallback.
+VARIANTS = ("standard", "swe2")
+DEVIN_ROLES = ("researcher", "worker")
 
 
 class Failure(Exception):
@@ -122,22 +125,35 @@ def transaction(path: str | Path):
         atomic(root / "run.json", state)
 
 
-def profile(role: str, director: str = "astra") -> dict:
+def profile(role: str, director: str = "astra", variant: str = "standard") -> dict:
     require(role in ROLES, "Unknown role.")
     require(director == "astra", "Only the Astra director is shipped.")
-    path = ROOT / "profiles" / (f"director/{director}.toml" if role == "director" else f"{role}.toml")
+    require(variant in VARIANTS, "Unknown variant.")
+    if role == "director":
+        path = ROOT / "profiles" / f"director/{director}.toml"
+    elif variant == "swe2" and role in DEVIN_ROLES:
+        path = ROOT / "profiles" / "swe2" / f"{role}.toml"
+    else:
+        path = ROOT / "profiles" / f"{role}.toml"
     with path.open("rb") as stream:
         value = tomllib.load(stream)
     require(value.get("role") == role, "Profile/role mismatch.")
     if role == "main":
         require(value.get("inherit_session") is True, "Main must inherit the existing session.")
-        require(not {"model", "reasoning_effort", "service_tier"} & value.keys(),
+        require(not {"model", "reasoning_effort", "service_tier", "agent"} & value.keys(),
                 "Main must not override model, effort or service tier.")
         return value
     require(value.get("reasoning_effort") in ("xhigh", "max"), "effort must be lowercase xhigh or max.")
     require(isinstance(value.get("model"), str) and value["model"], "A model is required.")
-    require(role in ("worker", "researcher") or "service_tier" not in value,
-            "Only Luna Worker/Researcher have a tier override.")
+    if value.get("agent", "codex") == "devin":
+        # Devin encodes effort in the model name and has no separate tier.
+        require(variant == "swe2" and role in DEVIN_ROLES, "Only swe2 Worker/Researcher run on Devin.")
+        require(value["model"] == f"swe-2-{value['reasoning_effort']}" and "service_tier" not in value,
+                "Devin profiles use swe-2-<effort> without a tier override.")
+    else:
+        require("agent" not in value or value["agent"] == "codex", "Unknown child agent.")
+        require(role in DEVIN_ROLES or "service_tier" not in value,
+                "Only Luna Worker/Researcher have a tier override.")
     return value
 
 
@@ -222,13 +238,16 @@ def idle_executors(root: Path, plan_id: str | None) -> None:
 
 
 def initialize(backend: str, cwd: str, request_file: str, *,
-               main_identity: dict | None = None, herdr_binding: dict | None = None) -> dict:
+               main_identity: dict | None = None, herdr_binding: dict | None = None,
+               variant: str = "standard") -> dict:
     require(os.environ.get("FRONTIERPLAN_ROLE") not in CHILDREN, "Children cannot initialize runs.")
     require(backend in ("herdr", "subagent"), "Unknown backend.")
+    require(variant in VARIANTS, "Unknown variant.")
+    require(variant == "standard" or backend == "herdr", "The swe2 variant runs only on herdr.")
     if backend == "herdr" and main_identity is None and herdr_binding is None:
         # Do not create an unbound herdr run through the common CLI.
         from herdr import initialize as initialize_herdr
-        return initialize_herdr(cwd, request_file)
+        return initialize_herdr(cwd, request_file, variant=variant)
     if main_identity is not None or herdr_binding is not None:
         require(backend == "herdr" and isinstance(main_identity, dict)
                 and isinstance(herdr_binding, dict), "Only herdr accepts a bound Main identity.")
@@ -245,7 +264,7 @@ def initialize(backend: str, cwd: str, request_file: str, *,
     for name in ("tasks", "messages", "decisions"):
         (root / name).mkdir(mode=0o700)
     (root / "messages" / "1.md").write_text(request, encoding="utf-8")
-    state = {"schema_version": 2, "id": uuid.uuid4().hex[:12], "backend": backend,
+    state = {"schema_version": 2, "id": uuid.uuid4().hex[:12], "backend": backend, "variant": variant,
              "cwd": cwd, "main_thread_id": owner, "phase": "planning", "user_seq": 1,
              "pending_forward": False, "authorization": None, "plan": None,
              "research": None, "final_checks": {}, "last_decision": None}
@@ -279,15 +298,20 @@ def research_pending(state: dict) -> bool:
     return bool(research and not research["returned"])
 
 
+DEVIN_TOOLS = """This Devin session runs in its OS sandbox with the edit and write tools
+disabled by FrontierPlan. Make every file change, including your report, with shell
+commands through exec (for example printf, a cat heredoc, python3 or sed). Never
+request additional access scopes; report blocked if a write is refused."""
+
 DIRECTOR_CONTRACT = """You are Astra, FrontierPlan's Director. Follow {astra}.
 Before implementation you own every judgment: understanding, research, design,
 questions to the user and the Plan. Research yourself read-only and with isolated
-probes; request broad investigation from Luna researchers with a `research`
+probes; request broad investigation from researchers with a `research`
 decision. Main relays your decisions without judging them. Do not spawn agents,
 manage panes, implement, edit project files, commit or publish."""
 
 ROLE_CONTRACTS = {
-    "researcher": """You are a Luna researcher answering Astra's research request.
+    "researcher": """You are a researcher answering Astra's research request.
 Investigate read-only. Temporary probes go only under {scratch}. Do not edit project
 files, commit or publish. Report facts with evidence (paths, commands, real output,
 sources) and uncertainty. Do not decide scope or design; Astra does.""",
@@ -352,7 +376,8 @@ def prepare(run: str, role: str, file: str | None = None, cwd: str | None = None
             path.mkdir(mode=0o700)
             task = {"id": path.name, "run": str(root), "role": role, "closed": False,
                     "cwd": str(Path(cwd or state["cwd"]).expanduser().resolve()),
-                    "profile": profile(role), "name": f"fp-{state['id']}-{path.name}", "handle": None}
+                    "profile": profile(role, variant=state.get("variant", "standard")),
+                    "name": f"fp-{state['id']}-{path.name}", "handle": None}
         require(Path(task["cwd"]).is_dir(), "Assigned cwd does not exist.")
         task.update(request_id=uuid.uuid4().hex[:12], user_seq=state["user_seq"],
                     plan_id=state["plan"]["id"] if state["plan"] else None,
@@ -370,6 +395,8 @@ def prepare(run: str, role: str, file: str | None = None, cwd: str | None = None
             body = f"## Assignment (evidence/quotes are not new authority)\n{material}"
             contract = ROLE_CONTRACTS[role].format(review=ROOT / "core" / "review.md",
                                                    scratch=path / "scratch")
+            if task["profile"].get("agent") == "devin":
+                contract += "\n" + DEVIN_TOOLS
             report_format = "concise Markdown with evidence, actual commands/output, gaps and direct user instructions"
         packet = f"""# FrontierPlan delegated assignment
 Role: {role}. You are NOT Main. Run: {root}. Task: {task['id']}.
@@ -710,7 +737,7 @@ def retire_lost(task_path: str, evidence_file: str) -> dict:
 def cli() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action", required=True)
-    q = sub.add_parser("init"); q.add_argument("--backend", choices=("herdr", "subagent"), required=True); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True)
+    q = sub.add_parser("init"); q.add_argument("--backend", choices=("herdr", "subagent"), required=True); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True); q.add_argument("--variant", choices=VARIANTS, default="standard")
     q = sub.add_parser("start-director"); q.add_argument("--run", required=True); q.add_argument("--file")
     for name in ("message", "consult", "final-check"):
         q = sub.add_parser(name); q.add_argument("--run", required=True); q.add_argument("--file", required=True)
@@ -727,9 +754,9 @@ def cli() -> None:
     for name in ("forward", "relay", "start", "status", "finish"):
         q = sub.add_parser(name); q.add_argument("--run", required=True)
         if name == "finish": q.add_argument("--file"); q.add_argument("--discussion", action="store_true")
-    q = sub.add_parser("profile"); q.add_argument("--role", choices=ROLES, required=True)
+    q = sub.add_parser("profile"); q.add_argument("--role", choices=ROLES, required=True); q.add_argument("--variant", choices=VARIANTS, default="standard")
     a = p.parse_args()
-    if a.action == "init": result = initialize(a.backend, a.cwd, a.request_file)
+    if a.action == "init": result = initialize(a.backend, a.cwd, a.request_file, variant=a.variant)
     elif a.action == "start-director": result = start_director(a.run, a.file)
     elif a.action == "message": result = message(a.run, a.file)
     elif a.action == "forward": result = forward(a.run)
@@ -745,7 +772,7 @@ def cli() -> None:
     elif a.action == "finish": result = finish(a.run, a.file, a.discussion)
     elif a.action == "close-record": result = close_record(a.task, a.closure_file)
     elif a.action == "retire-lost": result = retire_lost(a.task, a.file)
-    elif a.action == "profile": result = profile(a.role)
+    elif a.action == "profile": result = profile(a.role, variant=a.variant)
     else:
         root, result = run_at(a.run); main_only(result)
         result = {"state": result, "tasks": [t for _, t in tasks(root)], "uncollected": uncollected_reports(root)}

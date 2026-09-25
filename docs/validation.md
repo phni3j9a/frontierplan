@@ -5,10 +5,10 @@
 Run `python3 tools/validate_plugin.py`, `python3 -m unittest discover -s tests -v`,
 and `python3 tools/package_release.py`. Tests use temporary Git repositories and a
 fake herdr command surface; no external network/model calls occur. CI runs the same
-suite on Python 3.11 and 3.13. The package validator checks both entry points,
+suite on Python 3.11 and 3.13. The package validator checks all three entry points,
 explicit invocation policy, manifests, lowercase role profiles, local references
 and standalone extracted-package integrity. It also requires the Claude Code
-manifest to match the portable one and both SKILLs to carry
+manifest to match the portable one and all three SKILLs to carry
 `disable-model-invocation: true`; `claude plugin validate --strict .` and
 `claude plugin validate --strict plugins/frontierplan` check the Claude Code
 marketplace and plugin schemas when the Claude Code CLI is available (not in CI).
@@ -29,6 +29,17 @@ arguments: Director uses `gpt-6-astra` / `xhigh`, Researcher and Worker use
 Reviewer uses `gpt-6-sol` / `xhigh`. Main still inherits its existing session.
 Runtime routing and effective Luna tier require target-host evidence; the offline
 suite does not launch these models.
+
+`tests/test_swe2.py` covers the `astraplan-herdr-swe2` variant against the fake herdr:
+the variant is recorded at init and rejected on the subagent backend; only Researcher
+and Worker load `profiles/swe2/*.toml` and start with `--kind devin`, `--sandbox`,
+`--model swe-2-max`, a per-task `--config` and `--export`, while Astra, Design and the
+Reviewer keep their Codex arguments; the per-task Devin config keeps the user's hooks
+and rules, adds `Write(<run>/**)` and denies `edit`/`write`, is mode 0600 and leaves the
+user's file unchanged; a missing `devin` binary or a non-JSON user config stops before
+any pane split; `collect` records the models from Devin's session export (or reports
+them as unavailable); a Codex pane cannot stand in for a Devin task; and a full
+fix/re-review/final-check/close cycle works. A standard run is unchanged.
 
 `tests/test_herdr_lifecycle.py` exercises the 40/60 role layout with a split-tree
 fake, inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
@@ -71,7 +82,7 @@ end-to-end autonomous agent behavior. Those remain target-host checks below.
 
 ## Target-host smoke tests (not performed by the offline automated suite)
 
-1. Install from the marketplace in a fresh Codex (or Claude Code) session. Confirm exactly two skills
+1. Install from the marketplace in a fresh Codex (or Claude Code) session. Confirm exactly three skills
    appear and do not activate on ordinary requests. Confirm shared resources survive
    installation/ZIP extraction and all role profile reads work.
 2. Invoke each skill for a consultation-only task. Confirm Astra alone answers, Main

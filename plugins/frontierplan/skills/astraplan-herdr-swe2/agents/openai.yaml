@@ -1,0 +1,7 @@
+interface:
+  display_name: "AstraPlan-herdr-swe2"
+  short_description: "Astra plans; Main coordinates Devin SWE-2 workers via herdr."
+  default_prompt: "Use $frontierplan:astraplan-herdr-swe2 for this engineering task."
+
+policy:
+  allow_implicit_invocation: false

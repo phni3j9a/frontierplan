@@ -1,0 +1,4 @@
+role = "researcher"
+agent = "devin"
+model = "swe-2-max"
+reasoning_effort = "max"

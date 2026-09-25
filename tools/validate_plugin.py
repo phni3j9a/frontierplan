@@ -28,7 +28,8 @@ def validate(root: Path) -> list[str]:
         check(manifest["extensions"]["com.openai"]["interface"] == legacy["interface"], "Interface metadata drift")
         check(legacy.get("skills") == "./skills/", "Invalid legacy skills path")
         skills = {p.name for p in (root / "skills").iterdir() if p.is_dir()}
-        check(skills == {"astraplan-herdr", "astraplan-subagent"}, "Exactly two implemented SKILLs must ship")
+        check(skills == {"astraplan-herdr", "astraplan-herdr-swe2", "astraplan-subagent"},
+              "Exactly three implemented SKILLs must ship")
         for skill in skills:
             body = (root / "skills" / skill / "SKILL.md").read_text()
             check(body.startswith(f"---\nname: {skill}\n"), f"Skill frontmatter mismatch: {skill}")
@@ -43,7 +44,8 @@ def validate(root: Path) -> list[str]:
             policy = (root / "skills" / skill / "agents/openai.yaml").read_text()
             check(bool(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy)), f"Explicit invocation required: {skill}")
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
-        profiles = sorted((root / "profiles").rglob("*.toml"))
+        swe2 = root / "profiles" / "swe2"
+        profiles = sorted(p for p in (root / "profiles").rglob("*.toml") if not p.is_relative_to(swe2))
         expected = {"director": ("gpt-6-astra", "xhigh"), "main": (None, None),
                     "researcher": ("gpt-6-luna", "max"),
                     "worker": ("gpt-6-luna", "max"), "design": ("gpt-6-sol", "max"),
@@ -63,6 +65,12 @@ def validate(root: Path) -> list[str]:
             check((luna and data.get("service_tier") == "fast") or
                   (not luna and "service_tier" not in data), f"Unexpected tier override: {path}")
         check(seen == set(expected), "Missing role profile")
+        # The swe2 variant replaces only the Luna roles, with Devin SWE-2 at the same effort.
+        variant = {p.name: tomllib.loads(p.read_text()) for p in swe2.glob("*.toml")}
+        check(set(variant) == {"researcher.toml", "worker.toml"}, "swe2 must override exactly Researcher/Worker")
+        for name, data in variant.items():
+            check(data == {"role": name.removesuffix(".toml"), "agent": "devin", "model": "swe-2-max",
+                           "reasoning_effort": "max"}, f"swe2 profile mismatch: {name}")
         for required in ("core/workflow.md", "core/astra.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
                          "backends/herdr.md", "backends/subagent.md", "scripts/frontierplan.py",
                          "scripts/herdr.py", "LICENSE", "THIRD_PARTY_NOTICES.md"):

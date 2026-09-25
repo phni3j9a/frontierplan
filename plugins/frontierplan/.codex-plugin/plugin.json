@@ -1,7 +1,7 @@
 {
   "name": "frontierplan",
-  "version": "0.2.0",
-  "description": "Astra-led research and planning with Luna researchers, then axiom_for_herdr-style execution coordinated by Main with independent Sol review and Astra's one-time final check.",
+  "version": "0.3.0",
+  "description": "Astra-led research and planning with Luna (or Devin SWE-2) researchers, then axiom_for_herdr-style execution coordinated by Main with independent Sol review and Astra's one-time final check.",
   "author": {
     "name": "phni3j9a"
   },
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "FrontierPlan",
     "shortDescription": "Astra plans; Main coordinates execution and review.",
-    "longDescription": "Explicit-only AstraPlan-herdr and AstraPlan-subagent. Astra owns every judgment before implementation, using Luna researchers and user questions relayed verbatim by Main. After the Plan starts, Main coordinates Luna Workers and an independent Sol Reviewer in the axiom_for_herdr style, then asks Astra for one final check.",
+    "longDescription": "Explicit-only AstraPlan-herdr, AstraPlan-herdr-swe2 and AstraPlan-subagent. Astra owns every judgment before implementation, using researchers and user questions relayed verbatim by Main. After the Plan starts, Main coordinates Workers and an independent Sol Reviewer in the axiom_for_herdr style, then asks Astra for one final check. Researchers and Workers are Codex Luna, or Devin CLI SWE-2 in the herdr-swe2 variant.",
     "developerName": "phni3j9a",
     "category": "Productivity",
     "capabilities": [
@@ -20,6 +20,7 @@
     ],
     "defaultPrompt": [
       "$frontierplan:astraplan-herdr でこの開発を進めてください。",
+      "$frontierplan:astraplan-herdr-swe2 でこの開発を進めてください。",
       "$frontierplan:astraplan-subagent でこの開発を進めてください。"
     ]
   }

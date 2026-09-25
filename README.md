@@ -28,11 +28,12 @@ v0.1ではAstraが最終受入の門番で、ユーザーへ戻る経路もあ�
 作業が収束しなかったため、v0.2でこの形に作り直しました（[Issue #11](https://github.com/phni3j9a/frontierplan/issues/11)）。
 v0.1で作ったrunはv0.2のhelperでは続けられません。v0.1のまま終えてください。
 
-## 2つの入口
+## 3つの入口
 
 | SKILL | 実行方式 |
 |---|---|
 | `astraplan-herdr` | herdr上の見える別ペイン |
+| `astraplan-herdr-swe2` | herdr版と同じ。ResearcherとWorkerだけDevin CLIの`swe-2-max`で起動 |
 | `astraplan-subagent` | Codexのnative subagentツール |
 
 ```
@@ -54,7 +55,12 @@ $frontierplan:astraplan-herdr
 | Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当 |
 | Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで回数上限なく再レビュー |
 
-`profiles/director/astra.toml` と `profiles/*.toml` で役割別に管理します。profilesは
+`astraplan-herdr-swe2` では、Luna枠のResearcherとWorkerを Devin CLI の `swe-2-max`
+（effortはモデル名に含まれ、fast枠はありません）に置き換えます。Astra・Design・Reviewerは
+上の表のままです。詳しくは[SWE-2版](#swe-2版astraplan-herdr-swe2)を参照してください。
+
+`profiles/director/astra.toml` と `profiles/*.toml` で役割別に管理します（swe2版の2役割は
+`profiles/swe2/*.toml`）。profilesは
 FrontierPlan内部の設定で、Codexのカスタムエージェント登録ではありません。Mainのprofileは
 `inherit_session = true` のみで、モデル・effort・tierを指定しません。
 subagent版では子が孫を起動できない（`agents.max_depth` 既定1）ため、Astraの調査依頼は
@@ -75,7 +81,8 @@ terminal IDと組み合わせて識別します。取得できないホストで
 非CodexホストではSKILLと参照先の規約を明示的に読み込み、同じherdrホスト上のhelperを
 実行できる必要があります。Devinでは `devin plugins install` がAgent Plugins manifestを
 持つGitHubリポジトリ・git URL・ローカルフォルダを受け付け、両SKILLを
-`/frontierplan:astraplan-herdr` / `/frontierplan:astraplan-subagent` として公開します。
+`/frontierplan:astraplan-herdr` / `/frontierplan:astraplan-herdr-swe2` /
+`/frontierplan:astraplan-subagent` として公開します。
 SKILL frontmatterの `triggers: [user]` はDevin側でも明示起動を維持する宣言で、
 Codexの `allow_implicit_invocation: false` と同じ方針です。subagent backendは
 Codex nativeツールが必要なためDevinでは動作せず、DevinをMainにする場合はherdr版を
@@ -107,7 +114,7 @@ Claude Code（herdr版のMainとして使う場合）:
 ```
 CLIでは `claude plugin marketplace add phni3j9a/frontierplan` と
 `claude plugin install frontierplan@frontierplan` です。導入後の新しいセッションで
-`/frontierplan:astraplan-herdr` を明示指定します。両SKILLは `disable-model-invocation: true`
+`/frontierplan:astraplan-herdr`（または `-swe2`）を明示指定します。各SKILLは `disable-model-invocation: true`
 を持つため、Claude Codeが通常の依頼で自動起動することはありません。Claude Codeは
 herdr上で `agent: "claude"` とセッションIDを報告するため、Mainの識別は現在ペインから
 自動で行われます（`FRONTIERPLAN_MAIN_*` の明示指定は不要です）。`astraplan-subagent` は
@@ -116,8 +123,42 @@ Claude Code用のmanifestは `.claude-plugin/marketplace.json`（リポジトリ
 `plugins/frontierplan/.claude-plugin/plugin.json` で、`claude plugin validate --strict` で確認できます。
 
 配布物は `python3 tools/package_release.py` で生成します。単体Plugin ZIPは中に
-`plugin.json`、互換用`.codex-plugin/plugin.json`と`.claude-plugin/plugin.json`、2 SKILL、共通Core/profiles/scriptsを含みます。
+`plugin.json`、互換用`.codex-plugin/plugin.json`と`.claude-plugin/plugin.json`、3 SKILL、共通Core/profiles/scriptsを含みます。
 ZIPを展開しても、別のaxiomリポジトリを参照しません。
+
+## SWE-2版（astraplan-herdr-swe2）
+
+```
+$frontierplan:astraplan-herdr-swe2
+この機能を調査・設計して実装まで進めてください。
+```
+
+Mainは `herdr.py init --variant swe2` でrunを作り、以降は通常のherdr版と同じ手順です。
+variantはrunに記録され、途中で変更やフォールバックはしません（subagent backendでは使えません）。
+
+- 必要条件: herdr版の条件に加えて Devin CLI（SWE-2を使えるアカウント）と、Linuxでは
+  Devin sandbox用の `bwrap` と `socat`。FrontierPlanはこれらを導入しません。
+- 起動: `devin --sandbox --model swe-2-max --config <task>/devin-config.json --export <task>/devin-session.json`。
+  `--sandbox` ではDevinは常にautonomousモード（`--permission-mode` は無視されます）で、
+  シェルコマンドは確認なしに実行され、書き込みはworkspace（子のcwd）と許可した
+  `Write(...)` の範囲に制限されます（`/tmp` も書き込み可）。
+- 設定: ユーザーの `~/.config/devin/config.json` をタスクごとにコピーし、`Write(<run>/**)` の許可と
+  `edit`/`write` ツールの拒否を足したものを `--config` で渡します。ユーザー設定は変更しません。
+  herdrのDevin連携フックもコピーに含まれます。コメント付きJSONなど読めない設定では起動前に止まります。
+- ファイル編集: sandboxの外で動く `edit`/`write` ツールは、許可ルールがあっても確認待ちになり
+  ペインが止まるため拒否し、子には「ファイル変更はシェルで行う」と指示します。拒否された
+  ツールを使うとそのターンは終わり、`check` に `idle_without_report` が出ます。
+- 実効モデル: `collect` がDevin自身のsession exportから記録された `observed_models` を
+  `session_evidence` として返します。起動引数や子の自己申告では確認扱いにしません。
+
+Codex版との違い（隠さずに扱うもの）:
+- Devin sandboxのネットワーク制限は設定していないため、Devinの子はネットワークに出られます
+  （Codexの `workspace-write` は既定で遮断）。発行・公開の禁止は役割の指示として残ります。
+- sandboxはDevin側でResearch Previewです。workspaceに `.devin/config*.json` があると、
+  Devinはそれをタスク設定より優先してマージします。
+- SWE-2の利用はDevinのプランと利用枠に従います。
+
+実herdrでの確認結果は[検証手順](docs/validation.md)を参照してください。
 
 ## 実行の境界
 
@@ -130,6 +171,8 @@ ZIPを展開しても、別のaxiomリポジトリを参照しません。
 - Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合します。herdrの`check`は通知履歴に
   依存せず状態を確認し、`wait`は既定・最大300秒です。native版の`status`には`uncollected`一覧があります。
   バックグラウンドwaitだけ残してMainのターンを終えても自動再開は保証されません。
+
+swe2版のDevinの子は上の[SWE-2版](#swe-2版astraplan-herdr-swe2)の権限で動きます。
 
 herdr版の配置はMainが左40%、Astraが右60%。ResearcherやWorkerが入ると右側をAstra上40%・
 実行領域下60%へ分け、以降は実行領域内で左右に分割します。手動リサイズを維持し、役割の領域や
