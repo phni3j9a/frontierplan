@@ -151,6 +151,9 @@ checks the exact latest candidate. Close both only after PASS was collected.
 For scope/environment/capability intervention, use `pair-resume`; for an observed
 lost or safely collected stopped participant, use `pair-replace`. Neither operation
 is part of an ordinary finding/fix loop. Keep prior report paths and finding IDs.
+If a revised Plan drops a stopped old pair, follow the explicit `pairs.py abandon`
+procedure in [pairs.md](../core/pairs.md), then use `pair-close`. This preserves
+evidence and verifies idle/activity without labeling unfinished work as PASS.
 
 When reviewed tasks are collected and integrated:
 ```
@@ -180,6 +183,8 @@ Astra only after finish.
 Close requires the participant's current report to be collected and unchanged
 activity since collection; unresolved pair blockers stay open until resolved or
 safely captured and reassigned. Completion is not a reason to discard blockers. Never close Main.
+An explicitly abandoned old-Plan pair uses its saved abandonment receipt instead
+of a completed report; idle state, terminal ownership and activity checks still apply.
 
 Close verifies ownership, the unique original terminal, the current pane occupant,
 the collected report and unchanged `state_change_seq`. A moved owned terminal is

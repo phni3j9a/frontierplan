@@ -32,10 +32,16 @@ from real runtime evidence. Preserve the evidence with the returned agent handle
 
 ## Spawning and binding
 
-Every new child follows the same steps. The helper prints a `packet` and `profile`.
-Call the actual spawn tool with that profile's model and effort and the packet as
-the assignment, with no conversation fork when supported (e.g. `fork_turns="none"`
-on the known V2 surface). Then record the returned identity once:
+The helper prints a `packet` and `profile`. For paired children, it also prints
+`bootstrap_packet`: use **that identity-only packet** as the initial spawn
+assignment, including when replacing a lost/stopped participant. It runs
+`pairs.py bootstrap`, returns the child's observed thread ID, and ends without
+starting implementation/review. Wait for this initial turn to become idle.
+For unpaired planning/research children, use the normal `packet` at spawn.
+
+Call the actual spawn tool with the profile's model and effort, with no
+conversation fork when supported (e.g. `fork_turns="none"` on the known V2 surface).
+Then record the returned identity once:
 ```
 {"agent_id":"<returned-id>","thread_id":"<observed-child-conversation-id>","evidence":"<launch/runtime evidence reference>"}
 ```
@@ -47,6 +53,13 @@ For paired children, `thread_id` must be the actually observed child
 Do not assume it equals the host's agent_id. The helper checks the calling identity
 against this binding, but records Main-supplied evidence, not a sandbox or an
 independently verified model claim.
+Paired `bind` returns the actual work `packet` and records `delivery: bound`;
+it does not send that packet. Once both peers are bound, Main sends the work packets
+through the host's actual same-session follow-up tool, Reviewer first. A replacement
+gets its own work packet after binding; its existing counterpart is not restarted.
+Never spawn a paired child with the work packet and hope that Main binds before
+its first `begin`. Main's initial assignment delivery is lifecycle setup; all
+subsequent ordinary candidate/finding turns are delivered by the peers themselves.
 Luna roles request fast separately from effort max. Use ONLY a field/value the live
 schema supports (the predecessor used `service_tier="priority"` for the CLI fast
 tier); otherwise disclose unverified fast while keeping Luna/max.
@@ -99,8 +112,9 @@ Save actual host evidence (the file records evidence, it does not create capabil
 pp=<plugin-root>/scripts/pairs.py
 python3 "$pp" create --run "$run" --file "$short_contract" --capability-file "$capability" [--cwd "$worktree"] [--scope src/component]
 ```
-Spawn/bind the prepared Reviewer first (its bootstrap ends idle), then the Worker.
-Their generated packets explain `pairs.py begin/submit`. Each ordinary handoff
+Spawn with the identity `bootstrap_packet` and bind Reviewer, then Worker, as above.
+After both are bound, send the Reviewer's work packet (it waits idle for a candidate)
+and the Worker's work packet. These packets explain `pairs.py begin/submit`. Each ordinary handoff
 returns `native_call_required`, the registered peer agent_id, packet and request ID.
 **The child**, not Main, calls the actual native continuation tool. Python has not
 sent anything. The recipient's begin acknowledges the new turn. End the sender's
@@ -118,6 +132,9 @@ After PASS and collection, close both actual sessions and record their closures
 below. BLOCKED/ESCALATE needs Main intervention, not premature cleanup. A stopped
 pair can be prepared with `pairs.py resume`, and a lost/stopped member with
 `pairs.py replace`; Main performs only those exceptional lifecycle continuations.
+If a revised Plan excludes a stopped old pair, preserve its work/evidence and idle
+identities with `pairs.py abandon --task <member> --file <evidence>`, then close and
+record its sessions. Abandonment does not pass the task or authorize integration.
 Read [pairs.md](../core/pairs.md) for candidate ownership and recovery evidence.
 
 After integration, `frontierplan.py final-check` prepares Astra's one-time check.

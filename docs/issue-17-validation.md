@@ -16,6 +16,8 @@ python tools/package_release.py
 `tests/test_pairs.py` covers direct same-session handoff, current-candidate PASS,
 uncommitted/untracked changes, ownership and stale identity, counter-evidence,
 stagnation/resume, replacement, completion/closure and transport failure races.
+Regression cases also cover identity bootstrap before native binding and explicit
+abandonment of stopped tasks excluded by a revised Plan, without fabricating PASS.
 These are simulated tests, including the fixture's native capability assertions.
 
 ## Real Herdr smoke — local Codex
@@ -80,6 +82,25 @@ directions with persistent identities. The helper cannot implement a missing hos
 capability. Supply observed child `thread_id` separately from the native `agent_id`;
 never assume they are equal. Save actual tool names/arguments/results, resumed
 session IDs, effective model/permissions and the finding/fix/PASS chain.
+
+For each new or replacement participant, spawn with the returned `bootstrap_packet`.
+Allow its identity-only turn to return before Main binds it; it must neither fail
+for an unbound handle nor start project work. Bind both participants using their
+observed identities, then send the work `packet` returned by `bind` through actual
+same-session follow-ups, Reviewer first. Record these initial lifecycle prompts
+separately from ordinary review prompts (which must come only from the peers).
+
+## Revised-Plan recovery
+
+On a disposable run, exercise both a Worker blocker before any candidate and a
+Reviewer escalation after a candidate. After an actual revised Plan drops the old
+task, record its preserved artifacts and both idle identities with `pairs.py abandon
+--task <member> --file <evidence>`. Close the old sessions using the selected backend
+and finish reviewed work under the new Plan. The old task remains ABANDONED, never
+PASS, including when its Reviewer has no report. Check actual idle/identity/activity
+guards during closure and ensure the old unfinished changes are not integrated.
+
+## Unsupported native hosts
 
 If the host only permits parent-to-child continuation or notifications, mark pair
 execution **unsupported on that host**. Do not provide a fake capability file or

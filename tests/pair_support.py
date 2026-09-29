@@ -20,8 +20,12 @@ def create_pair(test, role="worker", scope=None):
         for key in ("reviewer", "worker"):
             task = value[key]["task"]
             identity = "simulated-" + Path(task).name
+            data = fp.task_at(task)[1]
+            with patch.dict(os.environ, {"CODEX_THREAD_ID": identity, "CODEX_SESSION_ID": ""}):
+                observed = pairs.bootstrap(task, data["request_id"])
             fp.bind(task, test.write(f"{identity}.json", {"agent_id": identity, "thread_id": identity,
                                                        "evidence": "simulated spawn"}))
+            test.assertEqual(observed["thread_id"], identity)
     return value["worker"]["task"], value["reviewer"]["task"]
 
 

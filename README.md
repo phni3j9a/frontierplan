@@ -176,6 +176,9 @@ Devinの `--sandbox` モードを使わない理由: sandboxではファイル�
 - 同じWorker/DesignとReviewerをタスク完了まで維持します。最新候補のPASSとMainの回収後に
   **両ペインを閉じます**。Astraは`finish`まで残します。未解決ブロッカーは、解消または証跡を
   引き継いだ担当変更まで残します。終了のために未解決をPASS扱いにはしません。
+- 再Planで不要になった旧タスクは、Mainが理由・作業内容の保存先・両セッションの停止確認を
+  `pairs.py abandon --task <member> --file <evidence>`に記録して終了できます。
+  現Planのタスクには使えず、打ち切った未完了の変更は統合しません。
 - PASSは契約・候補の実ファイル・Reviewer・最新報告に結び付けます。Mainの回収前に内容が
   変われば古いPASSは使えません。回収後の変更は別タスクでレビューし、古い成果物を再監査し続けません。
 - Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合します。herdrの`check`は通知履歴に
@@ -191,6 +194,9 @@ herdr版の配置はMainが左40%、Astraが右60%。ResearcherやWorkerが入�
 herdr操作とnative tool呼び出しは別のbackendです。native版のPython helperは
 モデルを起動するランタイムではなく、packet/receipt管理です。Mainは実際のnative起動・終了
 ツールを使い、通常レビューの継続ツールは登録済みの子自身が呼び出します。
+nativeの新規・交換セッションは`bootstrap_packet`で識別情報だけを取得してidleにし、
+両者をbindした後に実作業の`packet`を同じセッションへ送ります。初回の作業開始がbindに
+先行しない順序です。既存セッション間の通常レビューにはMainは介在しません。
 
 ## ペアの操作
 

@@ -193,8 +193,13 @@ def owned_pane(task: dict, state: dict, api: Herdr) -> dict:
 
 
 def safe_collected(path: Path, task: dict, state: dict, api: Herdr, complete: bool = True) -> dict:
-    result = fp.collected(path, task, complete)
-    receipt = fp.read(path / "receipt.json")
+    import pairs
+    if task.get("pair") and not task.get("replaced_by") and pairs.at(path)[1]["status"] == "ABANDONED":
+        receipt = pairs.abandonment_receipt(path)
+        result = fp.current_result(path, task)  # May be absent for an idle bootstrap.
+    else:
+        result = fp.collected(path, task, complete)
+        receipt = fp.read(path / "receipt.json")
     agent = owned_pane(task, state, api)
     fp.require(ready(agent) and receipt.get("state_change_seq") is not None
                and receipt.get("terminal_id") == agent["terminal_id"]
@@ -456,10 +461,15 @@ def close_pair(task_path: str) -> dict:
     import pairs
     _, pair, _, state = pairs.at(task_path)
     main_pane(state, Herdr(state))
-    pairs.require_collected(task_path)
+    if pair["status"] == "ABANDONED":
+        for path in pairs.members(pair):
+            pairs.abandonment_receipt(path)
+    else:
+        pairs.require_collected(task_path)
     return {"closed": [close(str(path)) for path in pairs.members(pair)
-                       if not fp.read(path / "task.json").get("lost")],
-            "note": "Recorded lost terminals are never closed; reviewed evidence remains collected."}
+                       if not fp.read(path / "task.json").get("lost")
+                       and fp.read(path / "task.json").get("handle")],
+            "note": "Recorded lost/unlaunched terminals are never closed; collected/abandoned evidence is retained."}
 
 
 def resume_pair(task_path: str, file: str, contract_file: str | None = None) -> dict:
@@ -580,6 +590,12 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
         if task.get("pair") and not task.get("replaced_by"):
             import pairs
             pair = pairs.at(path)[1]
+            if pair["status"] == "ABANDONED":
+                pairs.abandonment_receipt(path)
+                events.append({"task": str(path), "event": "abandoned_needs_close"})
+                marks[str(path)] = fp.digest({"event": "abandoned_needs_close", "seq": (agent or {}).get("state_change_seq")})
+                pending += 1
+                continue
             internal_pair_turn = pair["status"] not in pairs.TERMINAL
             active = pair["reviewer"] if pair["status"] == "REVIEW" else pair["worker"]
             waiting_for_peer = internal_pair_turn and task["id"] != active

@@ -22,7 +22,7 @@ import uuid
 
 import frontierplan as fp
 
-TERMINAL = ("PASS", "BLOCKED", "ESCALATE")
+TERMINAL = ("PASS", "BLOCKED", "ESCALATE", "ABANDONED")
 KINDS = ("candidate", "findings", "pass", "blocked", "escalate")
 
 
@@ -95,6 +95,7 @@ def actor(task_path: str, request_id: str, pair: dict, state: dict) -> tuple[Pat
     fp.require(task["id"] == pair[side] and task["request_id"] == request_id,
                "Stale participant or turn; only the registered pair may send.")
     fp.require(not fp.ended(task) and not task.get("closing"), "Participant ended or is closing.")
+    fp.require(pair["status"] != "ABANDONED", "This pair was abandoned; its evidence is sealed.")
     fp.require(state["phase"] == "executing" and state["plan"]["id"] == pair["plan_id"],
                "Pair belongs to an inactive Plan.")
     fp.require(task.get("handle"), "Main must bind/launch this participant first.")
@@ -169,6 +170,18 @@ pair record, another participant's files, or run.json directly.
     target = path / f"{task['request_id']}.task.md"
     target.write_text(body, encoding="utf-8")
     task["packet"] = str(target)
+    if pair.get("native_capability") and not task.get("handle"):
+        bootstrap_packet = path / f"{task['request_id']}.bootstrap.md"
+        bootstrap_packet.write_text(f"""# FrontierPlan native identity bootstrap
+You are {task['role']}, NOT Main. This is an identity-only initial turn.
+Do not implement, review, delegate, or run begin/submit. Run only:
+{command} bootstrap {base}
+Return its observed thread_id and task/request identity to Main, then end this turn.
+Do not poll or wait on an agent. Main waits for your idle state, binds your actual
+native handle, then sends the work packet through a same-session follow-up.
+The work assignment has not been delivered yet.
+""", encoding="utf-8")
+        task["bootstrap_packet"] = str(bootstrap_packet)
     fp.atomic(path / "task.json", task)
 
 
@@ -219,8 +232,27 @@ def create(run: str, file: str, cwd: str | None = None, scope: list[str] | None 
             packet(target, task, pair, "Implement the contract." if target == path else
                    "Bootstrap only: no candidate yet. begin returns waiting; end this turn until your peer resumes you.")
             item.update(packet=task["packet"])
+            if task.get("bootstrap_packet"):
+                item["bootstrap_packet"] = task["bootstrap_packet"]
     return {"pair": str(record), "worker": worker, "reviewer": reviewer,
-            "note": "Launch/bind Reviewer first, then Worker. Real-host support is not established by this record."}
+            "note": "Native: spawn with bootstrap_packet, wait for idle, bind both identities, then send packet to Reviewer and Worker. Herdr launches Reviewer first. Real-host support is not established by this record."}
+
+
+def bootstrap(task_path: str, request_id: str) -> dict:
+    """Observe native identity before binding, without starting or mutating a turn."""
+    _, pair, _, state = at(task_path)
+    path, task, _, _ = fp.task_at(task_path)
+    fp.require(state["backend"] == "subagent" and not task.get("handle"),
+               "Identity bootstrap is only for a newly spawned, unbound native participant.")
+    fp.require(path in members(pair) and task["request_id"] == request_id
+               and not fp.ended(task) and not task.get("closing") and pair["status"] != "ABANDONED",
+               "Stale bootstrap participant or request.")
+    fp.require(state["phase"] == "executing" and pair["plan_id"] == state["plan"]["id"],
+               "Bootstrap belongs to an inactive Plan.")
+    identity = fp.thread_id()
+    fp.require(identity and identity != state["main_thread_id"], "Run bootstrap in the actual native child.")
+    return {"task": str(path), "request_id": request_id, "thread_id": identity,
+            "waiting_for_bind": True, "note": "Return this identity and end the turn. Main binds after idle, then sends the work packet."}
 
 
 def begin(task_path: str, request_id: str) -> dict:
@@ -340,6 +372,7 @@ def require_collected(task_path: str | Path, *, live: bool = False) -> None:
 def collect(task_path: str) -> dict:
     with edit(task_path) as (record, pair, _, state):
         fp.main_only(state)
+        fp.require(pair["status"] != "ABANDONED", "Abandoned work is not a completed result; retain its abandonment evidence.")
         fp.require(pair["status"] in TERMINAL, "Ordinary review belongs to the pair; wait for PASS or an escalation.")
         if pair["status"] != "PASS":
             reports = []
@@ -367,10 +400,63 @@ def collect(task_path: str) -> dict:
                 "tasks": [str(p) for p in members(pair)], "note": "Collected exact reviewed candidate. Main closes both idle sessions now; later edits need a follow-up pair."}
 
 
+def abandon(task_path: str, file: str) -> dict:
+    """Capture stopped work excluded by a revised Plan, without manufacturing PASS."""
+    evidence = fp.text(file)
+    with edit(task_path) as (record, pair, _, state):
+        fp.main_only(state)
+        fp.require(state["plan"] and pair["plan_id"] != state["plan"]["id"],
+                   "Only work superseded by a revised Plan can be abandoned; resolve the current Plan's tasks.")
+        fp.require(pair["status"] in ("BLOCKED", "ESCALATE", "ABANDONED"),
+                   "Only a stopped pair can be abandoned; let active work stop first.")
+        receipts = {}
+        for path in members(pair):
+            task = fp.read(path / "task.json")
+            fp.require(not task.get("closing"), "Participant closure is uncertain; inspect before abandonment.")
+            receipt = {"request_id": task["request_id"], "handle_digest": fp.digest(task["handle"]),
+                       "result_digest": fp.digest(fp.current_result(path, task))}
+            if state["backend"] == "herdr" and not fp.ended(task) and task.get("handle"):
+                import herdr as hd
+                agent = hd.owned_pane(task, state, hd.Herdr(state))
+                fp.require(hd.ready(agent) and "state_change_seq" in agent,
+                           "Wait until both stopped participants are idle before abandonment.")
+                receipt.update(terminal_id=agent["terminal_id"], state_change_seq=agent["state_change_seq"])
+            receipts[task["id"]] = receipt
+        pair["abandonment"] = {"evidence": evidence, "superseded_by_plan": state["plan"]["id"],
+                               "participants": receipts, "recorded_at": time.time(),
+                               "pending": pair["pending"] or (pair.get("abandonment") or {}).get("pending")}
+        pair.update(status="ABANDONED", pending=None)
+        return {"status": "ABANDONED", "pair": str(record), "abandonment": pair["abandonment"],
+                "note": "Evidence retained, not PASS. Close owned idle sessions; exclude this work from integration."}
+
+
+def abandonment_receipt(task_path: str | Path) -> dict:
+    _, pair, _, state = at(task_path)
+    path, task, _, _ = fp.task_at(task_path)
+    saved = pair.get("abandonment") or {}
+    fp.require(pair["status"] == "ABANDONED" and fp.nonempty(saved.get("evidence"))
+               and pair["plan_id"] != state["plan"]["id"], "No recorded abandonment of superseded work.")
+    receipt = saved.get("participants", {}).get(task["id"], {})
+    fp.require(path in members(pair) and receipt.get("request_id") == task["request_id"]
+               and receipt.get("handle_digest") == fp.digest(task["handle"])
+               and receipt.get("result_digest") == fp.digest(fp.current_result(path, task)),
+               "Participant/report changed after abandonment; inspect and capture the stopped state again.")
+    return receipt
+
+
 def require_all_complete(root: Path, state: dict) -> None:
     seen = set()
     for path, task in fp.tasks(root):
-        if task["role"] not in fp.EXECUTORS or task.get("plan_id") != state["plan"]["id"]:
+        if task["role"] not in fp.EXECUTORS:
+            continue
+        if task.get("pair") and not task.get("replaced_by"):
+            pair = at(path)[1]
+            if pair["status"] == "ABANDONED":
+                abandonment_receipt(path)
+                continue
+            fp.require(pair["plan_id"] == state["plan"]["id"] or pair["status"] == "PASS",
+                       "Resolve or explicitly abandon stopped pairs from an earlier Plan.")
+        if task.get("plan_id") != state["plan"]["id"]:
             continue
         fp.require(task.get("pair"), "Unpaired executor: register implementation and Reviewer together with pairs.py create.")
         if task["pair"] not in seen:
@@ -427,6 +513,7 @@ def replace(task_path: str, file: str) -> dict:
     evidence = fp.text(file)
     record, pair, root, state = at(task_path)
     fp.main_only(state)
+    fp.require(pair["status"] != "ABANDONED", "Abandoned pairs cannot be replaced; create a new bounded task.")
     old_path, old, _, _ = fp.task_at(task_path)
     side = "reviewer" if old["role"] == "reviewer" else "worker"
     fp.require(pair[side] == old["id"] and not pair["collected"], "Cannot replace a completed or superseded participant.")
@@ -461,6 +548,8 @@ def replace(task_path: str, file: str) -> dict:
                f"Earlier reports/findings: {old_path}\nCurrent candidate: {json.dumps(pair['candidate'])}\n"
                "Continue the same bounded contract, stable findings and existing verification. Do not restart broad review.")
         new["packet"] = task["packet"]
+        if task.get("bootstrap_packet"):
+            new["bootstrap_packet"] = task["bootstrap_packet"]
     return dict(new, replaced_task=str(old_path), note="Main launches/binds this same-profile replacement. Close the superseded idle session only after capturing its reports; never close a reused/lost terminal.")
 
 
@@ -469,21 +558,23 @@ def cli() -> None:
     sub = parser.add_subparsers(dest="action", required=True)
     q = sub.add_parser("create"); q.add_argument("--run", required=True); q.add_argument("--file", required=True)
     q.add_argument("--cwd"); q.add_argument("--scope", action="append"); q.add_argument("--role", choices=("worker", "design"), default="worker"); q.add_argument("--capability-file")
-    for name in ("begin", "submit", "deliver"):
+    for name in ("bootstrap", "begin", "submit", "deliver"):
         q = sub.add_parser(name); q.add_argument("--task", required=True); q.add_argument("--request-id", required=True)
         if name == "submit":
             q.add_argument("--kind", choices=KINDS, required=True); q.add_argument("--file", required=True); q.add_argument("--candidate")
-    for name in ("collect", "status", "resume", "replace"):
+    for name in ("collect", "status", "resume", "replace", "abandon"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
-        if name in ("resume", "replace"): q.add_argument("--file", required=True)
+        if name in ("resume", "replace", "abandon"): q.add_argument("--file", required=True)
         if name == "resume": q.add_argument("--contract-file")
     a = parser.parse_args()
     if a.action == "create": result = create(a.run, a.file, a.cwd, a.scope, a.role, a.capability_file)
+    elif a.action == "bootstrap": result = bootstrap(a.task, a.request_id)
     elif a.action == "begin": result = begin(a.task, a.request_id)
     elif a.action == "submit": result = submit(a.task, a.request_id, a.kind, a.file, a.candidate)
     elif a.action == "deliver": result = deliver(a.task, a.request_id)
     elif a.action == "resume": result = resume(a.task, a.file, a.contract_file)
     elif a.action == "replace": result = replace(a.task, a.file)
+    elif a.action == "abandon": result = abandon(a.task, a.file)
     else: result = {"collect": collect, "status": status}[a.action](a.task)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

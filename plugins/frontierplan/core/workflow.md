@@ -65,6 +65,10 @@ collects a pair only after the latest candidate's PASS is recorded; old reports 
 an unreviewed follow-up are not completion. Collection captures the reviewed
 candidate and both reports, then Main closes both idle participants. Unresolved
 BLOCKED/ESCALATE work remains open unless safely captured and reassigned.
+When a revised Plan drops stopped old work, Main records `pairs.py abandon` with
+the scope decision, preserved artifacts and observed idle identities, then closes
+both sessions. This is not PASS; current-Plan work still requires review, and
+abandoned changes must not enter integration. See [pairs.md](pairs.md).
 
 Main integrates the exact reviewed work, preserving the worktree/diff and evidence.
 Closing a pane does not delete its reports, files or branch. Integration that

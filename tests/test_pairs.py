@@ -27,6 +27,102 @@ class NativePairs(unittest.TestCase):
         self.executing()
         return create_pair(self)
 
+    def test_native_initial_turn_can_finish_before_main_binds_without_starting_work(self):
+        self.executing()
+        capability = self.write("capability.json", {"direct_peer_resume": True, "evidence": "SIMULATED host"})
+        value = pairs.create(self.run, self.input, capability_file=capability)
+        bound = {}
+        for side in ("reviewer", "worker"):
+            item = value[side]
+            path, task, _, _ = fp.task_at(item["task"])
+            before = {p: p.read_bytes() for p in path.iterdir() if p.is_file()}
+            initial_packet = Path(item["bootstrap_packet"]).read_text()
+            self.assertIn(" bootstrap --task ", initial_packet)
+            self.assertNotIn(" begin --task ", initial_packet)
+            with self.assertRaises(fp.Failure): pairs.bootstrap(str(path), task["request_id"])  # Main is not a child.
+            with patch.dict(os.environ, {"CODEX_THREAD_ID": "observed-" + side, "CODEX_SESSION_ID": ""}):
+                with self.assertRaises(fp.Failure): pairs.bootstrap(str(path), "stale-request")
+                identity = pairs.bootstrap(str(path), task["request_id"])
+                self.assertTrue(identity["waiting_for_bind"])
+            self.assertEqual(before, {p: p.read_bytes() for p in path.iterdir() if p.is_file()})
+            self.assertIsNone(fp.current_result(path, task))
+            # The simulated spawn has now returned; Main binds after bootstrap is idle.
+            bound[side] = fp.bind(str(path), self.write(side + "-handle.json", {
+                "agent_id": "host-" + side, "thread_id": identity["thread_id"], "evidence": "SIMULATED idle bootstrap"}))
+            self.assertEqual(bound[side]["packet"], item["packet"])
+        worker, reviewer = value["worker"]["task"], value["reviewer"]["task"]
+        # Actual initial assignments are sent only after both identities exist.
+        with child(self, reviewer) as task:
+            self.assertTrue(pairs.begin(reviewer, task["request_id"])["waiting"])
+        with patch.object(fp, "main_only", side_effect=AssertionError("Main relayed an ordinary turn")):
+            pair_turn(self, worker, "candidate")
+            pair_turn(self, reviewer, "findings", "FP-001: concrete defect")
+            pair_turn(self, worker, "candidate", "FP-001 fixed")
+            pair_turn(self, reviewer, "pass")
+        pairs.collect(worker)
+
+    def abandon_replanned_pair(self, before_candidate):
+        director = self.executing()
+        worker, reviewer = create_pair(self)
+        if before_candidate:
+            pair_turn(self, worker, "blocked", "Old requirement is no longer needed")
+            self.assertIsNone(fp.current_result(Path(reviewer), fp.task_at(reviewer)[1]))
+        else:
+            pair_turn(self, worker, "candidate")
+            pair_turn(self, reviewer, "escalate", "Old requirement is no longer needed")
+        pairs.collect(worker)
+        with self.assertRaisesRegex(fp.Failure, "revised Plan"):
+            pairs.abandon(worker, self.input)
+        fp.consult(self.run, self.input)
+        self.decide(director, dict(base.PLAN, plan_id="plan-2", authorization_message=1))
+        fp.start(self.run)
+        passed_pair(self)
+        with self.assertRaises(fp.Failure): fp.final_check(self.run, self.input)
+        original = [fp.current_result(Path(p), fp.task_at(p)[1]) for p in (worker, reviewer)]
+        with child(self, worker), self.assertRaises(fp.Failure): pairs.abandon(worker, self.input)
+        outcome = pairs.abandon(worker, self.write("drop.md", "SIMULATED idle identities; Plan 2 drops this task. Preserve its diff; do not integrate it."))
+        self.assertEqual(outcome["status"], "ABANDONED")
+        self.assertEqual(original, [fp.current_result(Path(p), fp.task_at(p)[1]) for p in (worker, reviewer)])
+        self.assertEqual(fp.uncollected_reports(Path(self.run)), [])
+        with self.assertRaises(fp.Failure): pairs.collect(worker)
+        with self.assertRaises(fp.Failure): fp.collect(worker)
+        with self.assertRaises(fp.Failure): pairs.require_collected(worker)
+        with self.assertRaises(fp.Failure): pairs.resume(worker, self.input, self.input)
+        with self.assertRaises(fp.Failure): pairs.replace(worker, self.input)
+        fp.final_check(self.run, self.input)
+        self.decide(director, dict(base.FINAL, plan_id="plan-2"))
+        self.assertEqual(fp.finish(self.run, self.input)["phase"], "closed")
+        for path in (worker, reviewer):
+            task = fp.task_at(path)[1]
+            closure = self.write("closed.json", {"agent_id": task["handle"]["agent_id"], "closed": True, "evidence": "SIMULATED actual close"})
+            fp.close_record(path, closure)
+            self.assertTrue(fp.task_at(path)[1]["closed"])
+
+    def test_replan_abandons_worker_blocker_with_empty_reviewer_bootstrap(self):
+        self.abandon_replanned_pair(before_candidate=True)
+
+    def test_replan_abandons_reviewer_escalation_and_closes_after_finish(self):
+        self.abandon_replanned_pair(before_candidate=False)
+
+    def test_abandonment_cannot_skip_current_plan_pass_or_hide_changed_evidence(self):
+        director = self.executing()
+        worker, reviewer = create_pair(self)
+        with self.assertRaises(fp.Failure): pairs.abandon(worker, self.input)
+        pair_turn(self, worker, "blocked")
+        pairs.collect(worker)
+        fp.consult(self.run, self.input)
+        self.decide(director, dict(base.PLAN, plan_id="plan-2", authorization_message=1))
+        fp.start(self.run)
+        pairs.abandon(worker, self.input)
+        with self.assertRaisesRegex(fp.Failure, "No reviewed execution pair"):
+            pairs.require_all_complete(*fp.run_at(self.run))
+        path, task, _, state = fp.task_at(worker)
+        result = fp.current_result(path, task)
+        result["report"] = "different evidence"
+        fp.atomic(path / f"{task['request_id']}.result.json", result)
+        with self.assertRaisesRegex(fp.Failure, "changed after abandonment"):
+            fp.closable(path, task, state)
+
     def test_capability_is_explicit_and_not_an_invented_native_bridge(self):
         self.executing()
         with self.assertRaisesRegex(fp.Failure, "unverified"):
@@ -215,6 +311,7 @@ class NativePairs(unittest.TestCase):
         fp.retire_lost(reviewer, self.write("lost.md", "SIMULATED runtime: reviewer process exited"))
         new = pairs.replace(reviewer, self.write("replacement.md", "Resume from previous reports, not a new broad review"))
         fresh = new["task"]
+        self.assertIn(" bootstrap --task ", Path(new["bootstrap_packet"]).read_text())
         self.assertEqual(old_candidate, pairs.at(worker)[1]["candidate"])
         self.assertIn(reviewer, Path(new["packet"]).read_text())
         fp.bind(fresh, self.write("fresh.json", {"agent_id": "new-reviewer", "thread_id": "new-reviewer-thread", "evidence": "simulated new session"}))
@@ -266,6 +363,53 @@ class HerdrPairs(unittest.TestCase):
     def ready(self):
         director = self.director(); self.director_plan(director)
         return create_pair(self)
+
+    def obsolete_pair(self):
+        worker, reviewer = self.ready()
+        pair_turn(self, worker, "blocked", "Replan drops this task")
+        pairs.collect(worker)
+        director = str(fp.director_task(Path(self.run))[0])
+        hd.consult(self.run, self.input)
+        self.decide(director, dict(base.PLAN, plan_id="plan-2", authorization_message=1))
+        fp.start(self.run)
+        return worker, reviewer
+
+    def test_abandoned_pair_closes_idle_bootstrap_but_keeps_activity_and_identity_guards(self):
+        worker, reviewer = self.obsolete_pair()
+        peer = self.api.registered[fp.task_at(reviewer)[1]["name"]]
+        peer["agent_status"] = "working"
+        with self.assertRaisesRegex(fp.Failure, "idle"):
+            pairs.abandon(worker, self.input)
+        self.assertEqual(pairs.at(worker)[1]["status"], "BLOCKED")
+        peer["agent_status"] = "idle"
+        pairs.abandon(worker, self.input)
+        self.assertEqual({e["event"] for e in hd.check(self.run)["events"]}, {"abandoned_needs_close"})
+        peer["state_change_seq"] += 1
+        with self.assertRaisesRegex(fp.Failure, "activity changed"):
+            hd.close(reviewer)
+        pairs.abandon(worker, self.write("recapture.md", "SIMULATED inspected later activity; both idle; no output is integrated."))
+        terminal = peer["terminal_id"]
+        peer["terminal_id"] = "unrelated-terminal"
+        with self.assertRaises(fp.Failure): hd.close(reviewer)
+        peer["terminal_id"] = terminal
+        hd.close_pair(worker)
+        self.assertEqual(len(self.api.panes), 2)
+        passed_pair(self)
+        hd.final_check(self.run, self.input)
+        director = str(fp.director_task(Path(self.run))[0])
+        self.decide(director, dict(base.FINAL, plan_id="plan-2"))
+        self.assertEqual(fp.finish(self.run, self.input)["phase"], "closed")
+
+    def test_abandonment_never_closes_a_recorded_lost_terminal(self):
+        worker, reviewer = self.obsolete_pair()
+        fp.retire_lost(reviewer, self.write("lost.md", "SIMULATED runtime evidence: reviewer exited"))
+        peer = self.api.registered[fp.task_at(reviewer)[1]["name"]]
+        peer["terminal_id"] = "new-unrelated-terminal"
+        pairs.abandon(worker, self.input)
+        closes = len([c for c in self.api.calls if c[:2] == ("pane", "close")])
+        hd.close_pair(worker)
+        self.assertEqual(len([c for c in self.api.calls if c[:2] == ("pane", "close")]), closes + 1)
+        self.assertFalse(fp.task_at(reviewer)[1]["closed"])
 
     def test_direct_fix_round_trip_never_calls_main_and_keeps_sessions(self):
         worker, reviewer = self.ready()

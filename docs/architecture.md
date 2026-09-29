@@ -55,6 +55,9 @@ peer through its actual prompt operation, preserving existing idle/terminal chec
 Native management calls stay with Main, but peer continuations belong to the child;
 shell Python never invokes native tools. Missing reciprocal host capability is
 reported, not hidden behind a Main relay.
+New native pair participants first return their observed identity from a separate
+bootstrap packet. Main binds both idle sessions before sending work packets;
+replacement sessions follow the same order. Binding never implies delivery.
 
 The ledger refuses executor dispatch before Astra records authorization for the
 current Plan, planning decisions made before the newest user message reached Astra,
@@ -68,6 +71,11 @@ HEAD. Collection checks live bytes and seals the delivered result; later edits a
 new tasks. Finish validates collected pair evidence, not a perpetual rehash/review
 of completed worktrees. Main must integrate the exact reviewed artifact; a manifest
 of hashes is not a source archive or an automatic integration verifier.
+For stopped work excluded by a revised Plan, Main can record explicit abandonment
+with the scope decision and existing reports/identities, including an empty idle
+bootstrap. This allows closure and removes the old task from completion checks
+without manufacturing PASS. Current-Plan tasks cannot use this route. Herdr still
+checks idle state, terminal identity and activity sequences before pane closure.
 
 The herdr layout keeps Main left 40% and Astra right 60%; researchers and executors
 share the lower 60% of Astra's region. Completion reconciliation compares current

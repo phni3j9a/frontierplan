@@ -217,8 +217,12 @@ def uncollected_reports(root: Path) -> list[dict]:
         if ended(task):
             continue
         if task.get("pair") and not task.get("replaced_by"):
-            from pairs import at, TERMINAL
-            if at(path)[1]["status"] not in TERMINAL:
+            from pairs import at, TERMINAL, abandonment_receipt
+            pair_status = at(path)[1]["status"]
+            if pair_status == "ABANDONED":
+                abandonment_receipt(path)
+                continue
+            if pair_status not in TERMINAL:
                 continue
         result = current_result(path, task)
         if (result and result["status"] in ("complete", "blocked")
@@ -239,6 +243,11 @@ def idle_executors(root: Path, plan_id: str | None) -> None:
     for path, task in tasks(root):
         if task["role"] not in EXECUTORS or ended(task):
             continue
+        if task.get("pair") and not task.get("replaced_by"):
+            from pairs import at, abandonment_receipt
+            if at(path)[1]["status"] == "ABANDONED":
+                abandonment_receipt(path)
+                continue
         collected(path, task, complete=False)
 
 
@@ -483,9 +492,13 @@ def bind(task_path: str, handle_file: str) -> dict:
                     "Record a distinct, observed native child thread_id for paired participants.")
         require(not any(t.get("handle") and t["handle"].get("agent_id") == value["agent_id"] for _, t in tasks(root)),
                 "One native session cannot fill two roles.")
-        task.update(handle=value, delivery="sent")
+        task.update(handle=value, delivery="bound" if task.get("pair") else "sent")
         atomic(path / "task.json", task)
-    return {"bound": task["id"], "handle": value}
+    result = {"bound": task["id"], "handle": value}
+    if task.get("pair"):
+        result.update(packet=task["packet"],
+                      note="Bootstrap must be idle. After both peers are bound, Main sends this work packet through actual native follow-up; binding does not deliver it.")
+    return result
 
 
 def publish(task_path: str, request_id: str, status: str, file: str | None = None) -> dict:
@@ -511,7 +524,9 @@ def collect(task_path: str) -> dict:
     main_only(state)
     if task.get("pair") and not task.get("replaced_by"):
         from pairs import at, TERMINAL
-        require(at(path)[1]["status"] in TERMINAL, "Wait for pair PASS or escalation; Main does not collect ordinary review rounds.")
+        pair_status = at(path)[1]["status"]
+        require(pair_status in TERMINAL and pair_status != "ABANDONED",
+                "Wait for pair PASS or escalation; ordinary review and abandoned work are not collectable results.")
     with lock(path / ".report.lock"):
         result = current_result(path, task)
         require(result and result["status"] in ("complete", "blocked"), "No returned report yet.")
@@ -715,7 +730,9 @@ def closable(path: Path, task: dict, state: dict) -> dict:
     if task["role"] == "director":
         require(state["phase"] == "closed", "Astra stays until finish.")
     if task.get("pair") and not task.get("replaced_by"):
-        from pairs import require_collected
+        from pairs import at, require_collected, abandonment_receipt
+        if at(path)[1]["status"] == "ABANDONED":
+            return abandonment_receipt(path)
         require_collected(path, live=True)
     return collected(path, task, complete=needs_complete(task, state))
 

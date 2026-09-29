@@ -26,8 +26,12 @@ are unchanged. Failed/partial launch prints prepared handles: inspect those befo
 starting another pair.
 
 Native Main uses `pairs.py create` with the same arguments plus
-`--capability-file <actual-host-evidence.json>`, then uses real native spawn/bind
-operations, Reviewer first. See the [native backend](../backends/subagent.md).
+`--capability-file <actual-host-evidence.json>`. Spawn each new child with its
+`bootstrap_packet`, which only observes its native thread identity and ends idle.
+Bind both returned identities, then use real native follow-ups to send the actual
+`packet`, Reviewer first. `bind` also returns this work packet; binding is not delivery.
+This order also applies to replacement sessions and avoids racing child work
+against Main's binding. See the [native backend](../backends/subagent.md).
 The helper does not make a native tool call. Do not create a capability assertion
 from a hypothetical tool schema or use Main as a hidden peer relay.
 
@@ -99,6 +103,27 @@ ESCALATE is not completion. Do not close unresolved work except after capturing
 state and explicitly replacing the participant. Closure retains reports and files.
 A previously verified lost terminal is never closed using its reused pane ID.
 
+If a revised Plan drops a stopped old task, Main may explicitly abandon that pair:
+```
+python3 "$pp" abandon --task "$old_worker" --file "$abandonment_evidence"
+python3 "$hd" pair-close --task "$old_worker"
+```
+The evidence must explain why the revised Plan excludes the task, where its
+worktree/diff/reports are preserved, and the observed idle/lost state of both
+sessions. For native sessions Main verifies idle using the actual host before
+`abandon`, then closes/records each live agent through native tools as usual.
+Herdr verifies idle and terminal identity itself and records activity sequences;
+later activity requires inspection and a fresh `abandon` capture before closure.
+`check` exposes retained abandoned panes as `abandoned_needs_close`.
+
+`ABANDONED` is a recorded scope decision, never PASS or permission to integrate
+unfinished changes. Current-Plan tasks and active pairs cannot be abandoned.
+The record preserves the existing candidate, reports and pending-handoff evidence,
+including absence of a report from an idle Reviewer bootstrap. A revised Plan
+cannot finish while an old stopped pair remains unresolved: resume it under the
+new contract or abandon it explicitly. Abandoned pairs do not block the new Plan
+and may close even after finish; lost or unlaunched terminals are never closed.
+
 Once collected, the task is sealed. Later work must be a follow-up/integration pair,
 not edits under the old PASS. Final checks validate the delivered candidate and
 current reports, rather than rehashing an old worktree forever after subsequent
@@ -123,6 +148,8 @@ collected before replacement, and its superseded idle pane may then close. A los
 or reused terminal is never closed. If replacing a Reviewer without a valid current
 Worker candidate, bind/launch it, then resume the Worker to publish a new candidate.
 Native Main uses `pairs.py resume/replace` and the actual native lifecycle tools.
+Replacement native children use the same identity-bootstrap/bind/work sequence;
+continuing an already bound session needs no new bootstrap.
 
 Astra's final check is still once per Plan with no veto. Concrete later repairs use
 new pairs, and their PASS returns to Main, not an Astra re-acceptance loop.

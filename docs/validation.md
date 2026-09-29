@@ -57,7 +57,11 @@ The suite includes bounded pair registration, authenticated same-session peer tu
 explicit current-candidate PASS, stale/untracked/unstaged changes, candidate ownership,
 Main collection/closure, same-cause stagnation, session replacement and delivery
 race/uncertainty handling. Fixtures explicitly simulate native capability and Herdr
-agents. These tests do not establish real child-to-child host support.
+transport. Regression cases cover native bootstrap returning before Main binds,
+then initial assignment and direct peer review; and revised-Plan abandonment before
+any candidate or after Reviewer escalation, including closure after finish, changed
+evidence/activity, reused/lost terminals and rejection of current-Plan bypasses.
+These checks do not launch actual children or demonstrate real peer continuation.
 
 **Real Herdr pair validation is delegated to the user's local Codex and has not
 been run here. Native reciprocal continuation is also unverified.** Follow the
