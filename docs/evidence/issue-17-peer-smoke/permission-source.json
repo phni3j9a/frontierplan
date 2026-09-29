@@ -37,7 +37,7 @@
       ":read-only",
       ":workspace",
       ":danger-full-access",
-      "rfkit-loop-worker"
+      "[unrelated allowed profile name omitted]"
     ],
     "required_setup": "Explicit user-approved sudo addition of frontierplan-herdr=true in allowed_permission_profiles; proposal prepared, approval pending.",
     "warning_file": "herdr-requirements-warning.txt"
