@@ -1,0 +1,99 @@
+{
+  "result": "PASS",
+  "scope": "実ホスト上の限定的な兄弟間継続テスト。FrontierPlan全体のライフサイクル検証ではない",
+  "effective_policy": {
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-project",
+    "sandbox_mode": "workspace-write",
+    "approval_policy": "never"
+  },
+  "children": [
+    {
+      "canonical_path": "/root/smoke_worker",
+      "CODEX_THREAD_ID": "01a0eda7-9cf0-7990-aa85-927a6b962836",
+      "CODEX_SESSION_ID": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+      "requested_model": "gpt-6-luna",
+      "requested_reasoning_effort": "max",
+      "fork_turns": "none",
+      "identity_stable_across_observed_turns": true,
+      "final_observed_state": "completed"
+    },
+    {
+      "canonical_path": "/root/smoke_reviewer",
+      "CODEX_THREAD_ID": "01a0eda7-c613-7ed1-b8fe-2e858139f60b",
+      "CODEX_SESSION_ID": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+      "requested_model": "gpt-6-sol",
+      "requested_reasoning_effort": "xhigh",
+      "fork_turns": "none",
+      "identity_stable_across_observed_turns": true,
+      "final_observed_state": "completed"
+    }
+  ],
+  "idle_verification": {
+    "tool": "collaboration.list_agents",
+    "both_bootstrap_turns_completed_before_setup": true,
+    "both_final_turns_completed": true,
+    "interpretation": "両者ともターン終了後の待機状態。アーカイブ済みではない"
+  },
+  "actual_chain": {
+    "input": "  HELLO\tStraße  ",
+    "expected": "hello strasse",
+    "initial_candidate": "return \" \".join(text.split())",
+    "reviewer_finding": {
+      "id": "F1",
+      "actual": "HELLO Straße",
+      "comparison_passed": false,
+      "exit_code": 0
+    },
+    "fixed_candidate": "return \" \".join(text.casefold().split())",
+    "worker_check": {
+      "actual": "hello strasse",
+      "comparison_passed": true,
+      "exit_code": 0
+    },
+    "independent_reviewer_check": {
+      "actual": "hello strasse",
+      "comparison_passed": true,
+      "exit_code": 0,
+      "verdict": "PASS"
+    }
+  },
+  "direct_handoffs": {
+    "tool": "collaboration.followup_task",
+    "count": 3,
+    "sequence": [
+      "/root/smoke_worker → /root/smoke_reviewer: 初期候補",
+      "/root/smoke_reviewer → /root/smoke_worker: F1",
+      "/root/smoke_worker → /root/smoke_reviewer: 修正候補"
+    ],
+    "ordinary_main_relay_count": 0
+  },
+  "event_wait": {
+    "tool": "collaboration.wait_agent",
+    "calls": 6,
+    "timeouts": 1
+  },
+  "evidence": {
+    "main": "/tmp/fp17-real-kqrq6b8u/native-probe-evidence/native-roundtrip-main.json",
+    "audit": "/tmp/fp17-real-kqrq6b8u/native-probe-evidence/native-roundtrip-audit.json",
+    "worker": "/tmp/fp17-real-kqrq6b8u/native-probe-evidence/smoke_worker.jsonl",
+    "reviewer": "/tmp/fp17-real-kqrq6b8u/native-probe-evidence/smoke_reviewer.jsonl"
+  },
+  "archive": {
+    "owner": "Original Main",
+    "status": "pending",
+    "targets": [
+      "01a0eda7-9cf0-7990-aa85-927a6b962836",
+      "01a0eda7-c613-7ed1-b8fe-2e858139f60b"
+    ],
+    "calls_by_this_main": 0,
+    "results": []
+  },
+  "limitations": [
+    "指定プロファイルのspawn引数は受理されたが、実効モデル・推論強度を独立に確認する応答メタデータはない",
+    "Fastサービス階層を独立指定する公開フィールドはない",
+    "Worker証跡の先頭レコード間に文字列の\\nが入り、厳密なJSONLではない。原本を保持し、auditに解析済みレコードを保存した",
+    "Workerの引き継ぎ文内のテストコマンド例に引用符の欠落がある。記録された実行コマンドと候補は保持され、Reviewerは候補を独立実行してPASSした",
+    "子の証跡はコマンド・出力・引き継ぎ引数と応答を記録しているが、シェルツール応答の全メタデータは保存されていない",
+    "子のアーカイブと単独execによるライフサイクル完結は未検証"
+  ]
+}

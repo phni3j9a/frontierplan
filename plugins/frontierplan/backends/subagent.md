@@ -17,6 +17,10 @@ For pair execution, also require real **child-to-peer continuation in both
 surface these were spawn_agent with model/reasoning_effort/fork_turns, followup_task
 and wait_agent; other versions may differ. These names are examples, not registered
 tools created by FrontierPlan. Refuse unspecified model inheritance or backend fallback.
+Inspect deferred tool metadata too: the tested TUI exposed a native archive tool,
+while standalone `codex exec` did not. Availability in another session is not local
+capability. An idle turn can still have an active runtime writer; do not equate
+`completed` or `interrupt_agent` with a successful close/archive response.
 
 Codex limits nesting with `agents.max_depth` (default 1): a child cannot be relied on
 to spawn its own children. That is why Astra's research requests go through Main's

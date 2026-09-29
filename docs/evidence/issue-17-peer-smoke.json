@@ -54,7 +54,7 @@
     }
   },
   "native": {
-    "status": "capability_roundtrip_in_progress",
+    "status": "passed_actual_direct_capability_roundtrip_and_archive",
     "fixture": "/tmp/fp17-real-kqrq6b8u/native-project",
     "test_parent_thread_id": "01a0eda1-fa97-7b00-90da-82cf72974e60",
     "scope": "Actual native tools in a separate restricted CLI test harness; original Main retains repository engineering and actual native archive cleanup. Not a complete FrontierPlan ledger/Plan run.",
@@ -62,6 +62,79 @@
       "The exec harness has no native archive tool; the original TUI Main does. Original Main verified its actual native set_thread_archived tool on a completed disposable initial preflight session.",
       "CLI exec requires sandbox/config flags on exec itself; an initial misplaced-flag preflight inherited disabled sandbox, spawned no children, and was discarded/archived.",
       "Independent fast-tier selection is not exposed by collaboration.spawn_agent."
+    ],
+    "ordinary_main_relay_count": 0,
+    "direct_peer_handoffs": 3,
+    "actual_chain": {
+      "input": "  HELLO\tStraße  ",
+      "expected": "hello strasse",
+      "initial_candidate": "return \" \".join(text.split())",
+      "reviewer_finding": {
+        "id": "F1",
+        "actual": "HELLO Straße",
+        "comparison_passed": false,
+        "exit_code": 0
+      },
+      "fixed_candidate": "return \" \".join(text.casefold().split())",
+      "worker_check": {
+        "actual": "hello strasse",
+        "comparison_passed": true,
+        "exit_code": 0
+      },
+      "independent_reviewer_check": {
+        "actual": "hello strasse",
+        "comparison_passed": true,
+        "exit_code": 0,
+        "verdict": "PASS"
+      }
+    },
+    "children": [
+      {
+        "canonical_path": "/root/smoke_worker",
+        "CODEX_THREAD_ID": "01a0eda7-9cf0-7990-aa85-927a6b962836",
+        "CODEX_SESSION_ID": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+        "requested_model": "gpt-6-luna",
+        "requested_reasoning_effort": "max",
+        "fork_turns": "none",
+        "identity_stable_across_observed_turns": true,
+        "final_observed_state": "completed"
+      },
+      {
+        "canonical_path": "/root/smoke_reviewer",
+        "CODEX_THREAD_ID": "01a0eda7-c613-7ed1-b8fe-2e858139f60b",
+        "CODEX_SESSION_ID": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+        "requested_model": "gpt-6-sol",
+        "requested_reasoning_effort": "xhigh",
+        "fork_turns": "none",
+        "identity_stable_across_observed_turns": true,
+        "final_observed_state": "completed"
+      }
+    ],
+    "identity_note": "Native agent canonical path, distinct child CODEX_THREAD_ID, and inherited CODEX_SESSION_ID are different identifiers. Each child retained its observed thread ID across direct turns.",
+    "archive": {
+      "status": "both_children_and_test_parent_archived",
+      "tool": "mcp__codex_tui__set_thread_archived",
+      "caller": "Original TUI Main",
+      "evidence": "issue-17-peer-smoke/native-closures.json",
+      "initial_failure": "Child turns completed, but owning exec server still held active writers; archive was rejected.",
+      "resolution": "Waited for exec process exit_code 0, then actual archive succeeded for exact original IDs."
+    },
+    "model_permissions": "Original Main independently read scoped runtime metadata: Worker gpt-6-luna/max, Reviewer gpt-6-sol/xhigh; both managed restricted filesystem + restricted network, approval never. This resolves the exec test report's inability to inspect its own backend metadata.",
+    "end_to_end_frontierplan_ledger": "not_run; this probe used actual native tools and an in-memory code fixture, not FrontierPlan Plan/pair bootstrap/bind/collect/finish.",
+    "evidence": [
+      "issue-17-peer-smoke/native-result-before-archive.json",
+      "issue-17-peer-smoke/native-lifecycle-calls.json",
+      "issue-17-peer-smoke/native-worker-handoffs.json",
+      "issue-17-peer-smoke/native-reviewer-handoffs.json",
+      "issue-17-peer-smoke/native-smoke_worker-raw.txt",
+      "issue-17-peer-smoke/native-smoke_reviewer-raw.txt",
+      "issue-17-peer-smoke/native-closures.json",
+      "issue-17-peer-smoke/runtime-observations.json"
+    ],
+    "artifact_limitations": [
+      "Worker raw report has literal backslash-n separators in the first records; preserved unchanged as text, not claimed to be valid JSONL.",
+      "Worker fixed handoff includes a malformed heredoc example; exact candidate and actually executed command are intact. Reviewer independently executed the candidate successfully.",
+      "Raw actual collaboration calls/results were extracted from each scoped rollout, without model reasoning or unrelated sessions."
     ]
   },
   "swe2": {
@@ -70,8 +143,16 @@
   },
   "remaining": [
     "Successful Herdr direct same-session finding/fix/PASS under preserved permissions.",
-    "Native real roundtrip and exact lifecycle outcome; native helper end-to-end remains separate from capability-only probe.",
-    "Successful current-candidate collection, pair closure and one-time Astra final check for completed live Plan.",
-    "Follow-up PR merge remains withheld."
-  ]
+    "Native FrontierPlan helper end-to-end Plan/bootstrap/bind/collect/finish validation remains separate from the passed direct communication probe.",
+    "Successful current-candidate collection, pair closure and one-time Astra final check for a completed live Plan.",
+    "Follow-up PR #19 remains draft and unmerged."
+  ],
+  "recorded_at": "2026-09-29T15:04:02.594367+00:00",
+  "followup_pr": "https://github.com/phni3j9a/frontierplan/pull/19",
+  "automated_validation": {
+    "plugin_validator": "passed",
+    "unit_tests": 165,
+    "unit_result": "passed; simulated backends",
+    "standalone_packaging": "passed; plugin and source ZIPs"
+  }
 }

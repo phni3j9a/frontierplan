@@ -100,6 +100,17 @@ Standard-Codex evidence does not establish SWE2 interoperability.
 
 ## Native backend evidence
 
+The 2026-09-29/30 capability probe completed three actual sibling
+`collaboration.followup_task` calls: seeded candidate, real finding F1, corrected
+candidate, then independent Reviewer PASS. Child thread IDs stayed stable;
+`CODEX_SESSION_ID` was inherited from the parent and was not used as child identity.
+Original Main independently observed the requested model/effort and restricted
+runtime permissions. Its actual native archive tool archived both children after
+the owning exec process exited; the earlier attempts correctly failed with active
+writers. Ordinary Main relay count was zero. This proves the bounded communication
+probe, not the complete FrontierPlan Plan/bootstrap/bind/collect/finish workflow.
+See the evidence summary for the exact scope and raw report limitations.
+
 Test separately on a host exposing actual child-to-peer continuation in both
 directions with persistent identities. The helper cannot implement a missing host
 capability. Supply observed child `thread_id` separately from the native `agent_id`;
