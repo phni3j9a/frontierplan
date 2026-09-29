@@ -1,0 +1,363 @@
+{
+  "run": {
+    "schema_version": 2,
+    "id": "b3580048bb29",
+    "backend": "subagent",
+    "variant": "standard",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "main_thread_id": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+    "phase": "closed",
+    "user_seq": 1,
+    "pending_forward": false,
+    "authorization": {
+      "message": 1,
+      "digest": "223085cb6aec39a57ccab2692c0117639ab9d71e2af7ee164284ab7b055706cc",
+      "plan_id": "native-normalize-composite-1"
+    },
+    "plan": {
+      "id": "native-normalize-composite-1",
+      "digest": "c91524946bec358a7e80873f0b014fdc869d70068f26765344eb65854458a72a",
+      "file": "/tmp/frontierplan-gz8qi71g/decisions/ef76a0956036.json",
+      "user_seq": 1
+    },
+    "research": null,
+    "final_checks": {
+      "native-normalize-composite-1": "/tmp/frontierplan-gz8qi71g/decisions/f64428cfe54e.json"
+    },
+    "last_decision": {
+      "kind": "final_check",
+      "file": "/tmp/frontierplan-gz8qi71g/decisions/f64428cfe54e.json",
+      "task": "/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488",
+      "request_id": "f64428cfe54e",
+      "result_digest": "047f85587c219ce0c5872c6605a43939cc523b71446b76cfd67bd7abd20529d8",
+      "user_seq": 1
+    }
+  },
+  "tasks": [
+    {
+      "task": {
+        "id": "7327dfa54d40",
+        "run": "/tmp/frontierplan-gz8qi71g",
+        "role": "reviewer",
+        "closed": true,
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "profile": {
+          "role": "reviewer",
+          "model": "gpt-6-sol",
+          "reasoning_effort": "xhigh"
+        },
+        "name": "fp-b3580048bb29-7327dfa54d40",
+        "handle": {
+          "agent_id": "/root/native_reviewer",
+          "thread_id": "01a0edca-caac-7241-b2c2-046b523ccdba",
+          "evidence": {
+            "spawn": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/10-native-spawn-reviewer.json",
+            "bootstrap": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/bootstrap-output.json",
+            "identity": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/identity.json",
+            "idle": "Actual collaboration.list_agents reported completed after bootstrap; /tmp/fp17-real-kqrq6b8u/native-full-phase-a-events.jsonl"
+          }
+        },
+        "request_id": "4f75a368c7d7",
+        "user_seq": 1,
+        "plan_id": "native-normalize-composite-1",
+        "delivery": "prepared",
+        "created_at": 1790696394.782763,
+        "packet": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/4f75a368c7d7.task.md",
+        "pair": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/pair.json",
+        "bootstrap_packet": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/e4af11b671f0.bootstrap.md",
+        "closure": {
+          "agent_id": "/root/native_reviewer",
+          "closed": true,
+          "evidence": "Original TUI Main called actual mcp__codex_tui__set_thread_archived after controller exec exited 0; exact result {\"threadId\":\"01a0edca-caac-7241-b2c2-046b523ccdba\",\"archived\":true}. Full result in native-full-closures.json."
+        }
+      },
+      "reports": [
+        {
+          "task_id": "7327dfa54d40",
+          "request_id": "4f75a368c7d7",
+          "status": "complete",
+          "report": "# Reviewer PASS: candidate d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4\n\nTask `7327dfa54d40`, request `4f75a368c7d7`, contract `fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192`.\n\nResolved `FP-001`: `normalize_label` now applies Unicode `casefold()` after trimming and collapsing whitespace. The existing public signature is unchanged. The diff is confined to `normalize.py` and `test_normalize.py`, with a focused regression test for the contract's named input.\n\nVerification on this candidate, with `PYTHONDONTWRITEBYTECODE=1`: `python3 -m unittest -v` passed all three tests; an independent check passed for `\"  HELLO\\tStraße  \" -> \"hello strasse\"`, `\"\\tWEIß  Raum\\n\" -> \"weiss raum\"`, and whitespace-only input -> `\"\"`. Exact outputs are in `review-2-unittest.txt` and `review-2-independent.txt`. No relevant gaps remain for this bounded task.\n\nNative identity observed this turn: `CODEX_THREAD_ID=01a0edca-caac-7241-b2c2-046b523ccdba`, `CODEX_SESSION_ID=01a0edc5-ff16-7f61-89d5-25185f2e5463`. Both match the original Reviewer session. Effective boundary remains `workspace-write` with approval `never`. The fixture was reviewed read-only.\n",
+          "published_at": 1790696482.183251,
+          "pair_kind": "pass",
+          "candidate": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4"
+        },
+        {
+          "task_id": "7327dfa54d40",
+          "request_id": "c179443f10d1",
+          "status": "complete",
+          "report": "# Reviewer findings: candidate e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5\n\nTask `7327dfa54d40`, request `c179443f10d1`, contract `fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192`.\n\nNative identity observed this turn: `CODEX_THREAD_ID=01a0edca-caac-7241-b2c2-046b523ccdba`, `CODEX_SESSION_ID=01a0edc5-ff16-7f61-89d5-25185f2e5463`. This is the same Reviewer session as bootstrap. Effective boundary: `workspace-write`, approval `never`. Project files were read only.\n\nFP-001 `normalize_label` omits Unicode case folding.\nEvidence: The task contract requires `normalize_label(\"  HELLO\\tStraße  \") == \"hello strasse\"`. The current `normalize.py` only returns `\" \".join(text.split())`. An independent check returned `'HELLO Straße'` and exited with `AssertionError` (see `review-1-unicode.txt`).\nImpact: Mixed-case and Unicode labels violate the required normalized output, including the named completion example.\nCorrection: Casefold the normalized text while retaining the existing whitespace behavior and stable function signature; add a focused regression test.\n\nVerification: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v` passed the two existing tests. The independent mixed-case/Unicode assertion failed as described. No fixture content was changed by this review.\n",
+          "published_at": 1790696258.1351922,
+          "pair_kind": "findings",
+          "candidate": "e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5"
+        }
+      ],
+      "receipt.json": {
+        "digest": "8de742e2c36f6298b7bba119616574d285253eb1ec56d5e7231b8502d9857633",
+        "request_id": "4f75a368c7d7"
+      }
+    },
+    {
+      "task": {
+        "id": "a84d0b179b9b",
+        "run": "/tmp/frontierplan-gz8qi71g",
+        "role": "worker",
+        "closed": true,
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "profile": {
+          "role": "worker",
+          "model": "gpt-6-luna",
+          "reasoning_effort": "max",
+          "service_tier": "fast"
+        },
+        "name": "fp-b3580048bb29-a84d0b179b9b",
+        "handle": {
+          "agent_id": "/root/native_worker",
+          "thread_id": "01a0edca-f04c-7df3-afe0-2ecd93933f67",
+          "evidence": {
+            "spawn": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/11-native-spawn-worker.json",
+            "bootstrap": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/bootstrap-output.json",
+            "identity": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/identity.json",
+            "idle": "Actual collaboration.list_agents reported completed after bootstrap; /tmp/fp17-real-kqrq6b8u/native-full-phase-a-events.jsonl"
+          }
+        },
+        "request_id": "a568961f7af0",
+        "user_seq": 1,
+        "plan_id": "native-normalize-composite-1",
+        "delivery": "prepared",
+        "created_at": 1790696258.1356108,
+        "packet": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/a568961f7af0.task.md",
+        "pair": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/pair.json",
+        "bootstrap_packet": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/2516e0560436.bootstrap.md",
+        "closure": {
+          "agent_id": "/root/native_worker",
+          "closed": true,
+          "evidence": "Original TUI Main called actual mcp__codex_tui__set_thread_archived after controller exec exited 0; exact result {\"threadId\":\"01a0edca-f04c-7df3-afe0-2ecd93933f67\",\"archived\":true}. Full result in native-full-closures.json."
+        }
+      },
+      "reports": [
+        {
+          "task_id": "a84d0b179b9b",
+          "request_id": "2516e0560436",
+          "status": "complete",
+          "report": "# Worker turn 1 candidate report\n\nStatus: **INCOMPLETE TEST INPUT — seeded candidate submitted unchanged for independent review.**\n\nTask: `a84d0b179b9b`; request: `2516e0560436`; plan: `native-normalize-composite-1`.\n\nThis is the fixture's existing `normalize.py` and `test_normalize.py`, submitted with no edits. No tests were run on this intentionally incomplete first-turn input. The exact `begin` output is preserved in `worker-turn-1-begin-output.json`.\n\nObserved native identity (read only):\n- `CODEX_THREAD_ID`: `01a0edca-f04c-7df3-afe0-2ecd93933f67`\n- `CODEX_SESSION_ID`: `01a0edc5-ff16-7f61-89d5-25185f2e5463`\n\nNo finding IDs exist yet; this is the first candidate submission. The same native Worker session remains bound to the registered Reviewer for the review cycle.\n",
+          "published_at": 1790696158.1931612,
+          "pair_kind": "candidate",
+          "candidate": "e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5"
+        },
+        {
+          "task_id": "a84d0b179b9b",
+          "request_id": "a568961f7af0",
+          "status": "complete",
+          "report": "# Worker turn 2 candidate report\n\nTask: `a84d0b179b9b`; request: `a568961f7af0`; plan: `native-normalize-composite-1`.\n\nResolved finding `FP-001`: `normalize_label` now applies Unicode `casefold()` to the whitespace-collapsed text, retaining the public signature and whitespace behavior. Added a focused regression test for `\"  HELLO\\tStraße  \"` producing `\"hello strasse\"`. Only the owned fixture files `normalize.py` and `test_normalize.py` were edited.\n\nVerification:\n- `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v` — exit 0; 3 tests passed. Exact output: `worker-turn-2-unittest-output.txt`.\n- `PYTHONDONTWRITEBYTECODE=1 python3 -c 'from normalize import normalize_label; got = normalize_label(\"  HELLO\\tStraße  \"); expected = \"hello strasse\"; assert got == expected, f\"{got!r} != {expected!r}\"; print(f\"PASS: {got!r}\")'` — exit 0; output `PASS: 'hello strasse'`. Exact output: `worker-turn-2-independent-check-output.txt`.\n\nObserved native Worker identity this turn (read only):\n- `CODEX_THREAD_ID`: `01a0edca-f04c-7df3-afe0-2ecd93933f67`\n- `CODEX_SESSION_ID`: `01a0edc5-ff16-7f61-89d5-25185f2e5463`\n\nThis is the same Worker session as the initial candidate turn. The `FP-001` review finding came from the registered Reviewer in its same native session; the previous actual peer-continuation call is recorded in `worker-turn-1-native-handoff.json`.\n",
+          "published_at": 1790696394.78237,
+          "pair_kind": "candidate",
+          "candidate": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4"
+        }
+      ],
+      "receipt.json": {
+        "digest": "423be6fee0aca43ddeaf807c7c8e81e052e4593d313f9715ee6067b5d4e6c541",
+        "request_id": "a568961f7af0"
+      },
+      "pair.json": {
+        "id": "a84d0b179b9b",
+        "run": "/tmp/frontierplan-gz8qi71g",
+        "plan_id": "native-normalize-composite-1",
+        "worker": "a84d0b179b9b",
+        "reviewer": "7327dfa54d40",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "scope": [
+          "normalize.py",
+          "test_normalize.py"
+        ],
+        "contract": "Objective: finish normalize_label in /tmp/fp17-real-kqrq6b8u/native-full-project/normalize.py to trim/collapse whitespace and Unicode-casefold, with empty input returning \"\". Owned files: normalize.py and test_normalize.py. Existing public function signature stays stable.\nCompletion: \"  HELLO\\tStraße  \" becomes \"hello strasse\"; whitespace-only input is empty; existing whitespace behavior stays intact. Run python3 -m unittest -v and an independent mixed-case/Unicode check.\nLive-test staging: on the FIRST Worker turn only, submit the existing seeded candidate unchanged and label it incomplete test input. This fixture deliberately lacks casefold so the real Reviewer must independently find the concrete contract violation. On the subsequent Worker turn, make the smallest fix plus focused tests and resubmit to the SAME Reviewer. Reviewer must give truthful findings/PASS for the real code.\nEnd each turn immediately after handoff. Preserve exact command output, actual CODEX_THREAD_ID/CODEX_SESSION_ID, finding IDs, and session continuity in reports. No other agents, external messages, config changes, or publishing.\n",
+        "contract_digest": "fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192",
+        "status": "PASS",
+        "candidate": {
+          "digest": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4",
+          "manifest": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/a568961f7af0.candidate.json",
+          "head": "9d4dac8a1add7548fba56ccec4ff84babdb3e4d4"
+        },
+        "pass": {
+          "contract_digest": "fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192",
+          "candidate_digest": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4",
+          "reviewer": "7327dfa54d40",
+          "reviewer_handle": "134b2cf09fb526a455a4e4b1e60f609fba5e2f30e692f0af924d40ed9e3e0ad6",
+          "reviewer_report": "8de742e2c36f6298b7bba119616574d285253eb1ec56d5e7231b8502d9857633",
+          "worker_report": "423be6fee0aca43ddeaf807c7c8e81e052e4593d313f9715ee6067b5d4e6c541"
+        },
+        "collected": "8009f028fbc5fa0fc1a21e7b489217882a5f659ce8d0684540f2667352ddfc53",
+        "pending": null,
+        "native_capability": {
+          "direct_peer_resume": true,
+          "evidence": "Actual native sibling followup_task roundtrip already passed on Codex 0.159.0; see /home/server/projects/frontierplan/docs/evidence/issue-17-peer-smoke/native-lifecycle-calls.json and native-{worker,reviewer}-handoffs.json. Same-session candidate/finding/fix/PASS, Main ordinary relay count 0. Full helper lifecycle is being tested now; actual native archive is performed by original TUI Main only after this exec exits, then closure evidence recorded on resumption."
+        }
+      }
+    },
+    {
+      "task": {
+        "id": "c0762e3a7488",
+        "run": "/tmp/frontierplan-gz8qi71g",
+        "role": "director",
+        "closed": true,
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "profile": {
+          "role": "director",
+          "model": "gpt-6-astra",
+          "reasoning_effort": "xhigh"
+        },
+        "name": "fp-b3580048bb29-c0762e3a7488",
+        "handle": {
+          "agent_id": "/root/native_astra",
+          "thread_id": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf",
+          "evidence": {
+            "spawn": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/03-native-spawn-astra.json",
+            "identity": "/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488/ef76a0956036.identity.json",
+            "idle": "Actual collaboration.list_agents returned completed for /root/native_astra; native transcript /tmp/fp17-real-kqrq6b8u/native-full-phase-a-events.jsonl"
+          }
+        },
+        "request_id": "f64428cfe54e",
+        "user_seq": 1,
+        "plan_id": "native-normalize-composite-1",
+        "delivery": "prepared",
+        "created_at": 1790696913.1181152,
+        "purpose": "final_check",
+        "seen_user_seq": 1,
+        "packet": "/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488/f64428cfe54e.task.md",
+        "closure": {
+          "agent_id": "/root/native_astra",
+          "closed": true,
+          "evidence": "Original TUI Main called actual mcp__codex_tui__set_thread_archived after Phase B exec exited 0 and helper finish; exact result {\"threadId\":\"01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf\",\"archived\":true}. Full result in native-full-closures.json."
+        }
+      },
+      "reports": [
+        {
+          "task_id": "c0762e3a7488",
+          "request_id": "ef76a0956036",
+          "status": "complete",
+          "report": "{\n  \"kind\": \"plan\",\n  \"plan_id\": \"native-normalize-composite-1\",\n  \"user_response\": \"使い捨て fixture で、実際の native helper workflow を検証します。最初の Worker 候補は casefold が欠けた既存コードのまま提出し、同じ Reviewer による独立した指摘、同じ Worker の最小修正、再レビューの PASS までを直接通信で進めます。単体テストだけの確認では、今回求められた実通信とセッション継続を検証できないため、この一組の実行に限定します。PASS の収集後に Phase A を終了し、元の TUI Main が両 peer の正確な thread を実アーカイブしてから、同じ controller と Astra で closure 記録、1 回限りの最終確認、finish に進みます。検証結果は、この連携した host 構成に限って報告します。許可済みの範囲なので、追加確認なしで進められます。\",\n  \"plan\": \"# Intent and scope\\nユーザーメッセージ 1 と native-full-contract.md の範囲で、normalize_label の空白正規化と Unicode casefold を満たす disposable fixture を、実 native 通信を使った helper lifecycle で検証する。対象は /tmp/fp17-real-kqrq6b8u/native-full-project/normalize.py と test_normalize.py。報告・証跡は fixture の外に保存する。\\n# Non-goals\\nFrontierPlan 本体の開発・レビュー・Git 操作・公開、Herdr 利用、設定変更、権限拡大、追加 agent、架空の native 呼出しは対象外。Astra と Reviewer は fixture を変更しない。standalone exec に safe-close 機能があるとは主張しない。\\n# Approach\\nAstra gpt-6-astra/xhigh、Worker gpt-6-luna/max、Reviewer gpt-6-sol/xhigh のちょうど三つの test subject を、fork_turns none で実 native 起動する。現在の controller session は維持する。実際の tool handle と各子自身の CODEX_THREAD_ID を記録して一度だけ bind し、継承された CODEX_SESSION_ID と区別する。子の workspace-write + never 境界と実 model/effort は実 runtime 証拠で確認する。非対応の tier 引数は使わず、Luna fast は確認できない場合 unverified と記録する。\\n生成された bootstrap packet で Reviewer、Worker の identity-only turn を実行して idle を確認し、bind 後の work packet を Reviewer、Worker の順に送る。Worker は初回だけ seeded candidate を変更せず incomplete test input と明記して提出する。Reviewer は契約の違反を自ら再現し、その実 finding を同じ Worker に送る。Worker は最小の casefold 修正と必要な回帰テストを加え、同じ Reviewer が現在候補を再確認して truthful PASS を返す。候補・finding・修正の通常 handoff は実 collaboration.followup_task を使って peer 同士が行い、Main の通常中継数は 0 に保つ。各 sender は handoff 後に turn を終了する。\\nMain はイベント待機と実 idle 状態を照合して最新 PASS の pair を collect する。レビュー済み候補を変更せず独立 integration check を実行し、Phase A の実結果と未解決の closure を保存して exec を終了する。この段階では最終確認や finish を実施しない。\\nユーザーが明示した composite-host 手順に従い、元の TUI Main が収集済みかつ idle の正確な Worker と Reviewer thread を実 native archive tool でアーカイブする。同じ controller が再開し、実 tool result を close-record に記録してから同じ Astra に 1 回だけ final-check を依頼する。Main はその判断を収集し finish を実行し、最後に元の TUI Main が Astra を実アーカイブする。アーカイブ不能または不確実な場合は未完了として実状態を残す。\\n# Simpler alternative considered\\n関数の修正と単体テストだけではユーザーが要求した native 相互継続、同じ peer の再レビュー、collection と実 closure が検証できない。追加ペアや一般化した検証基盤は不要であり、指定された一組と既存 helper を用いる。\\n# Replanning triggers\\n相互 native 継続が実際に失敗する、identity または権限境界が適合しない、候補が所有範囲外の変更を必要とする、元 TUI の実アーカイブ証拠が取得できない場合は、証拠を保存して具体的な未解決事項を報告する。モデル・backend・権限・Main 中継への無断切替は行わない。\",\n  \"acceptance_criteria\": [\n    \"AC1: normalize_label(\\\"  HELLO\\\\tStraße  \\\") が \\\"hello strasse\\\" を返す。\",\n    \"AC2: 空文字列と空白のみの入力が空文字列を返す。\",\n    \"AC3: 既存の前後空白除去と連続空白の一つの空白への正規化を維持する。\",\n    \"AC4: normalize_label の既存公開シグネチャを維持する。\",\n    \"AC5: fixture の編集は normalize.py と test_normalize.py に限られ、FrontierPlan 本体や設定ファイルを変更しない。\",\n    \"AC6: 指定 model/effort と fork_turns none で起動された三つの実 test subject だけを使用する。\",\n    \"AC7: 各参加者の実 CODEX_THREAD_ID と CODEX_SESSION_ID を改変せず保存し、同じ controller と同じ peer sessions を継続する。\",\n    \"AC8: 各子の有効な権限境界が workspace-write + never を満たす。\",\n    \"AC9: 初回 Worker 候補は seeded fixture と同一であり、未完成の test input と明記される。\",\n    \"AC10: Reviewer が初回候補の casefold 欠落を独立に再現し、実 finding ID と根拠を記録する。\",\n    \"AC11: finding と修正候補の往復は同じ登録 peer 間の実 native 呼出しで成立し、Main の通常 handoff 中継数は 0 である。\",\n    \"AC12: 修正後の現在候補に対して同じ Reviewer の PASS が実 candidate digest と検証結果に結び付く。\",\n    \"AC13: 両 peer が実 idle となった後、最新 PASS の pair が helper により収集される。\",\n    \"AC14: 両 peer の正確な thread の外部 TUI による実アーカイブ結果が保持され、同じ controller の close-record に記録される。\"\n  ],\n  \"verification\": [\n    \"Focused: 初回 candidate digest と元の fixture の同一性、Reviewer の独立した mixed-case/Unicode 再現、finding ID、peer の実 followup 呼出しと begin/submit の実出力を保存する。修正時は追加した回帰テストと python3 -m unittest -v を実行し、Reviewer は独立した mixed-case/Unicode check でも現在候補を確認する。\",\n    \"Final integration: 最新 PASS を collect したあと、Main が python3 -m unittest -v と独立した mixed-case/Unicode check をレビュー済み fixture で一度実施し、candidate digest、実 idle 状態、collect 出力を保存する。\",\n    \"Final lifecycle: Phase A を完了扱いせず、元の TUI Main の Worker/Reviewer 実アーカイブ出力と controller の close-record を対応付ける。その後に同じ Astra が criteria、fixture 差分、解決済み finding、実テスト・通信・identity/境界の証拠を一度だけ確認する。\",\n    \"Completion: Main が final-check を収集して finish の実結果を保存し、元の TUI Main が最後に Astra を実アーカイブする。最終報告では実施済み工程と未解決事項を区別し、composite-host 構成だけの検証であることと未確認の fast tier を明示する。\"\n  ],\n  \"authorization_message\": 1\n}\n",
+          "published_at": 1790695806.9925687
+        },
+        {
+          "task_id": "c0762e3a7488",
+          "request_id": "f64428cfe54e",
+          "status": "complete",
+          "report": "{\n  \"kind\": \"final_check\",\n  \"plan_id\": \"native-normalize-composite-1\",\n  \"ac_status\": [\n    {\n      \"criterion\": \"AC1: normalize_label(\\\"  HELLO\\\\tStraße  \\\") が \\\"hello strasse\\\" を返す。\",\n      \"status\": \"met\",\n      \"evidence\": \"修正後 normalize.py の return は空白処理後に casefold() を適用する。/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-independent-check.json で契約例が hello strasse となり exit_code 0。/tmp/fp17-real-kqrq6b8u/native-integration.json と phase-b-integration-verification.json により、統合先は PASS 候補と同じ bytes で単体テスト 3 件成功。\"\n    },\n    {\n      \"criterion\": \"AC2: 空文字列と空白のみの入力が空文字列を返す。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-independent-check.json に空文字列と空白・タブ・改行のみの入力がいずれも空文字列となった実出力があり、5 ケース全体が exit_code 0。\"\n    },\n    {\n      \"criterion\": \"AC3: 既存の前後空白除去と連続空白の一つの空白への正規化を維持する。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-unittest.json の既存 test_whitespace と、integration-independent-check.json の既存例・Unicode 空白例が成功している。normalize.py の split/join 処理も維持されている。\"\n    },\n    {\n      \"criterion\": \"AC4: normalize_label の既存公開シグネチャを維持する。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/fixture-diff.txt と seeded-fixture.json を確認。公開シグネチャ def normalize_label(text: str) -> str は変更されていない。\"\n    },\n    {\n      \"criterion\": \"AC5: fixture の編集は normalize.py と test_normalize.py に限られ、FrontierPlan 本体や設定ファイルを変更しない。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/fixture-diff.txt と fixture-status.txt の変更対象は normalize.py と test_normalize.py のみ。Worker の worker-turn-2-report.md も同じ所有範囲を記録し、FrontierPlan 本体は実 runtime の読取り専用領域。提出された証拠に本体・設定変更や公開はない。\"\n    },\n    {\n      \"criterion\": \"AC6: 指定 model/effort と fork_turns none で起動された三つの実 test subject だけを使用する。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/actual-native-controller-evidence.json に spawn_agent 3 回と実 tool result がある。引数は Astra gpt-6-astra/xhigh、Reviewer gpt-6-sol/xhigh、Worker gpt-6-luna/max、すべて fork_turns none。/tmp/fp17-real-kqrq6b8u/native-full-runtime.json と各 actual-native-*-evidence.json の turn context が実 model/effort と一致する。fast tier は schema に指定欄がなく未確認のままで、確認済みとは扱わない。\"\n    },\n    {\n      \"criterion\": \"AC7: 各参加者の実 CODEX_THREAD_ID と CODEX_SESSION_ID を改変せず保存し、同じ controller と同じ peer sessions を継続する。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/controller-state.json、native-runtime-audit.json、各 peer の初回・修正/PASS 報告を照合。controller は 01a0edc5-ff16-7f61-89d5-25185f2e5463、Worker は 01a0edca-f04c-7df3-afe0-2ecd93933f67、Reviewer は 01a0edca-caac-7241-b2c2-046b523ccdba のまま継続した。今回 Astra の直接環境観測も 01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf で初回と一致し、/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488/f64428cfe54e.identity.json に保存した。継承 legacy CODEX_SESSION_ID は controller の値で、native handle と thread ID を混同していない。\"\n    },\n    {\n      \"criterion\": \"AC8: 各子の有効な権限境界が workspace-write + never を満たす。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-runtime.json に全 child の workspace-write、approval never、managed restricted filesystem/network と書込み可能範囲が記録されている。各 actual-native-*-evidence.json の全 turn context と phase-b-original-main-runtime-summary.json も一致する。今回の Astra 自身の有効境界も workspace-write / never のまま。\"\n    },\n    {\n      \"criterion\": \"AC9: 初回 Worker 候補は seeded fixture と同一であり、未完成の test input と明記される。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/2516e0560436.candidate.json の両ファイル SHA-256 は /tmp/fp17-real-kqrq6b8u/native-full-evidence/seeded-fixture.json と一致する。worker-turn-1-report.md は INCOMPLETE TEST INPUT と明記し、既存候補を無編集で提出している。初回 digest は e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5。\"\n    },\n    {\n      \"criterion\": \"AC10: Reviewer が初回候補の casefold 欠落を独立に再現し、実 finding ID と根拠を記録する。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/review-1-findings.md の FP-001 と review-1-unicode.txt を確認。期待 hello strasse に対し実値 HELLO Straße、独立 assertion の失敗が保存され、casefold 欠落と契約違反の影響が特定されている。\"\n    },\n    {\n      \"criterion\": \"AC11: finding と修正候補の往復は同じ登録 peer 間の実 native 呼出しで成立し、Main の通常 handoff 中継数は 0 である。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/actual-native-worker-evidence.json に登録 Reviewer /root/native_reviewer への followup_task 2 回、actual-native-reviewer-evidence.json に登録 Worker /root/native_worker への 1 回があり、すべて実 call/result を保持する。各次 turn の同一 thread context と finding/修正/PASS が対応する。actual-native-controller-evidence.json の peer 宛 followup は初期 lifecycle 配信 2 回だけで、Main の通常 handoff 中継は 0。\"\n    },\n    {\n      \"criterion\": \"AC12: 修正後の現在候補に対して同じ Reviewer の PASS が実 candidate digest と検証結果に結び付く。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/review-2-pass.md と review-2-independent.txt で FP-001 解消、単体テスト 3 件と独立 Unicode/空白確認の成功を確認。review-2-submit-output.json と /tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/pair.json は同一 Reviewer、candidate d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4、contract fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192、両 current report の digest に PASS を結び付けている。\"\n    },\n    {\n      \"criterion\": \"AC13: 両 peer が実 idle となった後、最新 PASS の pair が helper により収集される。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-evidence/26-native-idle-before-collection.json の実 list_agents 応答で両 peer が completed。25-pair-collect.json が最新 candidate d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4 の PASS 収集を示し、pair.json の receipt digest は 8009f028fbc5fa0fc1a21e7b489217882a5f659ce8d0684540f2667352ddfc53。phase-b-integration-verification.json によりレビュー済み bytes が保持されている。\"\n    },\n    {\n      \"criterion\": \"AC14: 両 peer の正確な thread の外部 TUI による実アーカイブ結果が保持され、同じ controller の close-record に記録される。\",\n      \"status\": \"met\",\n      \"evidence\": \"/tmp/fp17-real-kqrq6b8u/native-full-closures.json に元 TUI Main の実 mcp__codex_tui__set_thread_archived 呼出しと、Worker 01a0edca-f04c-7df3-afe0-2ecd93933f67 / Reviewer 01a0edca-caac-7241-b2c2-046b523ccdba の archived:true 応答がある。phase-b-verified-closures.json が bound identity と対応付け、phase-b-close-record-worker.json と phase-b-close-record-reviewer.json に実記録成功がある。close-record 自体は Main 提供証拠の記録であり、archive 実行ではない。この判断は exec の native 通信と元 TUI の archive を合わせた composite-host 構成に限定する。\"\n    }\n  ],\n  \"findings\": [],\n  \"plan_divergence\": []\n}\n",
+          "published_at": 1790697101.0788374
+        }
+      ],
+      "receipt.json": {
+        "digest": "047f85587c219ce0c5872c6605a43939cc523b71446b76cfd67bd7abd20529d8",
+        "request_id": "f64428cfe54e"
+      }
+    }
+  ],
+  "decisions": {
+    "ef76a0956036.json": {
+      "kind": "plan",
+      "plan_id": "native-normalize-composite-1",
+      "user_response": "使い捨て fixture で、実際の native helper workflow を検証します。最初の Worker 候補は casefold が欠けた既存コードのまま提出し、同じ Reviewer による独立した指摘、同じ Worker の最小修正、再レビューの PASS までを直接通信で進めます。単体テストだけの確認では、今回求められた実通信とセッション継続を検証できないため、この一組の実行に限定します。PASS の収集後に Phase A を終了し、元の TUI Main が両 peer の正確な thread を実アーカイブしてから、同じ controller と Astra で closure 記録、1 回限りの最終確認、finish に進みます。検証結果は、この連携した host 構成に限って報告します。許可済みの範囲なので、追加確認なしで進められます。",
+      "plan": "# Intent and scope\nユーザーメッセージ 1 と native-full-contract.md の範囲で、normalize_label の空白正規化と Unicode casefold を満たす disposable fixture を、実 native 通信を使った helper lifecycle で検証する。対象は /tmp/fp17-real-kqrq6b8u/native-full-project/normalize.py と test_normalize.py。報告・証跡は fixture の外に保存する。\n# Non-goals\nFrontierPlan 本体の開発・レビュー・Git 操作・公開、Herdr 利用、設定変更、権限拡大、追加 agent、架空の native 呼出しは対象外。Astra と Reviewer は fixture を変更しない。standalone exec に safe-close 機能があるとは主張しない。\n# Approach\nAstra gpt-6-astra/xhigh、Worker gpt-6-luna/max、Reviewer gpt-6-sol/xhigh のちょうど三つの test subject を、fork_turns none で実 native 起動する。現在の controller session は維持する。実際の tool handle と各子自身の CODEX_THREAD_ID を記録して一度だけ bind し、継承された CODEX_SESSION_ID と区別する。子の workspace-write + never 境界と実 model/effort は実 runtime 証拠で確認する。非対応の tier 引数は使わず、Luna fast は確認できない場合 unverified と記録する。\n生成された bootstrap packet で Reviewer、Worker の identity-only turn を実行して idle を確認し、bind 後の work packet を Reviewer、Worker の順に送る。Worker は初回だけ seeded candidate を変更せず incomplete test input と明記して提出する。Reviewer は契約の違反を自ら再現し、その実 finding を同じ Worker に送る。Worker は最小の casefold 修正と必要な回帰テストを加え、同じ Reviewer が現在候補を再確認して truthful PASS を返す。候補・finding・修正の通常 handoff は実 collaboration.followup_task を使って peer 同士が行い、Main の通常中継数は 0 に保つ。各 sender は handoff 後に turn を終了する。\nMain はイベント待機と実 idle 状態を照合して最新 PASS の pair を collect する。レビュー済み候補を変更せず独立 integration check を実行し、Phase A の実結果と未解決の closure を保存して exec を終了する。この段階では最終確認や finish を実施しない。\nユーザーが明示した composite-host 手順に従い、元の TUI Main が収集済みかつ idle の正確な Worker と Reviewer thread を実 native archive tool でアーカイブする。同じ controller が再開し、実 tool result を close-record に記録してから同じ Astra に 1 回だけ final-check を依頼する。Main はその判断を収集し finish を実行し、最後に元の TUI Main が Astra を実アーカイブする。アーカイブ不能または不確実な場合は未完了として実状態を残す。\n# Simpler alternative considered\n関数の修正と単体テストだけではユーザーが要求した native 相互継続、同じ peer の再レビュー、collection と実 closure が検証できない。追加ペアや一般化した検証基盤は不要であり、指定された一組と既存 helper を用いる。\n# Replanning triggers\n相互 native 継続が実際に失敗する、identity または権限境界が適合しない、候補が所有範囲外の変更を必要とする、元 TUI の実アーカイブ証拠が取得できない場合は、証拠を保存して具体的な未解決事項を報告する。モデル・backend・権限・Main 中継への無断切替は行わない。",
+      "acceptance_criteria": [
+        "AC1: normalize_label(\"  HELLO\\tStraße  \") が \"hello strasse\" を返す。",
+        "AC2: 空文字列と空白のみの入力が空文字列を返す。",
+        "AC3: 既存の前後空白除去と連続空白の一つの空白への正規化を維持する。",
+        "AC4: normalize_label の既存公開シグネチャを維持する。",
+        "AC5: fixture の編集は normalize.py と test_normalize.py に限られ、FrontierPlan 本体や設定ファイルを変更しない。",
+        "AC6: 指定 model/effort と fork_turns none で起動された三つの実 test subject だけを使用する。",
+        "AC7: 各参加者の実 CODEX_THREAD_ID と CODEX_SESSION_ID を改変せず保存し、同じ controller と同じ peer sessions を継続する。",
+        "AC8: 各子の有効な権限境界が workspace-write + never を満たす。",
+        "AC9: 初回 Worker 候補は seeded fixture と同一であり、未完成の test input と明記される。",
+        "AC10: Reviewer が初回候補の casefold 欠落を独立に再現し、実 finding ID と根拠を記録する。",
+        "AC11: finding と修正候補の往復は同じ登録 peer 間の実 native 呼出しで成立し、Main の通常 handoff 中継数は 0 である。",
+        "AC12: 修正後の現在候補に対して同じ Reviewer の PASS が実 candidate digest と検証結果に結び付く。",
+        "AC13: 両 peer が実 idle となった後、最新 PASS の pair が helper により収集される。",
+        "AC14: 両 peer の正確な thread の外部 TUI による実アーカイブ結果が保持され、同じ controller の close-record に記録される。"
+      ],
+      "verification": [
+        "Focused: 初回 candidate digest と元の fixture の同一性、Reviewer の独立した mixed-case/Unicode 再現、finding ID、peer の実 followup 呼出しと begin/submit の実出力を保存する。修正時は追加した回帰テストと python3 -m unittest -v を実行し、Reviewer は独立した mixed-case/Unicode check でも現在候補を確認する。",
+        "Final integration: 最新 PASS を collect したあと、Main が python3 -m unittest -v と独立した mixed-case/Unicode check をレビュー済み fixture で一度実施し、candidate digest、実 idle 状態、collect 出力を保存する。",
+        "Final lifecycle: Phase A を完了扱いせず、元の TUI Main の Worker/Reviewer 実アーカイブ出力と controller の close-record を対応付ける。その後に同じ Astra が criteria、fixture 差分、解決済み finding、実テスト・通信・identity/境界の証拠を一度だけ確認する。",
+        "Completion: Main が final-check を収集して finish の実結果を保存し、元の TUI Main が最後に Astra を実アーカイブする。最終報告では実施済み工程と未解決事項を区別し、composite-host 構成だけの検証であることと未確認の fast tier を明示する。"
+      ],
+      "authorization_message": 1
+    },
+    "f64428cfe54e.json": {
+      "kind": "final_check",
+      "plan_id": "native-normalize-composite-1",
+      "ac_status": [
+        {
+          "criterion": "AC1: normalize_label(\"  HELLO\\tStraße  \") が \"hello strasse\" を返す。",
+          "status": "met",
+          "evidence": "修正後 normalize.py の return は空白処理後に casefold() を適用する。/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-independent-check.json で契約例が hello strasse となり exit_code 0。/tmp/fp17-real-kqrq6b8u/native-integration.json と phase-b-integration-verification.json により、統合先は PASS 候補と同じ bytes で単体テスト 3 件成功。"
+        },
+        {
+          "criterion": "AC2: 空文字列と空白のみの入力が空文字列を返す。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-independent-check.json に空文字列と空白・タブ・改行のみの入力がいずれも空文字列となった実出力があり、5 ケース全体が exit_code 0。"
+        },
+        {
+          "criterion": "AC3: 既存の前後空白除去と連続空白の一つの空白への正規化を維持する。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/integration-unittest.json の既存 test_whitespace と、integration-independent-check.json の既存例・Unicode 空白例が成功している。normalize.py の split/join 処理も維持されている。"
+        },
+        {
+          "criterion": "AC4: normalize_label の既存公開シグネチャを維持する。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/fixture-diff.txt と seeded-fixture.json を確認。公開シグネチャ def normalize_label(text: str) -> str は変更されていない。"
+        },
+        {
+          "criterion": "AC5: fixture の編集は normalize.py と test_normalize.py に限られ、FrontierPlan 本体や設定ファイルを変更しない。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/fixture-diff.txt と fixture-status.txt の変更対象は normalize.py と test_normalize.py のみ。Worker の worker-turn-2-report.md も同じ所有範囲を記録し、FrontierPlan 本体は実 runtime の読取り専用領域。提出された証拠に本体・設定変更や公開はない。"
+        },
+        {
+          "criterion": "AC6: 指定 model/effort と fork_turns none で起動された三つの実 test subject だけを使用する。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/actual-native-controller-evidence.json に spawn_agent 3 回と実 tool result がある。引数は Astra gpt-6-astra/xhigh、Reviewer gpt-6-sol/xhigh、Worker gpt-6-luna/max、すべて fork_turns none。/tmp/fp17-real-kqrq6b8u/native-full-runtime.json と各 actual-native-*-evidence.json の turn context が実 model/effort と一致する。fast tier は schema に指定欄がなく未確認のままで、確認済みとは扱わない。"
+        },
+        {
+          "criterion": "AC7: 各参加者の実 CODEX_THREAD_ID と CODEX_SESSION_ID を改変せず保存し、同じ controller と同じ peer sessions を継続する。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/controller-state.json、native-runtime-audit.json、各 peer の初回・修正/PASS 報告を照合。controller は 01a0edc5-ff16-7f61-89d5-25185f2e5463、Worker は 01a0edca-f04c-7df3-afe0-2ecd93933f67、Reviewer は 01a0edca-caac-7241-b2c2-046b523ccdba のまま継続した。今回 Astra の直接環境観測も 01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf で初回と一致し、/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488/f64428cfe54e.identity.json に保存した。継承 legacy CODEX_SESSION_ID は controller の値で、native handle と thread ID を混同していない。"
+        },
+        {
+          "criterion": "AC8: 各子の有効な権限境界が workspace-write + never を満たす。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-runtime.json に全 child の workspace-write、approval never、managed restricted filesystem/network と書込み可能範囲が記録されている。各 actual-native-*-evidence.json の全 turn context と phase-b-original-main-runtime-summary.json も一致する。今回の Astra 自身の有効境界も workspace-write / never のまま。"
+        },
+        {
+          "criterion": "AC9: 初回 Worker 候補は seeded fixture と同一であり、未完成の test input と明記される。",
+          "status": "met",
+          "evidence": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/2516e0560436.candidate.json の両ファイル SHA-256 は /tmp/fp17-real-kqrq6b8u/native-full-evidence/seeded-fixture.json と一致する。worker-turn-1-report.md は INCOMPLETE TEST INPUT と明記し、既存候補を無編集で提出している。初回 digest は e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5。"
+        },
+        {
+          "criterion": "AC10: Reviewer が初回候補の casefold 欠落を独立に再現し、実 finding ID と根拠を記録する。",
+          "status": "met",
+          "evidence": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/review-1-findings.md の FP-001 と review-1-unicode.txt を確認。期待 hello strasse に対し実値 HELLO Straße、独立 assertion の失敗が保存され、casefold 欠落と契約違反の影響が特定されている。"
+        },
+        {
+          "criterion": "AC11: finding と修正候補の往復は同じ登録 peer 間の実 native 呼出しで成立し、Main の通常 handoff 中継数は 0 である。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/actual-native-worker-evidence.json に登録 Reviewer /root/native_reviewer への followup_task 2 回、actual-native-reviewer-evidence.json に登録 Worker /root/native_worker への 1 回があり、すべて実 call/result を保持する。各次 turn の同一 thread context と finding/修正/PASS が対応する。actual-native-controller-evidence.json の peer 宛 followup は初期 lifecycle 配信 2 回だけで、Main の通常 handoff 中継は 0。"
+        },
+        {
+          "criterion": "AC12: 修正後の現在候補に対して同じ Reviewer の PASS が実 candidate digest と検証結果に結び付く。",
+          "status": "met",
+          "evidence": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40/review-2-pass.md と review-2-independent.txt で FP-001 解消、単体テスト 3 件と独立 Unicode/空白確認の成功を確認。review-2-submit-output.json と /tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b/pair.json は同一 Reviewer、candidate d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4、contract fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192、両 current report の digest に PASS を結び付けている。"
+        },
+        {
+          "criterion": "AC13: 両 peer が実 idle となった後、最新 PASS の pair が helper により収集される。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/26-native-idle-before-collection.json の実 list_agents 応答で両 peer が completed。25-pair-collect.json が最新 candidate d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4 の PASS 収集を示し、pair.json の receipt digest は 8009f028fbc5fa0fc1a21e7b489217882a5f659ce8d0684540f2667352ddfc53。phase-b-integration-verification.json によりレビュー済み bytes が保持されている。"
+        },
+        {
+          "criterion": "AC14: 両 peer の正確な thread の外部 TUI による実アーカイブ結果が保持され、同じ controller の close-record に記録される。",
+          "status": "met",
+          "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-closures.json に元 TUI Main の実 mcp__codex_tui__set_thread_archived 呼出しと、Worker 01a0edca-f04c-7df3-afe0-2ecd93933f67 / Reviewer 01a0edca-caac-7241-b2c2-046b523ccdba の archived:true 応答がある。phase-b-verified-closures.json が bound identity と対応付け、phase-b-close-record-worker.json と phase-b-close-record-reviewer.json に実記録成功がある。close-record 自体は Main 提供証拠の記録であり、archive 実行ではない。この判断は exec の native 通信と元 TUI の archive を合わせた composite-host 構成に限定する。"
+        }
+      ],
+      "findings": [],
+      "plan_divergence": []
+    }
+  }
+}

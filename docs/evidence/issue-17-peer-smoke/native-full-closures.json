@@ -34,5 +34,41 @@
       ],
       "isError": false
     }
+  },
+  {
+    "role": "astra",
+    "threadId": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf",
+    "tool": "mcp__codex_tui__set_thread_archived",
+    "arguments": {
+      "archived": true,
+      "threadId": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"threadId\":\"01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf\",\"archived\":true}"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "role": "controller",
+    "threadId": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+    "tool": "mcp__codex_tui__set_thread_archived",
+    "arguments": {
+      "archived": true,
+      "threadId": "01a0edc5-ff16-7f61-89d5-25185f2e5463"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"threadId\":\"01a0edc5-ff16-7f61-89d5-25185f2e5463\",\"archived\":true}"
+        }
+      ],
+      "isError": false
+    }
   }
 ]

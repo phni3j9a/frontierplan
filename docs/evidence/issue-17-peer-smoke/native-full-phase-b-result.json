@@ -1,0 +1,42 @@
+{
+  "status": "PHASE_B_FINISHED_ASTRA_ARCHIVE_PENDING",
+  "run": "/tmp/frontierplan-gz8qi71g",
+  "helper_phase": "closed",
+  "controller_thread_id": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+  "controller_identity_unchanged": true,
+  "peer_closure": {
+    "worker": "実アーカイブ証拠の identity 照合と close-record 完了",
+    "reviewer": "実アーカイブ証拠の identity 照合と close-record 完了"
+  },
+  "final_check": {
+    "same_astra": true,
+    "performed_once": true,
+    "collected_and_decision_recorded": true,
+    "criteria_met": 14,
+    "findings": [],
+    "plan_divergence": [],
+    "astra_response_relayed_verbatim": true
+  },
+  "finish": "実コマンド成功",
+  "integration": {
+    "path": "/tmp/fp17-real-kqrq6b8u/native-integrated",
+    "reviewed_bytes_match": true,
+    "tests_passed": 3,
+    "exit_code": 0
+  },
+  "main_ordinary_relay_count": 0,
+  "remaining_astra": {
+    "native_handle": "/root/native_astra",
+    "thread_id": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf",
+    "helper_task": "/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488",
+    "observed_status": "completed / idle",
+    "closed": false,
+    "next": "この exec 終了後に元 TUI Main が実アーカイブ。同じ controller の最終ターンで実結果だけを close-record。"
+  },
+  "limitations": [
+    "composite host 構成の検証。standalone exec の archive 能力は主張しない",
+    "Luna fast tier は未検証"
+  ],
+  "result_file": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/phase-b-result.json",
+  "controller_state": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/controller-state.json"
+}

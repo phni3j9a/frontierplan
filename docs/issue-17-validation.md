@@ -6,9 +6,9 @@ submission. The final startup warning identified an unlisted permission profile:
 `/etc/codex/requirements.toml` forced `:workspace` instead. A successful isolated
 `codex sandbox` probe did not establish real-session policy acceptance, and
 `--no-daemon` did not bypass the host's requirements. Keep these failed attempts
-separate from successful communication evidence. Native has completed the actual
-helper finding/fix/PASS and collection; its final lifecycle evidence is being
-recorded. The Python suite simulates both backends and cannot establish live
+separate from successful communication evidence. Native has completed the actual helper Plan/bootstrap/bind, direct finding/fix/PASS,
+collection, actual peer archive, exact-byte integration, one final check (14/14 met),
+finish and all participant/controller archives. The Python suite simulates both backends and cannot establish live
 communication. PR #18 remains merged; follow-up PR #19 must stay unmerged until the
 user's real-host completion condition is met.
 
@@ -120,8 +120,16 @@ candidate, then independent Reviewer PASS. Child thread IDs stayed stable;
 Original Main independently observed the requested model/effort and restricted
 runtime permissions. Its actual native archive tool archived both children after
 the owning exec process exited; the earlier attempts correctly failed with active
-writers. Ordinary Main relay count was zero. This proves the bounded communication
-probe, not the complete FrontierPlan Plan/bootstrap/bind/collect/finish workflow.
+writers. Ordinary Main relay count was zero. That initial probe established direct communication only. The subsequent complete
+helper run also passed: actual Astra Plan, identity-only bootstrap/bind, three peer
+follow-ups with stable identities and zero ordinary Main relays, current-candidate
+PASS/collection, actual peer archives, exact-byte integration (3 unit tests plus
+5 independent cases), same-Astra one-time final check (14 criteria met), finish,
+and actual archives of Astra/controller. The exec controller was resumed with its
+original identity to record actual native archive results from original TUI Main.
+This composite host arrangement is explicit; standalone exec still lacks its own
+archive tool. Fast tier remains unverified. The raw tool results, ledger, runtime
+metadata and reviewed fixture are preserved in the evidence summary.
 See the evidence summary for the exact scope and raw report limitations.
 
 Test separately on a host exposing actual child-to-peer continuation in both

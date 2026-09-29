@@ -1,0 +1,16 @@
+{
+  "phase": "complete",
+  "run": "/tmp/frontierplan-gz8qi71g",
+  "controller_thread_id": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+  "close_record": {
+    "exit_code": 0,
+    "closed_record": "c0762e3a7488"
+  },
+  "status_exit_code": 0,
+  "run_closed": true,
+  "all_three_children_closed": true,
+  "environment_ids_altered": false,
+  "controller_own_archive": "未実施。この exec 終了後に元 Main が実行予定",
+  "result_file": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/phase-c-result.json",
+  "controller_state_phase": "complete"
+}

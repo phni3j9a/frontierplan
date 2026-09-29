@@ -4,7 +4,7 @@
   "source_commit": "efe64c78e852086a55532b3f1072b76ef2500d90",
   "pr": "https://github.com/phni3j9a/frontierplan/pull/18",
   "issue": "https://github.com/phni3j9a/frontierplan/issues/17",
-  "overall_status": "incomplete_do_not_merge_followup_as_validation_complete",
+  "overall_status": "incomplete_herdr_host_policy_approval_pending_native_full_lifecycle_passed",
   "host": {
     "os": "Ubuntu 24.04 LTS",
     "herdr": "0.9.1",
@@ -52,9 +52,54 @@
       "socket": "/home/server/.config/herdr/herdr.sock",
       "exact_socket_allowlist": "also denied; no automatic/global config mutation",
       "enforcement_layer": "not established"
+    },
+    "continuation": {
+      "status": "blocked_before_candidate_by_managed_profile_allowlist",
+      "attempts": [
+        {
+          "plan": "herdr-peer-smoke-2",
+          "worker": "6e4e914a2ba1",
+          "reviewer": "9140903ba72e",
+          "outcome": "ABANDONED with preserved failure; both idle owned panes closed"
+        },
+        {
+          "plan": "herdr-peer-smoke-3",
+          "worker": "41594b896c4f",
+          "reviewer": "a9af62163d73",
+          "outcome": "BLOCKED; idle original participants retained pending approved host setup"
+        }
+      ],
+      "actual_warning": "Configured permission_profile disallowed by requirements; falling back to :workspace",
+      "policy_file": "/etc/codex/requirements.toml",
+      "policy_owner": "root:root 0644",
+      "proposed_setup": "Add only frontierplan-herdr=true to allowed_permission_profiles, after explicit user approval required for sudo. Not applied yet.",
+      "correction": "Shared-server reuse alone was not the cause: --no-daemon also fell back. The isolated sandbox probe did not establish model-session policy acceptance.",
+      "documented_IPC_boundary": "Workspace filesystem + never; managed external network policy; all local Unix sockets, not only Herdr. No automatic host policy changes.",
+      "evidence": [
+        "issue-17-peer-smoke/herdr-requirements-warning.txt",
+        "issue-17-peer-smoke/permission-source.json",
+        "issue-17-peer-smoke/herdr-recovery-state.json",
+        "issue-17-peer-smoke/boundary-probe.json"
+      ]
     }
   },
-  "native": {
+  "swe2": {
+    "status": "not_run",
+    "reason": "Standard Codex evidence does not establish Devin interoperability."
+  },
+  "remaining": [
+    "Explicit user approval for sudo host policy addition, then actual successful Herdr same-session finding/fix/PASS, collection, closure, integration and one final check.",
+    "Follow-up PR #19 remains draft and unmerged until requested real-host completion."
+  ],
+  "recorded_at": "2026-09-29T15:57:32.531697+00:00",
+  "followup_pr": "https://github.com/phni3j9a/frontierplan/pull/19",
+  "automated_validation": {
+    "plugin_validator": "passed",
+    "unit_tests": 165,
+    "unit_result": "passed; simulated backends",
+    "standalone_packaging": "passed; plugin and source ZIPs"
+  },
+  "native_capability_probe": {
     "status": "passed_actual_direct_capability_roundtrip_and_archive",
     "fixture": "/tmp/fp17-real-kqrq6b8u/native-project",
     "test_parent_thread_id": "01a0eda1-fa97-7b00-90da-82cf72974e60",
@@ -138,22 +183,44 @@
       "Raw actual collaboration calls/results were extracted from each scoped rollout, without model reasoning or unrelated sessions."
     ]
   },
-  "swe2": {
-    "status": "not_run",
-    "reason": "Standard Codex evidence does not establish Devin interoperability."
-  },
-  "remaining": [
-    "Successful Herdr direct same-session finding/fix/PASS under preserved permissions.",
-    "Native FrontierPlan helper end-to-end Plan/bootstrap/bind/collect/finish validation remains separate from the passed direct communication probe.",
-    "Successful current-candidate collection, pair closure and one-time Astra final check for a completed live Plan.",
-    "Follow-up PR #19 remains draft and unmerged."
-  ],
-  "recorded_at": "2026-09-29T15:04:02.594367+00:00",
-  "followup_pr": "https://github.com/phni3j9a/frontierplan/pull/19",
-  "automated_validation": {
-    "plugin_validator": "passed",
-    "unit_tests": 165,
-    "unit_result": "passed; simulated backends",
-    "standalone_packaging": "passed; plugin and source ZIPs"
+  "native": {
+    "status": "passed_full_helper_lifecycle_on_documented_composite_host",
+    "run": "/tmp/frontierplan-gz8qi71g",
+    "fixture": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "controller_thread_id": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+    "plan_id": "native-normalize-composite-1",
+    "source_commit": "5c6c95380b230ac3920d32d42a97d98cbfb3c5ae",
+    "ordinary_main_relay_count": 0,
+    "direct_peer_handoffs": 3,
+    "latest_candidate_digest": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4",
+    "collected_pass": true,
+    "peers_archived": true,
+    "integration": "Exact reviewed source and test bytes copied by original Main; SHA-256 matched and 3 tests passed. Controller also independently ran 3 unit tests and 5 cases.",
+    "scope": "Composite actual host: restricted codex exec controller/peers use native tools; original TUI Main performs actual native archive after controller process exit. This does not establish a local archive capability in standalone exec.",
+    "evidence": [
+      "issue-17-peer-smoke/native-full-phase-a-result.json",
+      "issue-17-peer-smoke/native-full-closures.json",
+      "issue-17-peer-smoke/native-integration.json",
+      "issue-17-peer-smoke/native-full-completed.json",
+      "issue-17-peer-smoke/native-full-runtime.json",
+      "issue-17-peer-smoke/native-full-phase-b-result.json",
+      "issue-17-peer-smoke/native-full-phase-c-result.json",
+      "issue-17-peer-smoke/native-full-01a0edca-f04c-7df3-afe0-2ecd93933f67-calls.json",
+      "issue-17-peer-smoke/native-full-01a0edca-caac-7241-b2c2-046b523ccdba-calls.json",
+      "issue-17-peer-smoke/native-full-01a0edc5-ff16-7f61-89d5-25185f2e5463-calls.json",
+      "issue-17-peer-smoke/native-reviewed-fixture/normalize.py",
+      "issue-17-peer-smoke/native-reviewed-fixture/test_normalize.py"
+    ],
+    "final_check": {
+      "count": 1,
+      "criteria_met": 14,
+      "findings": []
+    },
+    "finish": "closed",
+    "cleanup": "All three children close-recorded; actual native archive succeeded for Worker, Reviewer, Astra and controller after owning exec processes exited.",
+    "limitations": [
+      "Standalone exec has no local native archive tool; original TUI Main provided actual native closure in this explicitly coordinated test.",
+      "Luna fast tier not exposed by native spawn schema and remains unverified."
+    ]
   }
 }

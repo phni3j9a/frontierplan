@@ -1,0 +1,1294 @@
+[
+  {
+    "id": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+    "rollout_path": "/home/server/.codex/archived_sessions/rollout-2026-09-30T00-26-11-01a0edc5-ff16-7f61-89d5-25185f2e5463.jsonl",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "sandbox_policy": "{\"type\":\"managed\",\"file_system\":{\"type\":\"restricted\",\"entries\":[{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"root\"}},\"access\":\"read\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project\"},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"slash_tmp\"}},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"tmpdir\"}},\"access\":\"write\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.git\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.agents\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.codex\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.aws\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"}]},\"network\":\"restricted\"}",
+    "approval_mode": "never",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "turn_contexts": [
+      {
+        "turn_id": "01a0edc5-ffea-7e02-a7ff-3ab0d5839f34",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edd8-7d8d-7ed2-a774-71f2be12f4b3",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0ede0-f182-75a2-b5c7-860fbdfa7229",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      }
+    ]
+  },
+  {
+    "id": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf",
+    "rollout_path": "/home/server/.codex/archived_sessions/rollout-2026-09-30T00-27-45-01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf.jsonl",
+    "model": "gpt-6-astra",
+    "reasoning_effort": "xhigh",
+    "sandbox_policy": "{\"type\":\"managed\",\"file_system\":{\"type\":\"restricted\",\"entries\":[{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"root\"}},\"access\":\"read\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project\"},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"slash_tmp\"}},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"tmpdir\"}},\"access\":\"write\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.git\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.agents\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.codex\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.aws\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"}]},\"network\":\"restricted\"}",
+    "approval_mode": "never",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "turn_contexts": [
+      {
+        "turn_id": "01a0edc7-711a-7a93-b29f-bea41070fb7e",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edda-a673-7283-94aa-0e82af790239",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-astra",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      }
+    ]
+  },
+  {
+    "id": "01a0edca-caac-7241-b2c2-046b523ccdba",
+    "rollout_path": "/home/server/.codex/archived_sessions/rollout-2026-09-30T00-31-25-01a0edca-caac-7241-b2c2-046b523ccdba.jsonl",
+    "model": "gpt-6-sol",
+    "reasoning_effort": "xhigh",
+    "sandbox_policy": "{\"type\":\"managed\",\"file_system\":{\"type\":\"restricted\",\"entries\":[{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"root\"}},\"access\":\"read\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project\"},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"slash_tmp\"}},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"tmpdir\"}},\"access\":\"write\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.git\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.agents\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.codex\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.aws\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"}]},\"network\":\"restricted\"}",
+    "approval_mode": "never",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "turn_contexts": [
+      {
+        "turn_id": "01a0edca-caf7-7bd2-9e75-7f4911093f5e",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-sol",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edcc-cfcb-7562-9be6-492e13f20e62",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-sol",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edcf-9e2c-7103-80f6-3ba75ef24d7c",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-sol",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edd3-173d-70f0-886e-5f6a19481fbb",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-sol",
+        "effort": "xhigh",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      }
+    ]
+  },
+  {
+    "id": "01a0edca-f04c-7df3-afe0-2ecd93933f67",
+    "rollout_path": "/home/server/.codex/archived_sessions/rollout-2026-09-30T00-31-35-01a0edca-f04c-7df3-afe0-2ecd93933f67.jsonl",
+    "model": "gpt-6-luna",
+    "reasoning_effort": "max",
+    "sandbox_policy": "{\"type\":\"managed\",\"file_system\":{\"type\":\"restricted\",\"entries\":[{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"root\"}},\"access\":\"read\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project\"},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"slash_tmp\"}},\"access\":\"write\"},{\"path\":{\"type\":\"special\",\"value\":{\"kind\":\"tmpdir\"}},\"access\":\"write\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.git\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.agents\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.codex\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"},{\"path\":{\"type\":\"path\",\"path\":\"/tmp/fp17-real-kqrq6b8u/native-full-project/.aws\"},\"access\":\"read\",\"missing_path_behavior\":\"skip\"}]},\"network\":\"restricted\"}",
+    "approval_mode": "never",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "turn_contexts": [
+      {
+        "turn_id": "01a0edca-f09f-7de3-bf12-0a32f0de4b01",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edcd-9805-7572-a613-c0f3794a55a0",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      },
+      {
+        "turn_id": "01a0edd0-af23-7b82-86d7-449c7cd84a0e",
+        "cwd": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "approval_policy": "never",
+        "active_permission_profile": {
+          "id": ":workspace"
+        },
+        "permission_profile": {
+          "type": "managed",
+          "file_system": {
+            "type": "restricted",
+            "entries": [
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "root"
+                  }
+                },
+                "access": "read"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project"
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "slash_tmp"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "special",
+                  "value": {
+                    "kind": "tmpdir"
+                  }
+                },
+                "access": "write"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.git"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.agents"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.codex"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              },
+              {
+                "path": {
+                  "type": "path",
+                  "path": "/tmp/fp17-real-kqrq6b8u/native-full-project/.aws"
+                },
+                "access": "read",
+                "missing_path_behavior": "skip"
+              }
+            ]
+          },
+          "network": "restricted"
+        },
+        "sandbox_policy": {
+          "type": "workspace-write",
+          "network_access": false,
+          "exclude_tmpdir_env_var": false,
+          "exclude_slash_tmp": false
+        },
+        "network": {
+          "allowed_domains": [
+            "*.crates.io",
+            "*.github.com",
+            "*.githubusercontent.com",
+            "*.pypi.org",
+            "crates.io",
+            "files.pythonhosted.org",
+            "github.com",
+            "pypi.org"
+          ],
+          "denied_domains": []
+        }
+      }
+    ]
+  }
+]
