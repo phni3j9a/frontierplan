@@ -380,6 +380,7 @@ class HerdrPairs(unittest.TestCase):
         value = hd.block_pair_start(worker, self.write("ipc.md", "SIMULATED: both begin calls failed at Herdr IPC; local reports preserved."))
         self.assertEqual(value["status"], "BLOCKED")
         self.assertEqual(value["startup_blocker"]["source"], "main_observed_transport_failure")
+        self.assertEqual({e["event"] for e in hd.check(self.run)["events"]}, {"pair_startup_blocked"})
         self.assertEqual([fp.task_at(p)[1] for p in (worker, reviewer)], before)
         self.assertTrue(all(fp.current_result(Path(p), fp.task_at(p)[1]) is None for p in (worker, reviewer)))
         self.assertEqual(pairs.collect(worker)["reports"], [])

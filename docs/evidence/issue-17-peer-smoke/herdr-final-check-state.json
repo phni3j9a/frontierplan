@@ -1,0 +1,13 @@
+{
+  "events": [
+    {
+      "task": "/tmp/frontierplan-j503_xcu/tasks/249b647355db",
+      "event": "pair_startup_blocked"
+    },
+    {
+      "task": "/tmp/frontierplan-j503_xcu/tasks/8bb071715d0b",
+      "event": "pair_startup_blocked"
+    }
+  ],
+  "pending": 2
+}

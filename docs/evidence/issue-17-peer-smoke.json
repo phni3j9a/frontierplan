@@ -42,7 +42,8 @@
       "issue-17-peer-smoke/herdr-startup-failure.md",
       "issue-17-peer-smoke/herdr-startup-blocked.json",
       "issue-17-peer-smoke/socket-syscall.stdout",
-      "issue-17-peer-smoke/socket-syscall.stderr"
+      "issue-17-peer-smoke/socket-syscall.stderr",
+      "issue-17-peer-smoke/herdr-final-check-state.json"
     ],
     "socket_probe": {
       "command": "codex sandbox -C <herdr fixture> -P :workspace -- python3 -c <AF_UNIX socket creation then connect to bound Herdr socket>",

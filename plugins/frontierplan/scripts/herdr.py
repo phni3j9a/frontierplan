@@ -623,7 +623,7 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
         if agent and (agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id")
                       or str(agent.get("agent", "")).lower() != child_agent(task)):
             agent = None
-        internal_pair_turn = waiting_for_peer = uncertain_pair_delivery = False
+        internal_pair_turn = waiting_for_peer = uncertain_pair_delivery = startup_blocked = False
         if task.get("pair") and not task.get("replaced_by"):
             import pairs
             pair = pairs.at(path)[1]
@@ -637,6 +637,7 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
             active = pair["reviewer"] if pair["status"] == "REVIEW" else pair["worker"]
             waiting_for_peer = internal_pair_turn and task["id"] != active
             uncertain_pair_delivery = bool(pair["pending"] and pair["pending"]["delivery"] == "uncertain")
+            startup_blocked = pair["status"] == "BLOCKED" and bool(pair.get("startup_blocker"))
         result = fp.current_result(path, task)
         receipt = fp.read(path / "receipt.json") if (path / "receipt.json").exists() else {}
         unchanged = result and receipt.get("digest") == fp.digest(result)
@@ -650,6 +651,7 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
         if not agent: event = "unavailable"
         elif agent.get("agent_status") in ("blocked", "unknown"): event = agent["agent_status"]
         elif uncertain_pair_delivery: event = "pair_delivery_uncertain"
+        elif startup_blocked: event = "pair_startup_blocked" if ready(agent) else "report_waiting_idle"
         elif waiting_for_peer: continue
         elif result and result["status"] in ("complete", "blocked") and not internal_pair_turn:
             if not ready(agent): event = "report_waiting_idle"

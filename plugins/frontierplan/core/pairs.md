@@ -142,8 +142,9 @@ python3 "$hd" pair-block-start --task "$worker" --file "$transport_evidence"
 This requires the current Plan, both original participants idle with live identity
 and activity evidence, no current result (including `working`), and no candidate,
 handoff or collection. It records `BLOCKED` plus separate `startup_blocker`
-evidence. It neither repairs permissions nor completes/closes the pair. Restore
-the existing transport before `pair-resume`, or explicitly abandon the stopped
+evidence. It neither repairs permissions nor completes/closes the pair.
+`check`/`wait` exposes the separate `pair_startup_blocked` event for this state.
+Restore the existing transport before `pair-resume`, or explicitly abandon the stopped
 work after a revised Plan excludes it. Existing identity/activity checks still
 apply at abandonment and closure. Never call a live participant lost merely to
 get around this failure.
