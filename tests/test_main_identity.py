@@ -17,6 +17,7 @@ import test_frontierplan as base
 import test_herdr as transport
 import frontierplan as fp
 import herdr as hd
+from pair_support import passed_pair
 
 
 class ProviderHerdr(transport.FakeHerdr):
@@ -216,12 +217,8 @@ class MainIdentity(unittest.TestCase):
         fp.message(self.run, self.input); hd.forward(self.run)
         self.report(director, {"kind": "authorize", "plan_id": "p1", "authorization_message": 2})
         hd.collect(director); fp.decision(director); fp.start(self.run)
-        worker = hd.spawn(self.run, "worker", self.input)["task"]
-        self.report(worker, "Implemented; simulated test evidence."); hd.collect(worker)
-        design = hd.spawn(self.run, "design", self.input)["task"]
-        self.report(design, "UI implemented; simulated test evidence."); hd.collect(design)
-        reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
-        self.report(reviewer, "FINDINGS: none"); hd.collect(reviewer)
+        worker, reviewer = passed_pair(self)
+        design, design_reviewer = passed_pair(self, role="design")
         hd.final_check(self.run, self.input)
         self.report(director, {"kind": "final_check", "plan_id": "p1",
                               "ac_status": [{"criterion": "Works", "status": "met", "evidence": "tests"}],
@@ -229,10 +226,10 @@ class MainIdentity(unittest.TestCase):
         hd.collect(director); fp.decision(director)
         self.assertEqual(fp.finish(self.run, self.write("final.md", "Main final report"))["user_response"],
                          "Main final report")
-        for task in (director, worker, design, reviewer): hd.close(task)
+        for task in (director, worker, design, reviewer, design_reviewer): hd.close(task)
         self.assertEqual(self.api.panes, [original])
         starts = [c for c in self.api.calls if c[:2] == ("agent", "start")]
-        self.assertEqual(len(starts), 5)
+        self.assertEqual(len(starts), 6)
         self.assertTrue(all(c[c.index("--kind") + 1] == "codex" for c in starts))
         for task, model, effort in ((director, "gpt-6-astra", "xhigh"), (researcher, "gpt-6-luna", "max"),
                                     (worker, "gpt-6-luna", "max"), (design, "gpt-6-sol", "max"),

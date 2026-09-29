@@ -1,17 +1,13 @@
 # Shared workflow
 
-FrontierPlan keeps axiom_for_herdr's working structure: Main coordinates, Luna
-executes, an independent Sol reviews, and Main decides when the work is done. The
-one change is planning: **Astra owns everything up to the Plan**, because that is
-where judgment matters most, and Main only relays it.
+Astra plans. Main assigns and integrates. Worker implements. Reviewer closes the
+bounded task. Astra checks the integrated Plan once. Main finishes.
 
 ```
-Planning   Astra judges ─┬─ research ──> Luna researchers (relayed by Main)
-                         ├─ questions ─> user (relayed verbatim by Main)
-                         └─ Plan + authorization
-Execution  Main judges: split, assign, integrate, adjudicate review (axiom_for_herdr)
-                         └─ consult Astra when stuck or the Plan no longer fits
-Final      Astra checks the result once; Main adjudicates, finishes and reports
+Planning   Astra -> research / user dialogue (Main relays) -> Plan + authorization
+Execution  Main -> [Worker <-> Reviewer] -> collected current PASS -> close pair
+Final      Main integrates -> Astra checks once -> Main finishes or assigns repairs
+Repair     New bounded pair -> collected PASS -> Main finishes (no Astra reacceptance)
 ```
 
 ## 1. Planning: Astra decides, Main relays
@@ -43,89 +39,77 @@ user's agreement first, she presents it and waits. Any new user message before
 records it again if it still holds. A consultation-only request ends
 with Astra's reply; `finish --discussion` closes it.
 
-## 2. Execution: Main coordinates (axiom_for_herdr)
+## 2. Execution: Main coordinates; pairs verify
 
-After `start`, Main owns intent within the Plan, assignment, integration and review
-adjudication. Main is assumed capable of judging review findings.
+Main turns the Plan into short tasks: objective, owned scope, completion conditions,
+existing contracts and required focused verification. Create each implementation
+and its Reviewer together using [pairs.md](pairs.md). Worker/Design implements;
+Reviewer verifies the assigned task. Routine fixes and counter-evidence travel
+between the same two sessions without Main brokering or judging them.
 
-- Ordinary bounded implementation, tests, debugging and long-running monitoring go
-  to Luna Workers. Luna compute is almost free; Main context is expensive. Delegate
-  when it protects Main context or enables useful parallel work, without splitting
-  simple tasks artificially. There is no fixed worker count.
-- Unsettled visual or interaction work goes to Sol Design. Settled designs can be
-  implemented by Luna.
-- Launch independent work before waiting. Use disjoint write ownership or prepared
-  worktrees; serialize overlap; preserve existing user changes.
-- **Keep the responsible Worker through its review cycle.** Send accepted fixes to
-  that same Worker with the finding IDs, Main's decision and required verification.
-  A fresh Worker is recovery for a lost session, not the routine next step.
-- Delegate repeated CI/build/test monitoring to the responsible Luna Worker. Main
-  does not poll it; the Worker reports completion, failure or a needed decision.
-- Main may make small adjustments within the Plan. When the Plan no longer fits,
-  or the same accepted finding keeps coming back after fixes, Main consults Astra
-  (`consult`). Astra returns advice or a revised Plan; Main decides adoption.
-- A new user message during execution goes to Main. Main handles it, and consults
-  Astra when it changes the Plan's scope or design.
+Launch independent tasks when useful; do not split small work artificially. Use
+disjoint ownership or worktrees and serialize overlapping writes. The fingerprint
+scope must contain the candidate's actual owned changes, not just convenient files.
+Settled UI work may use Worker; unsettled UI realization may use Design, always
+with a separate Sol Reviewer. Profiles and existing permissions do not change.
 
-## 3. Independent review
+Main receives PASS or a blocker/escalation. It resolves task boundaries, environment,
+capability and same-cause stagnation, consulting Astra only for Plan-level judgment.
+It may resume a stopped pair or replace a lost/stopped participant, not direct each
+ordinary review round. Scope-changing user input goes to Main, then Astra as needed.
 
-Follow [review.md](review.md). One fresh Sol Reviewer is kept for the whole review
-cycle. There is no finding-count or round limit: convergence comes from reviewer
-continuity, stable finding IDs, evidence-bounded findings and Main's adjudication.
-Main ends review when no accepted material finding remains unaddressed.
+## 3. Collection, integration and pair cleanup
 
-## 4. Final check: Astra looks once
+Follow [review.md](review.md) and the backend's actual idle/identity checks. Main
+collects a pair only after the latest candidate's PASS is recorded; old reports or
+an unreviewed follow-up are not completion. Collection captures the reviewed
+candidate and both reports, then Main closes both idle participants. Unresolved
+BLOCKED/ESCALATE work remains open unless safely captured and reassigned.
 
-After review converges and executors are idle, Main runs `final-check` with an
-evidence file: Plan/criteria mapping, the diff range, real test output, review
-findings with ACCEPT/REJECT/DEFER decisions, and known gaps. Astra returns an
-acceptance-criteria table, findings and Plan divergence **once per Plan**.
+Main integrates the exact reviewed work, preserving the worktree/diff and evidence.
+Closing a pane does not delete its reports, files or branch. Integration that
+changes product behavior (including substantive conflict resolution) is itself a
+bounded reviewed task. Do not silently add unreviewed Main edits. New work after
+collection uses a follow-up pair; do not retain all old sessions just in case.
 
-Main treats Astra's findings exactly like Reviewer findings: it adjudicates them,
-sends accepted fixes to the responsible Worker and has the same Reviewer re-review.
-Fixes do not go back to Astra. Astra has no veto. If Astra reports a divergence
-whose correction would change scope or cost materially, Main gives the user options
-with a recommendation.
+## 4. Final check: Astra looks once, not an acceptance gate
 
-## 5. When the user hears from FrontierPlan
+After current tasks are reviewed, collected and integrated, Main sends Astra the
+criteria mapping, diff/worktree references, real verification, resolved findings
+and known gaps. Astra returns criteria status, material findings and Plan divergence
+**once per Plan**, with no veto. It is not another local design/style review.
 
-Only these three:
+Main chooses finish, bounded rework, replan or escalation. A concrete implementation
+defect goes to a follow-up Worker–Reviewer pair; ordinary technical findings are
+resolved there, not by Main. Plan/scope divergence is a Main/Astra concern and may
+require user choice. Repairs are verified by their Reviewer, not resubmitted to
+Astra. A materially revised Plan is explicit, not a renamed excuse for reacceptance.
 
-1. Astra's planning messages (questions, the Plan), relayed verbatim.
-2. The completion report.
-3. A branch whose answer changes scope or cost: give concrete options and a
-   recommended default. Never ask "should I continue?".
+## 5. User communication
 
-Review rounds, elapsed time or a routine finding are not reasons to return to the user.
+Relay Astra's planning dialogue verbatim. During execution return the completion
+report or a genuine scope/cost/permission decision with concrete options. Review
+rounds, elapsed time or routine findings are not user checkpoints; do not ask
+"should I continue?". Higher-priority host communication requirements still apply.
 
-## 6. Finish and cleanup
+## 6. Finish
 
-`finish --file <report>` requires Astra's final check for the current Plan and
-collected reports from every live Worker/Design/Reviewer. Main writes the final
-report: results, Astra's acceptance-criteria table, key decisions, real verification,
-and remaining items (rejected/deferred findings, unverified points). Update
-repository documentation within the authorized scope. Then close remaining
-participants and Astra through the backend. Closing never deletes reports,
-worktrees or branches.
+`finish --file <report>` requires the one-time final check for the current Plan,
+a collected current PASS for every execution pair, and collected current reports
+from live executors. Main reports results, Astra's criteria table, real validation
+and remaining limitations. Document accepted conclusions within the authorized
+scope, then close Astra and any remaining participants. No publishing permission
+is inferred from a Plan or PASS.
 
-Close participants when Main ends their lifetime: researchers after their reports
-return to Astra, Workers/Design/Reviewer after their review cycle, Astra after
-finish. A participant with unresolved or active work stays open.
+## Waiting and recovery
 
-## Waiting
+Follow [Completion reconciliation](waiting.md). Main reconciles pair-level PASS,
+blockers and transport failures, not internal candidate/finding reports. Children
+end their turn after handoff instead of waiting on each other indefinitely.
 
-Follow [Completion reconciliation](waiting.md) and the selected backend instructions.
-
-## Failures and recovery
-
-Do not silently substitute models, efforts or backends. If Astra is unavailable
-during planning, planning is blocked: report it rather than planning in Main.
-During execution Main continues its own work and reports the missing consultation.
-For a verified lost session, record `retire-lost` with runtime evidence and start a
-replacement with the prior reports; the Director replacement also gets the Plan and
-user messages. Never retire a merely slow or idle session.
-
-Keep handles, the Plan and decisions in the run across turns and compaction. The
-temporary run directory is not a durable archive; keep accepted conclusions in
-project documentation. No background daemon, dashboard, auto-invocation hook or
-automatic config mutation.
+Do not substitute models, efforts or backends. Record actual lost-session evidence
+before replacement; idle or slow is not lost. Pair replacement preserves its
+contract, current candidate and findings. Astra's planning replacement receives
+prior user messages and decisions; Main never takes over planning. Preserve handles
+through compaction. The temporary run directory is not a durable project archive.
+No daemon, dashboard, generic message bus or automatic config mutation is needed.

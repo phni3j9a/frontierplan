@@ -84,9 +84,14 @@ and the evidence needed. Do not forward whole transcripts. Keep primary excerpts
 next to Main's summary so a mistaken summary can be challenged.
 
 The final-check evidence file maps each criterion to real evidence: paths and diff,
-commands and actual output, review finding IDs with ACCEPT/REJECT/DEFER reasons,
+commands and actual output, reviewed candidate references, resolved finding IDs and any explicit scope decisions,
 unverified points and residual risk. Never reduce it to "implemented, tests passed".
 Main's final report reuses Astra's criteria table and lists remaining items.
+
+For implementation, Main supplies a short Task Contract to a registered
+Worker/Design–Reviewer pair. Candidate, findings, fixes/counter-evidence and PASS
+use [pairs.md](pairs.md). The contract is not changed by the Reviewer. Do not
+summarize every peer round for Main; preserve reports and return PASS/escalation.
 
 ## Run data
 

@@ -2,7 +2,8 @@
 """FrontierPlan's local, cooperative handoff ledger. Python 3.11+, stdlib only.
 
 This is not an authorization service, model runner, or sandbox. Native agent
-calls belong to Main; herdr.py supplies the visible CLI transport.
+management belongs to Main; pairs.py handles bounded peer review and herdr.py
+supplies the visible CLI transport.
 """
 from __future__ import annotations
 
@@ -215,6 +216,10 @@ def uncollected_reports(root: Path) -> list[dict]:
     for path, task in tasks(root):
         if ended(task):
             continue
+        if task.get("pair") and not task.get("replaced_by"):
+            from pairs import at, TERMINAL
+            if at(path)[1]["status"] not in TERMINAL:
+                continue
         result = current_result(path, task)
         if (result and result["status"] in ("complete", "blocked")
                 and receipt_of(path).get("digest") != digest(result)):
@@ -315,7 +320,7 @@ Plan. Report rather than decide requirement or design changes. Stay available fo
 fixes during the review cycle.""",
     "design": """You are Design. Realize the assigned UI work within the current Plan.
 Report rather than change product direction. You cannot review your own work.""",
-    "reviewer": """You are the independent Reviewer. Follow {review}. Inspect read-only;
+    "reviewer": """You are the bounded task Reviewer. Follow {review}. Inspect read-only;
 do not edit project files, format, auto-fix, commit or publish.""",
 }
 
@@ -362,6 +367,7 @@ def prepare(run: str, role: str, file: str | None = None, cwd: str | None = None
             path, task, task_root, _ = task_at(reuse)
             require(task_root == root and task["role"] == role, "Wrong role/run for continuation.")
             require(not ended(task) and not task.get("closing"), "Session is unavailable.")
+            require(not task.get("pair"), "Paired turns belong to the peer protocol; use pairs.py resume only for blockers.")
             collected(path, task, complete=False)
         else:
             if role == "director":
@@ -454,8 +460,8 @@ def final_check(run: str, file: str) -> dict:
     plan_id = state["plan"]["id"]
     require(plan_id not in state["final_checks"], "The final check already ran for this Plan; it runs once.")
     idle_executors(root, plan_id)
-    require(any(t["role"] == "reviewer" and t.get("plan_id") == plan_id and completed(p, t)
-                for p, t in tasks(root)), "A completed independent review is required before the final check.")
+    from pairs import require_all_complete
+    require_all_complete(root, state)
     head = git(state["cwd"], "rev-parse", "HEAD") or "unavailable (git failed)"
     status = git(state["cwd"], "status", "--short")
     status = "unavailable (git failed)" if status is None else status or "clean"
@@ -471,6 +477,10 @@ def bind(task_path: str, handle_file: str) -> dict:
         require(state["backend"] == "subagent", "herdr handles are managed by herdr.py.")
         require(value.get("agent_id") and value.get("evidence"), "Record the returned agent ID and launch evidence.")
         require(not task.get("handle"), "Already bound; continue the existing agent.")
+        if task.get("pair"):
+            require(nonempty(value.get("thread_id")) and value["thread_id"] != state["main_thread_id"]
+                    and not any((t.get("handle") or {}).get("thread_id") == value["thread_id"] for _, t in tasks(root)),
+                    "Record a distinct, observed native child thread_id for paired participants.")
         require(not any(t.get("handle") and t["handle"].get("agent_id") == value["agent_id"] for _, t in tasks(root)),
                 "One native session cannot fill two roles.")
         task.update(handle=value, delivery="sent")
@@ -480,6 +490,7 @@ def bind(task_path: str, handle_file: str) -> dict:
 
 def publish(task_path: str, request_id: str, status: str, file: str | None = None) -> dict:
     path, task, _, state = task_at(task_path)
+    require(not task.get("pair"), "Use pairs.py begin/submit for paired turns; plain reports cannot bypass peer review.")
     with lock(path / ".report.lock"):
         task = read(path / "task.json")
         require(not ended(task) and not task.get("closing") and state["phase"] != "closed",
@@ -498,6 +509,9 @@ def publish(task_path: str, request_id: str, status: str, file: str | None = Non
 def collect(task_path: str) -> dict:
     path, task, _, state = task_at(task_path)
     main_only(state)
+    if task.get("pair") and not task.get("replaced_by"):
+        from pairs import at, TERMINAL
+        require(at(path)[1]["status"] in TERMINAL, "Wait for pair PASS or escalation; Main does not collect ordinary review rounds.")
     with lock(path / ".report.lock"):
         result = current_result(path, task)
         require(result and result["status"] in ("complete", "blocked"), "No returned report yet.")
@@ -568,6 +582,13 @@ def decision(task_path: str) -> dict:
             require(relay, "Director must present the Plan to the user.")
             prior = [read(p).get("plan_id") for p in (root / "decisions").glob("*.json") if read(p).get("kind") == "plan"]
             require(value["plan_id"] not in prior, "A changed Plan needs a new plan_id.")
+            if state["phase"] == "executing":
+                # Do not strand an active peer turn under an obsolete Plan.
+                from pairs import at, TERMINAL
+                for participant, executor in tasks(root):
+                    if executor.get("pair") and not ended(executor) and not executor.get("replaced_by"):
+                        require(at(participant)[1]["status"] in TERMINAL,
+                                "Let active pairs complete or escalate before adopting a revised Plan.")
             state.update(plan={"id": value["plan_id"], "digest": digest(value), "file": str(target),
                                "user_seq": state["user_seq"]}, phase="planned", authorization=None)
             if value.get("authorization_message") is not None:
@@ -679,6 +700,8 @@ def finish(run: str, file: str | None = None, discussion: bool = False) -> dict:
             require(state["plan"]["id"] in state["final_checks"], "Run Astra's one-time final check first.")
             require(file, "Main's final report file is required.")
             idle_executors(root, state["plan"]["id"])
+            from pairs import require_all_complete
+            require_all_complete(root, state)
             report = text(file)
             (root / "final-report.md").write_text(report, encoding="utf-8")
         state["phase"] = "closed"
@@ -691,13 +714,16 @@ def closable(path: Path, task: dict, state: dict) -> dict:
     require(not ended(task) and not task.get("closing"), "Participant is unavailable or closure is uncertain.")
     if task["role"] == "director":
         require(state["phase"] == "closed", "Astra stays until finish.")
+    if task.get("pair") and not task.get("replaced_by"):
+        from pairs import require_collected
+        require_collected(path, live=True)
     return collected(path, task, complete=needs_complete(task, state))
 
 
 def needs_complete(task: dict, state: dict) -> bool:
     # Unresolved executor blockers stay visible until the overall wrap-up. A blocked
     # research answer is still an answer that has been returned to Astra.
-    return state["phase"] != "closed" and task["role"] != "researcher"
+    return state["phase"] != "closed" and task["role"] != "researcher" and not task.get("replaced_by")
 
 
 def close_record(task_path: str, closure_file: str) -> dict:

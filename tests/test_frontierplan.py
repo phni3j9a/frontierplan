@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "plugins/frontierplan/scripts"))
 sys.path.insert(0, str(ROOT / "tools"))
 import frontierplan as fp
+from pair_support import create_pair, pair_turn, pass_pair, passed_pair
 from validate_plugin import validate
 from package_release import package
 
@@ -79,8 +80,7 @@ class Protocol(unittest.TestCase):
 
     def reviewed(self):
         director = self.executing()
-        worker = self.prepare("worker"); self.report(worker, "Implemented; tests actually passed.")
-        reviewer = self.prepare("reviewer"); self.report(reviewer, "FINDINGS: none")
+        worker, reviewer = passed_pair(self)
         return director, worker, reviewer
 
     def final_checked(self):
@@ -319,11 +319,14 @@ class Protocol(unittest.TestCase):
 
     def test_final_check_requires_review_and_idle_executors(self):
         self.executing()
-        worker = self.prepare("worker"); self.report(worker, "Done.")
+        worker, reviewer = create_pair(self)
         with self.assertRaises(fp.Failure): fp.final_check(self.run, self.input)
-        reviewer = self.prepare("reviewer")
+        pair_turn(self, worker, "candidate")
         with self.assertRaises(fp.Failure): fp.final_check(self.run, self.input)
-        self.report(reviewer, "FINDINGS: none")
+        pair_turn(self, reviewer, "pass")
+        with self.assertRaises(fp.Failure): fp.final_check(self.run, self.input)  # not collected
+        import pairs
+        pairs.collect(worker)
         packet = Path(fp.final_check(self.run, self.write("e.md", "Evidence body"))["packet"]).read_text()
         self.assertIn("HEAD:", packet); self.assertIn("Evidence body", packet)
 
@@ -344,9 +347,9 @@ class Protocol(unittest.TestCase):
         director, worker, reviewer = self.final_checked()
         self.assertEqual(self.state()["final_checks"], {"plan-1": self.state()["last_decision"]["file"]})
         with self.assertRaises(fp.Failure): fp.final_check(self.run, self.input)
-        # Accepted findings go to the same Worker and Reviewer, never back to Astra.
-        self.prepare("worker", reuse=worker); self.report(worker, "Fixed FP-101.")
-        self.prepare("reviewer", reuse=reviewer); self.report(reviewer, "FINDINGS: none")
+        # Sealed tasks are not reopened: a bounded repair pair verifies the fix.
+        # The original one-time Astra check is not repeated.
+        passed_pair(self)
         self.assertIn("Final", fp.finish(self.run, self.write("r.md", "Final report"))["user_response"])
 
     def test_final_check_shape(self):
@@ -374,10 +377,10 @@ class Protocol(unittest.TestCase):
         with self.assertRaises(fp.Failure): fp.finish(self.run, discussion=True)
 
     def test_finish_requires_collected_executors(self):
-        _, worker, _ = self.final_checked()
-        self.prepare("worker", reuse=worker)
+        self.final_checked()
+        worker, reviewer = create_pair(self)
         with self.assertRaises(fp.Failure): fp.finish(self.run, self.input)
-        self.report(worker, "Fixed.")
+        pass_pair(self, worker, reviewer)
         out = fp.finish(self.run, self.write("r.md", "Final report body"))
         self.assertEqual(out["user_response"], "Final report body")
         self.assertEqual((Path(self.run) / "final-report.md").read_text(), "Final report body")

@@ -3,11 +3,11 @@
 | Role | Model / effort | Owns | Does not own |
 |---|---|---|---|
 | Director (Astra) | `gpt-6-astra` / `xhigh` | Planning judgment: understanding, research, design, user questions, Plan, implementation authorization; advice; one final check | Spawning, panes, implementation, review adjudication, final acceptance |
-| Main | inherits its session | Planning relay; execution: split, assign, integrate, adjudicate review and final-check findings, finish and report | Planning judgment, research before execution |
+| Main | inherits its session | Planning relay; execution: assign pairs, integrate reviewed work, resolve escalations, finish and report | Planning judgment, research before execution, ordinary task review adjudication |
 | Researcher | `gpt-6-luna` / `max` / fast | Read-only investigation requested by Astra | Scope, design, edits |
 | Worker | `gpt-6-luna` / `max` / fast | Bounded implementation, tests, debugging, monitoring; fixes in its review cycle | Requirement/design changes |
 | Design | `gpt-6-sol` / `max` | Optional implementation-phase UI realization | Product policy, reviewing its own work |
-| Reviewer | `gpt-6-sol` / `xhigh` | Fresh independent read-only review; same-session re-review | Edits, new requirements, adjudication |
+| Reviewer | `gpt-6-sol` / `xhigh` | Independent bounded task verification; findings/PASS; same-session re-review | Edits, new requirements, Plan changes, overall completion |
 
 In the swe2 variant (`astraplan-herdr-swe2`), Researcher and Worker are Devin CLI
 `swe-2-max` (`profiles/swe2/*.toml`) with the same ownership; Director, Design and
@@ -15,7 +15,9 @@ Reviewer are unchanged. Devin has no fast tier.
 
 Main is the technical parent of every child; there is no nested spawning. Astra's
 research requests reach researchers through Main's mechanical relay. No role
-delegates through tools, CLI, another skill or another plugin.
+delegates through tools, CLI, another skill or another plugin. The registered
+Worker/Design–Reviewer pair may continue its peer through the narrow
+[pair protocol](pairs.md); this is not spawning or managing another participant.
 
 Profiles live in `profiles/director/astra.toml` and `profiles/*.toml`. They are
 FrontierPlan data, not Codex custom-agent registrations. `main.toml` describes the
@@ -36,7 +38,8 @@ Native children inherit effective parent permissions; role text does not narrow 
 broad parent sandbox. Verify before delegation and stop if the child boundary cannot
 be met without unauthorized changes. No custom agent or config is installed.
 
-A direct user instruction to a child first invalidates its old report with `begin`;
+A direct user instruction to a child first invalidates its old report with `begin`
+(`pairs.py begin` for paired tasks; collected tasks need a new follow-up pair);
 the new report includes the instruction and its effect. Main brings scope changes
 back to its own plan, or to Astra during planning. This cooperative protocol does
 not atomically intercept typing.

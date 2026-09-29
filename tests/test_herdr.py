@@ -14,6 +14,7 @@ from unittest.mock import patch
 import test_frontierplan as base
 import frontierplan as fp
 import herdr as hd
+from pair_support import passed_pair
 
 
 class FakeHerdr:
@@ -233,10 +234,7 @@ class HerdrTransport(unittest.TestCase):
 
     def test_final_check_and_finish_flow(self):
         director = self.director(); self.director_plan(director)
-        worker = hd.spawn(self.run, "worker", self.input)["task"]
-        self.report(worker, "Implemented."); hd.collect(worker)
-        reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
-        self.report(reviewer, "FINDINGS: none"); hd.collect(reviewer)
+        worker, reviewer = passed_pair(self)
         hd.final_check(self.run, self.write("evidence.md", "Criteria map and test output."))
         self.assertEqual(fp.task_at(director)[1]["purpose"], "final_check")
         out = self.decide(director, {"kind":"final_check", "plan_id":"p1",

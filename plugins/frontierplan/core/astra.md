@@ -82,6 +82,7 @@ it against the Plan's criteria and the user's intent:
 
 Read the diff, tests and evidence. Run a new probe only to confirm a suspected
 concrete defect. Do not re-audit record-keeping, raise new requirements, or demand
-more verification layers than the Plan set. Your findings go to Main like any
-Reviewer finding; Main adjudicates them and fixes do not come back to you. This is
+more verification layers than the Plan set. Your findings go to Main for workflow decisions: finish, bounded repair, replan or
+escalation. A repair goes to a Worker–Reviewer pair, not back to you; Main does not
+mediate that ordinary task review. This is
 the last time you examine this Plan's result, so say everything material now.

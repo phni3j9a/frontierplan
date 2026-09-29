@@ -112,6 +112,9 @@ def layout(api, main_pane: str) -> dict:
 
 
 def smoke(limit: float) -> dict:
+    fp.require(not (fp.ROOT / "scripts" / "pairs.py").exists(),
+               "Legacy pre-pair smoke: use its original v0.3 checkout, or docs/issue-17-validation.md "
+               "for the v0.4 local Codex peer smoke. No panes/models have been started.")
     scratch = Path(tempfile.mkdtemp(prefix="fp-swe2-smoke-"))
     project = scratch / "project"; project.mkdir()
     git = lambda *a: subprocess.run(["git", "-C", str(project), *a], check=True, capture_output=True, text=True).stdout

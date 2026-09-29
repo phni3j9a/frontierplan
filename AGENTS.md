@@ -2,14 +2,19 @@
 
 Astra owns every judgment before implementation; Main only relays her decisions,
 research requests and user dialogue verbatim. After the Plan starts, Main owns
-coordination, review adjudication and completion (the axiom_for_herdr structure);
+coordination, integration and completion; Worker–Reviewer pairs close bounded tasks
+without Main relaying or adjudicating ordinary review;
 Astra advises on request and checks the result once per Plan. Do not reintroduce an
 Astra acceptance gate, review round quotas or time-based user checkpoints.
 
 Both SKILLs are explicit only. Keep effort values lowercase, profiles role-specific
 and common contracts single-source. Do not add an unavailable Fable route, implicit
 invocation, daemon, auto config mutation or hidden backend fallback. Native tool
-calls stay native.
+calls stay native. Pairing requires actual child-to-peer continuation, not just a
+notification or hidden Main relay. Keep contracts short and corrections minimal.
+Collect the current candidate's PASS, then close both pair sessions; later work
+gets a bounded follow-up pair. Herdr/native real-host validation remains distinct
+from the simulated protocol tests.
 
 Run validation, unit tests and standalone packaging after changes. Keep real-host
 smoke evidence distinct from simulated tests. Maintain MIT notices for adapted code.
