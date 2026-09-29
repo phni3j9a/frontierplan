@@ -1,6 +1,6 @@
 ---
 name: astraplan-herdr-swe2
-description: AstraPlan-herdr with Devin SWE-2 in the Luna seats. Astra owns research and planning with SWE-2 researchers; Main then coordinates SWE-2 implementation, independent Sol review and Astra's one-time final check through visible herdr panes.
+description: AstraPlan-herdr with Devin SWE-2 in the Luna seats. Astra owns research and planning with SWE-2 researchers; Main then coordinates SWE-2 implementation, bounded Sol task verification and Astra's one-time final check through visible herdr panes.
 disable-model-invocation: true
 triggers:
   - user
@@ -42,13 +42,15 @@ her `user_response` to the user verbatim, give new user messages to her with
 `forward`, and `start` when she has recorded implementation authorization. Resolve
 only transport problems yourself.
 
-**Execution — you decide (axiom_for_herdr).** Split, assign, integrate and
-adjudicate review against Astra's Plan. Keep each responsible SWE-2 Worker through
-its review cycle and send it the accepted fixes. Keep one independent Sol Reviewer
-through the cycle; there is no round limit. Consult Astra when the Plan no longer
-fits or a finding keeps returning. When review converges, run Astra's one-time
-final check, adjudicate its findings like any Reviewer finding, then write the
-final report and finish.
+**Execution — coordinate reviewed pairs.** Split the Plan into short bounded
+contracts and register one Worker/Design–Reviewer pair per task. The same two
+sessions exchange candidates, concrete findings, fixes and PASS directly; do not
+relay or adjudicate ordinary review. Follow [Pair operations](../../core/pairs.md).
+Resolve only blockers/ownership/scope and same-cause stagnation, consulting Astra
+for Plan-level decisions. Collect the latest candidate's PASS, then close both idle
+pair sessions and integrate the reviewed work. Later repairs use new bounded pairs.
+Astra checks the integrated Plan once, with no veto or re-acceptance loop; Main
+chooses finish, rework or replan and reports the result. No review-round quota.
 
 Return to the user only for Astra's planning messages, the completion report, or a
 scope/cost-changing branch presented as options with a recommendation. Never ask

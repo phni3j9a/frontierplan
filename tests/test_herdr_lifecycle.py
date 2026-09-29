@@ -12,6 +12,7 @@ import test_frontierplan as base
 import test_herdr as transport
 import frontierplan as fp
 import herdr as hd
+from pair_support import passed_pair
 
 
 class Lifecycle(unittest.TestCase):
@@ -203,7 +204,8 @@ class Lifecycle(unittest.TestCase):
         self.assertTrue((Path(worker) / (self.task(worker)["request_id"] + ".result.json")).exists())
 
     def test_finish_then_close_everything_but_main(self):
-        director, worker, reviewer = self.reviewed()
+        director = self.director(); self.director_plan(director)
+        worker, reviewer = passed_pair(self)
         hd.final_check(self.run, self.input)
         self.decide(director, {"kind": "final_check", "plan_id": "p1",
                                "ac_status": [{"criterion": "Works", "status": "met", "evidence": "tests"}],

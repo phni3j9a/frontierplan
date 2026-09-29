@@ -13,9 +13,11 @@ Apply this contract to both backends using their documented native operations.
   A complete report is a returned assignment, not review approval or final acceptance.
   A published report with a busy session is visible but cannot yet be collected,
   re-prompted or closed. Inspect persistent discrepancies without removing idle guards.
-- Collect every ready report, read it and resolve its next action: integration,
-  bounded new assignment, review, Astra's decision and its relay, or explicit
-  blocker retention.
+- Collect ready planning/research reports and terminal pair results, then resolve
+  integration, Astra's relay, a bounded follow-up or blocker retention. Routine
+  paired candidate/findings are intentionally excluded from Main's collection;
+  the assigned peers resume each other. A waiting peer's empty/old report is not
+  a new Main assignment. Missing sessions and uncertain delivery still surface.
   A collected blocker remains unresolved until its prerequisite is actually resolved.
 - Keep one supported wait per run and retain its execution handle, including outer
   wrappers. Use the host's available result-wait mechanism with a maximum of about

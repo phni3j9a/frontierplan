@@ -1,7 +1,7 @@
 # herdr backend
 
 Requires Python 3.11+ and herdr plus Codex on the same host (the swe2 variant also
-needs Devin CLI); Git only labels the final-check packet. Main is an existing session inside herdr, not necessarily
+needs Devin CLI); Git is required for candidate snapshots. Main is an existing session inside herdr, not necessarily
 Codex: a recognized Devin or another agent can coordinate while all children still
 run through Codex.
 Main keeps its existing agent, model, effort and permissions. FrontierPlan never
@@ -10,6 +10,7 @@ Set absolute helper paths from this installed plugin, not a guessed checkout pat
 ```
 fp=<plugin-root>/scripts/frontierplan.py
 hd=<plugin-root>/scripts/herdr.py
+pp=<plugin-root>/scripts/pairs.py
 ```
 
 ## Initialize and start Astra
@@ -130,32 +131,46 @@ relay and the new words reach Astra together with the reports. A consultation-on
 
 ## Execution
 
+Use the [pair protocol](../core/pairs.md), not separate ordinary Worker/Reviewer
+spawns or Main-mediated `send` loops:
 ```
-python3 "$hd" spawn --run "$run" --role worker --file "$assignment" [--cwd "$worktree"]
-python3 "$hd" spawn --run "$run" --role reviewer --file "$review_request"
-python3 "$hd" send --task "$worker" --file "$accepted_fixes"
-python3 "$hd" send --task "$reviewer" --file "$rereview_request"
-python3 "$hd" consult --run "$run" --file "$question"
+python3 "$hd" pair-spawn --run "$run" --file "$short_contract" [--cwd "$worktree"] [--scope src/component] [--role design]
 ```
-Roles: `worker` (Luna MAX fast; SWE-2 Max in the swe2 variant), `design` (Sol MAX),
-`reviewer` (Sol XHIGH).
-Children use the begin/report commands embedded in their packets. Always collect
-through herdr.py to record live idle/activity evidence. `send` continues the same
-Worker/Design/Reviewer session; Astra's turns use `forward`, `relay`, `consult` and
-`final-check`. After `consult`, collect and run `decision`; the advice is Main's to
-adopt (`next: main_decides`) unless it carries a `user_response` to relay.
+The Reviewer bootstraps first and waits idle for a candidate. Both children use
+`pairs.py begin/submit` from their generated packets. Worker candidate delivery
+resumes that same Reviewer; findings resume that same Worker. Main does not relay
+those messages. Models, efforts, layout and permissions remain role-specific.
 
-When review has converged and every Worker/Design/Reviewer is idle and collected:
+Main collects only a terminal pair result (PASS/BLOCKED/ESCALATE):
+```
+python3 "$pp" collect --task "$worker"
+python3 "$hd" pair-close --task "$worker"
+```
+Pair collection internally uses herdr.py for both idle/activity receipts and
+checks the exact latest candidate. Close both only after PASS was collected.
+For scope/environment/capability intervention, use `pair-resume`; for an observed
+lost or safely collected stopped participant, use `pair-replace`. Neither operation
+is part of an ordinary finding/fix loop. Keep prior report paths and finding IDs.
+If a revised Plan drops a stopped old pair, follow the explicit `pairs.py abandon`
+procedure in [pairs.md](../core/pairs.md), then use `pair-close`. This preserves
+evidence and verifies idle/activity without labeling unfinished work as PASS.
+
+When reviewed tasks are collected and integrated:
 ```
 python3 "$hd" final-check --run "$run" --file "$evidence"
 python3 "$hd" collect --task "$director"
 python3 "$fp" decision --task "$director"
 ```
-It runs once per Plan. Adjudicate its findings like Reviewer findings; accepted
-fixes go to the responsible Worker and the same Reviewer, not back to Astra. Then:
+Astra checks once per Plan, without a veto. Main routes concrete repair work to
+new bounded pairs; fixes do not go back to Astra. Consult Astra for Plan changes,
+not ordinary technical findings. Main remains responsible for completion:
 ```
 python3 "$fp" finish --run "$run" --file "$final_report"
 ```
+
+Peer continuation must be smoke-tested on the actual Herdr/Codex (and SWE2, when
+used) host. The helper's supported CLI path and simulated tests are not real-host
+validation. Do not disguise lack of child-to-peer capability with Main relaying.
 
 ## Closing participants
 
@@ -163,10 +178,13 @@ python3 "$fp" finish --run "$run" --file "$final_report"
 python3 "$hd" close --task "$task"
 ```
 Close a researcher once `relay` has returned its report (relay does this), a
-Worker/Design/Reviewer when Main ends its review cycle, and Astra only after finish.
+Worker/Design–Reviewer pair immediately after current PASS and collection, and
+Astra only after finish.
 Close requires the participant's current report to be collected and unchanged
-activity since collection; unresolved Worker/Design/Reviewer blockers stay open until
-finish. Never close Main.
+activity since collection; unresolved pair blockers stay open until resolved or
+safely captured and reassigned. Completion is not a reason to discard blockers. Never close Main.
+An explicitly abandoned old-Plan pair uses its saved abandonment receipt instead
+of a completed report; idle state, terminal ownership and activity checks still apply.
 
 Close verifies ownership, the unique original terminal, the current pane occupant,
 the collected report and unchanged `state_change_seq`. A moved owned terminal is
@@ -190,7 +208,9 @@ python3 "$hd" check --run "$run"
 `check` is read-only and may run while the one waiter is alive. It returns current
 `events` and `pending`, including already-announced but uncollected reports. It does
 not collect reports or close sessions. Inspect each returned task and collect ready
-reports through `herdr.py collect` before advancing their next action.
+planning/research reports through `herdr.py collect`; use `pairs.py collect` for
+terminal pairs. Ordinary peer turns and intentionally idle companions do not become
+Main review work. `pair_delivery_uncertain` remains an actionable transport issue.
 
 Use one `python3 "$hd" wait --run "$run" --timeout 300` process per run (300 is also
 the default and maximum). Retain its execution handle. Its local two-second checks
