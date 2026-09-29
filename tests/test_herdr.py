@@ -155,7 +155,7 @@ class HerdrTransport(unittest.TestCase):
         args = data["requested_codex_args"]
         self.assertEqual(args[args.index("-m")+1], "gpt-6-astra")
         self.assertIn('model_reasoning_effort="xhigh"', args)
-        permissions = "frontierplan-" + Path(self.run).name
+        permissions = "frontierplan-herdr"
         self.assertIn(f'default_permissions="{permissions}"', args)
         self.assertIn(f'permissions.{permissions}.extends=":workspace"', args)
         self.assertIn(f'permissions.{permissions}.network.enabled=true', args)

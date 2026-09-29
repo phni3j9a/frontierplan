@@ -290,10 +290,10 @@ def spawn_target(root: Path, state: dict, task: dict, api: Herdr) -> tuple[str, 
 
 def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
     p = task["profile"]
-    # A run-specific profile avoids inheriting an unrelated named user profile.
+    # A dedicated profile can be explicitly allowlisted by managed host policy.
     # Codex 0.159.0 Linux blocks AF_UNIX connect in :workspace. Its managed proxy
     # retains internet filtering while allowing the local IPC needed by Herdr.
-    permissions = "frontierplan-" + root.name
+    permissions = "frontierplan-herdr"
     args = ["-C", task["cwd"], "-m", p["model"], "-c", f'model_reasoning_effort="{p["reasoning_effort"]}"',
             "-c", f'default_permissions="{permissions}"',
             "-c", f'permissions.{permissions}.extends=":workspace"',

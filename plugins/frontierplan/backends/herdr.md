@@ -275,15 +275,25 @@ result and receipt. Treat missing evidence as unverified routing.
 
 ## Permissions, routing and partial failures
 
-Each Codex child selects a run-specific permissions profile extending `:workspace`,
+Each Codex child selects the `frontierplan-herdr` permissions profile extending `:workspace`,
 with `--ask-for-approval never` and the run directory added as writable. The launch
 sets `features.network_proxy.enabled=true`, profile `network.enabled=true`, and
 `network.dangerously_allow_all_unix_sockets=true`. These are process arguments;
 FrontierPlan does not edit global configuration. Each child uses `--no-daemon` so
-its process-local configuration reaches its own server. The tested shared server
-kept `:workspace` instead of applying the requested profile. Existing shared
-servers and other sessions are untouched. A legacy `--sandbox` override must not
+its process-local configuration reaches its own server. Existing shared servers
+and other sessions are untouched. A legacy `--sandbox` override must not
 replace the selected profile.
+
+Managed host policy can restrict allowed profile names. On the tested host,
+`/etc/codex/requirements.toml` rejected an unlisted profile and Codex selected
+`:workspace` instead, even with `--no-daemon`. Before launching, the administrator
+must permit `frontierplan-herdr` in `[allowed_permission_profiles]` when that
+allowlist exists. The plugin never edits requirements or global configuration.
+Preserve the original policy and follow the host's approval rules for this setup.
+Check the actual active profile and startup warnings; the isolated `codex sandbox`
+probe alone does not prove a model session accepts the profile. An unapproved or
+unsupported boundary is a reported prerequisite failure, never a reason to ignore
+managed requirements or silently select full access.
 
 On the tested Linux/Codex 0.159.0 host, plain `:workspace` denies Unix-socket
 `connect()`, including Herdr. The managed proxy keeps external networking subject
