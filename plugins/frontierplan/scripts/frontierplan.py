@@ -93,9 +93,9 @@ def lock(path: Path):
 
 
 def thread_id() -> str | None:
-    first, second = os.environ.get("CODEX_THREAD_ID"), os.environ.get("CODEX_SESSION_ID")
-    require(not (first and second and first != second), "Contradictory Codex conversation IDs.")
-    return first or second
+    # Native children can inherit the parent's legacy SESSION_ID while Codex
+    # supplies their own THREAD_ID. Only fall back when the current ID is absent.
+    return os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID")
 
 
 def main_only(state: dict) -> None:

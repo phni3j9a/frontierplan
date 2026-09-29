@@ -235,8 +235,10 @@ Main回収→両ペイン終了の確認項目と、残すべき証跡を記載�
 Planの適切さ・実機UI・権限・nativeツール互換性の実証ではありません。実herdr（0.9.1）での
 ペイン配置は合成エージェントのsmokeで確認済みです（[証跡](docs/evidence/issue-11-herdr-layout.json)）。
 
-子の方針はworkspace-write + never。herdrは起動時に要求しますが、実効値は環境で
-確認が必要です。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
+herdrの子はworkspaceのファイル書き込み制限とneverを維持し、管理プロキシ経由の
+通信制限とローカルUnixソケットへのアクセスを起動引数で指定します。検証したLinuxでは
+ソケット単位の許可ができず、Herdr以外のローカルUnixソケットにも接続可能になります。
+グローバル設定は変更しません。[権限の詳細](plugins/frontierplan/backends/herdr.md#permissions-routing-and-partial-failures)を参照し、実効値は環境で確認してください。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
 扱いません。必要条件を満たせない場合は停止・報告し、勝手に権限拡大/モデル変更しません。
 
 helperは協調的な手順チェックで、認証・sandbox・ユーザー同意の自動判定ではありません。

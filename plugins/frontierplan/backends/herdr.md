@@ -33,8 +33,9 @@ that ID. With no explicit identity or Codex identity in the environment, it deri
 Main's agent kind and session ID from this verified current pane. It does not look
 at focus, cwd, the only available agent, or model names to guess Main.
 
-Codex's `CODEX_THREAD_ID` / `CODEX_SESSION_ID` remain supported and must agree when
-both are present. For other hosts that cannot expose a trustworthy current pane or
+Codex's `CODEX_THREAD_ID` identifies the current conversation. `CODEX_SESSION_ID`
+is a fallback only when the former is absent; native children can inherit the
+parent's legacy session ID. For other hosts that cannot expose a trustworthy current pane or
 session ID, independently verify Main's actual agent kind, actual session ID and
 pane/terminal pair, then supply the provider-neutral identity in Main's command
 environment for **every** helper invocation (both scripts), not only initialization:
@@ -274,12 +275,27 @@ result and receipt. Treat missing evidence as unverified routing.
 
 ## Permissions, routing and partial failures
 
-Each child requests workspace-write + never and `default_permissions=":workspace"`,
-matching the predecessor's CLI 0.154.0/shared app-server 0.153.4 workaround. This is
-NOT a cross-version permission guarantee. Verify effective permissions and model /
-effort from session evidence, not launch args or a child's self-report. Only Worker
-adds fast overrides. No role enables network access; Astra and researchers use only already available
-authorized search/connector/command tools. Missing tools are blockers.
+Each Codex child selects a run-specific permissions profile extending `:workspace`,
+with `--ask-for-approval never` and the run directory added as writable. The launch
+sets `features.network_proxy.enabled=true`, profile `network.enabled=true`, and
+`network.dangerously_allow_all_unix_sockets=true`. These are process arguments;
+FrontierPlan does not edit global configuration. A legacy `--sandbox` override must
+not replace the selected profile.
+
+On the tested Linux/Codex 0.159.0 host, plain `:workspace` denies Unix-socket
+`connect()`, including Herdr. The managed proxy keeps external networking subject
+to its domain policy (no domain allow entries are added by FrontierPlan), while the
+Unix-socket setting permits **all local Unix sockets**, not just Herdr's socket.
+Linux does not support the proxy's per-path Unix-socket allowlist. Local services
+reachable through other sockets are consequently within the child's IPC reach.
+This explicit transport boundary must be acceptable for the host; if host policy
+forbids it, report the incompatibility rather than disable the sandbox or relay
+ordinary peer traffic through Main. The children must not broaden it further.
+
+This is not a cross-version or cross-platform permission guarantee. Verify effective
+permissions and model/effort from session evidence, not launch args or a child's
+self-report. Only Worker adds fast overrides. Astra and researchers use only
+already available authorized tools; missing capabilities remain blockers.
 Main's explicit identity variables are cleared in child pane and Codex shell
 configuration; the child-role guard still prevents children from managing the run.
 

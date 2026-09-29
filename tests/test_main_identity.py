@@ -115,9 +115,14 @@ class MainIdentity(unittest.TestCase):
         with patch.dict(os.environ, {"CODEX_THREAD_ID": "inherited"}), self.assertRaises(fp.Failure):
             self.initialize(explicit=True)
 
-    def test_codex_environment_aliases_must_agree(self):
-        with patch.dict(os.environ, {"CODEX_THREAD_ID": "one", "CODEX_SESSION_ID": "two"}), self.assertRaises(fp.Failure):
-            self.initialize()
+    def test_current_codex_thread_takes_precedence_over_inherited_session(self):
+        with patch.dict(os.environ, {"CODEX_THREAD_ID": "one", "CODEX_SESSION_ID": "two"}):
+            self.assertEqual(fp.thread_id(), "one")
+            self.assertEqual(hd.caller_identity(), {"agent": "codex", "session_id": "one"})
+            with self.assertRaises(fp.Failure):
+                fp.main_only({"backend": "subagent", "main_thread_id": "two"})
+        with patch.dict(os.environ, {"CODEX_THREAD_ID": "", "CODEX_SESSION_ID": "two"}):
+            self.assertEqual(fp.thread_id(), "two")
 
     def test_session_metadata_variants_and_conflicts(self):
         for field, value in (("agent_session", {"value": "s"}), ("agent_session", {"id": "s"}),

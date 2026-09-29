@@ -27,10 +27,13 @@ fast, separately from `reasoning_effort = "max"`. Effort values are lowercase.
 Astra, researchers and the Reviewer do not edit project content; they write only
 their reports, protocol data and scratch files under the run directory. These are
 role instructions, not a read-only sandbox. All roles stay subordinate to
-host/system/user permissions. Never widen filesystem, network or approval scope, or
+host/system/user permissions. Never widen the selected backend's documented
+filesystem, network or approval scope, or
 treat a Plan as publishing consent.
 
-Herdr requests workspace-write + never for each Codex child. The one explicit
+Herdr requests workspace filesystem writes + never for each Codex child, with
+managed network filtering and local Unix-socket access for the Herdr transport
+(see the backend notes for the wider local IPC boundary on Linux). The one explicit
 exception is the swe2 variant, whose Devin children run in Devin's bypass mode
 without an OS sandbox because the user chose that trade-off; roles must not widen
 anything beyond it (see the backend notes).

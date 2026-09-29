@@ -290,8 +290,16 @@ def spawn_target(root: Path, state: dict, task: dict, api: Herdr) -> tuple[str, 
 
 def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
     p = task["profile"]
+    # A run-specific profile avoids inheriting an unrelated named user profile.
+    # Codex 0.159.0 Linux blocks AF_UNIX connect in :workspace. Its managed proxy
+    # retains internet filtering while allowing the local IPC needed by Herdr.
+    permissions = "frontierplan-" + root.name
     args = ["-C", task["cwd"], "-m", p["model"], "-c", f'model_reasoning_effort="{p["reasoning_effort"]}"',
-            "-c", 'default_permissions=":workspace"']
+            "-c", f'default_permissions="{permissions}"',
+            "-c", f'permissions.{permissions}.extends=":workspace"',
+            "-c", f'permissions.{permissions}.network.enabled=true',
+            "-c", f'permissions.{permissions}.network.dangerously_allow_all_unix_sockets=true',
+            "-c", 'features.network_proxy.enabled=true']
     if p.get("service_tier") == "fast":
         args += ["-c", 'service_tier="fast"', "-c", "features.fast_mode=true"]
     env = {"FRONTIERPLAN_ROLE": task["role"], "FRONTIERPLAN_TASK": str(root / "tasks" / task["id"]),
@@ -301,7 +309,7 @@ def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
         env["HERDR_SOCKET_PATH"] = api.env["HERDR_SOCKET_PATH"]
     for key, value in env.items():
         args += ["-c", f"shell_environment_policy.set.{key}={json.dumps(value)}"]
-    return args + ["--sandbox", "workspace-write", "--ask-for-approval", "never",
+    return args + ["--ask-for-approval", "never",
                    "--add-dir", str(root), "--no-alt-screen"]
 
 

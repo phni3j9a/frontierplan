@@ -40,7 +40,7 @@ class NativePairs(unittest.TestCase):
             self.assertIn(" bootstrap --task ", initial_packet)
             self.assertNotIn(" begin --task ", initial_packet)
             with self.assertRaises(fp.Failure): pairs.bootstrap(str(path), task["request_id"])  # Main is not a child.
-            with patch.dict(os.environ, {"CODEX_THREAD_ID": "observed-" + side, "CODEX_SESSION_ID": ""}):
+            with patch.dict(os.environ, {"CODEX_THREAD_ID": "observed-" + side, "CODEX_SESSION_ID": "main-test"}):
                 with self.assertRaises(fp.Failure): pairs.bootstrap(str(path), "stale-request")
                 identity = pairs.bootstrap(str(path), task["request_id"])
                 self.assertTrue(identity["waiting_for_bind"])

@@ -34,8 +34,9 @@ Use a disposable Git repository/worktree and the PR's installed plugin copy (or
 explicitly identify a contributor smoke using this checkout's helper paths).
 Do not silently substitute a checkout for an already loaded skill. Record plugin
 commit, Python/Herdr/Codex versions, selected standard/SWE2 variant and Main's
-actual agent/session/terminal. Follow existing setup permissions; do not broaden
-permissions or modify global config to make the smoke pass.
+actual agent/session/terminal. Use the explicitly documented backend boundary; do not silently broaden it or
+modify global config to make the smoke pass. The corrected Herdr launch allows
+local Unix-socket IPC while retaining filesystem and managed network restrictions.
 
 Run a small user-authorized task through normal Astra planning and `start`, for
 example implementing a tiny normalization function with an explicit edge-case
@@ -83,10 +84,15 @@ Check child socket access under the actual launch boundary before treating an
 idle session as a successful bootstrap. On the observed Linux/Codex 0.159.0 host,
 `codex sandbox -P :workspace -- herdr ...` reproduced the permission failure.
 An independent Python probe reached `socket.connect()` before EPERM; socket
-creation itself succeeded. Exact socket allowlist attempts also failed. The
-specific enforcement layer is not established. Do not infer a dead Herdr daemon,
-disable the sandbox, broaden networking, or bypass identity checks to turn this
-failure into a passing smoke.
+creation itself succeeded. Investigation of the installed version's Linux sandbox
+source confirmed the restricted seccomp `connect` denial. Exact socket allowlists
+do not work for Linux AF_UNIX. The corrected run-specific profile enables the
+managed network proxy and all-local-Unix-socket IPC; no global config is changed.
+An actual boundary probe confirmed Herdr access and workspace writes succeed,
+outside-workspace writes are read-only, direct external connections have no route,
+and the proxy rejects external requests without domain allow entries (403).
+This is broader local IPC than an exact Herdr socket permission; document that
+scope explicitly and test it on the actual host/version before using it.
 
 When both original children are idle and neither has begun, preserve their local
 error reports and use `herdr.py pair-block-start --task "$worker" --file

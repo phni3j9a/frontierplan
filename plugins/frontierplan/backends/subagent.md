@@ -53,7 +53,9 @@ Then record the returned identity once:
 python3 "$fp" bind --task "$task" --handle-file "$handle"
 ```
 For paired children, `thread_id` must be the actually observed child
-`CODEX_THREAD_ID`/`CODEX_SESSION_ID`, distinct from Main and every other child.
+`CODEX_THREAD_ID` (legacy `CODEX_SESSION_ID` only when the current ID is absent),
+distinct from Main and every other child. An inherited parent `CODEX_SESSION_ID`
+must not override a child's current thread ID.
 Do not assume it equals the host's agent_id. The helper checks the calling identity
 against this binding, but records Main-supplied evidence, not a sandbox or an
 independently verified model claim.
