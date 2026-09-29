@@ -1,0 +1,77 @@
+{
+  "date": "2026-09-29",
+  "kind": "real host contributor smoke, not simulated unit evidence",
+  "source_commit": "efe64c78e852086a55532b3f1072b76ef2500d90",
+  "pr": "https://github.com/phni3j9a/frontierplan/pull/18",
+  "issue": "https://github.com/phni3j9a/frontierplan/issues/17",
+  "overall_status": "incomplete_do_not_merge_followup_as_validation_complete",
+  "host": {
+    "os": "Ubuntu 24.04 LTS",
+    "herdr": "0.9.1",
+    "codex": "0.159.0",
+    "python": "3.12.3"
+  },
+  "herdr": {
+    "variant": "standard",
+    "status": "failed_before_first_candidate",
+    "run": "/tmp/frontierplan-j503_xcu",
+    "fixture": "/tmp/fp17-real-kqrq6b8u/herdr-project",
+    "plan_id": "herdr-peer-smoke-1",
+    "main_thread_id": "01a0ed83-afec-7e61-95dc-ca519f6a78f3",
+    "main_pane_id": "w1:p2C",
+    "main_terminal_id": "term_65c74ea54b80215",
+    "fixture_staging": "Deliberately seeded missing Unicode casefold; first Worker must submit seed unchanged, real Reviewer must independently find it. Neither reached this stage.",
+    "observed_failure": "Both actual children failed pairs.py begin and blocked submit during required live Herdr identity lookup: EPERM. Local reports are genuine but were not registered as child protocol results.",
+    "ordinary_main_relay_count": 0,
+    "direct_peer_handoffs": 0,
+    "candidate": null,
+    "pass": null,
+    "collected_pass": false,
+    "cleanup": "Director and both original children retained idle for recovery; no raw close, fake loss or closure receipt. Other user panes untouched.",
+    "recovery": "Working-tree follow-up pair-block-start executed on actual idle original participants; separate Main observation recorded BLOCKED, no child reports created. Resume/abandon/close paths are covered by simulated regression tests only.",
+    "manual_interventions": [
+      "Explicit verified Main pane/terminal used because inherited HERDR_PANE_ID referenced a stale pane.",
+      "Director initial prompt was acknowledged by Herdr but no turn began; Main inspected absence of a runtime turn and sent an explicit lifecycle prompt with --wait --until working. This was not an ordinary peer relay.",
+      "Initial consultation incorrectly described socket creation failing. Raw probe emitted before_socket AND before_connect; the denial is at connect. This correction supersedes the consultation wording."
+    ],
+    "evidence": [
+      "issue-17-peer-smoke/herdr-worker-blocked.md",
+      "issue-17-peer-smoke/herdr-reviewer-blocked.md",
+      "issue-17-peer-smoke/herdr-state.json",
+      "issue-17-peer-smoke/runtime-observations.json",
+      "issue-17-peer-smoke/herdr-startup-failure.md",
+      "issue-17-peer-smoke/herdr-startup-blocked.json",
+      "issue-17-peer-smoke/socket-syscall.stdout",
+      "issue-17-peer-smoke/socket-syscall.stderr"
+    ],
+    "socket_probe": {
+      "command": "codex sandbox -C <herdr fixture> -P :workspace -- python3 -c <AF_UNIX socket creation then connect to bound Herdr socket>",
+      "stage": "connect",
+      "errno": 1,
+      "socket": "/home/server/.config/herdr/herdr.sock",
+      "exact_socket_allowlist": "also denied; no automatic/global config mutation",
+      "enforcement_layer": "not established"
+    }
+  },
+  "native": {
+    "status": "capability_roundtrip_in_progress",
+    "fixture": "/tmp/fp17-real-kqrq6b8u/native-project",
+    "test_parent_thread_id": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+    "scope": "Actual native tools in a separate restricted CLI test harness; original Main retains repository engineering and actual native archive cleanup. Not a complete FrontierPlan ledger/Plan run.",
+    "runtime_limitations": [
+      "The exec harness has no native archive tool; the original TUI Main does. Original Main verified its actual native set_thread_archived tool on a completed disposable initial preflight session.",
+      "CLI exec requires sandbox/config flags on exec itself; an initial misplaced-flag preflight inherited disabled sandbox, spawned no children, and was discarded/archived.",
+      "Independent fast-tier selection is not exposed by collaboration.spawn_agent."
+    ]
+  },
+  "swe2": {
+    "status": "not_run",
+    "reason": "Standard Codex evidence does not establish Devin interoperability."
+  },
+  "remaining": [
+    "Successful Herdr direct same-session finding/fix/PASS under preserved permissions.",
+    "Native real roundtrip and exact lifecycle outcome; native helper end-to-end remains separate from capability-only probe.",
+    "Successful current-candidate collection, pair closure and one-time Astra final check for completed live Plan.",
+    "Follow-up PR merge remains withheld."
+  ]
+}

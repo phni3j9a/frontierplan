@@ -61,6 +61,10 @@ transport. Regression cases cover native bootstrap returning before Main binds,
 then initial assignment and direct peer review; and revised-Plan abandonment before
 any candidate or after Reviewer escalation, including closure after finish, changed
 evidence/activity, reused/lost terminals and rejection of current-Plan bypasses.
+Main-observed startup transport failure is also covered: no fabricated child
+report, no stopping working/reused sessions, and preserved resume/abandonment and
+closure guards. The real host exercised only recording this failure; simulated
+recovery tests do not establish a successful live peer cycle.
 These checks do not launch actual children or demonstrate real peer continuation.
 
 **Real Herdr pair validation is delegated to the user's local Codex and has not

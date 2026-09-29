@@ -151,6 +151,9 @@ checks the exact latest candidate. Close both only after PASS was collected.
 For scope/environment/capability intervention, use `pair-resume`; for an observed
 lost or safely collected stopped participant, use `pair-replace`. Neither operation
 is part of an ordinary finding/fix loop. Keep prior report paths and finding IDs.
+If IPC prevents even `begin`/`blocked` and both children are still unstarted and
+idle, use the Main-only `pair-block-start` recovery in [pairs.md](../core/pairs.md).
+It records an external transport failure, never a child verdict or completion.
 If a revised Plan drops a stopped old pair, follow the explicit `pairs.py abandon`
 procedure in [pairs.md](../core/pairs.md), then use `pair-close`. This preserves
 evidence and verifies idle/activity without labeling unfinished work as PASS.

@@ -132,6 +132,22 @@ must integrate the actual reviewed artifact; the helper is not a merge engine.
 
 ## Exceptions and recovery
 
+If Herdr IPC fails before either participant starts, even a child's `blocked`
+submission can fail its live identity check. Preserve the local error reports.
+Main may record this externally observed startup failure, without impersonating a
+child or manufacturing a report:
+```
+python3 "$hd" pair-block-start --task "$worker" --file "$transport_evidence"
+```
+This requires the current Plan, both original participants idle with live identity
+and activity evidence, no current result (including `working`), and no candidate,
+handoff or collection. It records `BLOCKED` plus separate `startup_blocker`
+evidence. It neither repairs permissions nor completes/closes the pair. Restore
+the existing transport before `pair-resume`, or explicitly abandon the stopped
+work after a revised Plan excludes it. Existing identity/activity checks still
+apply at abandonment and closure. Never call a live participant lost merely to
+get around this failure.
+
 Main may `pair-resume --task <member> --file <resolution>` for a stopped pair or a
 candidate changed after PASS but before collection. `--contract-file` records an
 explicit scope clarification, never a Reviewer-created requirement. After adopting

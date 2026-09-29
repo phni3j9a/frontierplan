@@ -1,0 +1,24 @@
+{
+  "status": "BLOCKED",
+  "pair": "/tmp/frontierplan-j503_xcu/tasks/249b647355db/pair.json",
+  "startup_blocker": {
+    "source": "main_observed_transport_failure",
+    "evidence": "Real host startup transport failure, observed by original Main. Both child begin and blocked submit calls failed with Operation not permitted; no child result was registered. Preserve unedited worker /tmp/frontierplan-j503_xcu/tasks/249b647355db/fdd770d5d534.blocked.md and reviewer /tmp/frontierplan-j503_xcu/tasks/8bb071715d0b/59ec37bca280.blocked.md. Both registered sessions were observed done/idle, with distinct runtime threads and configured workspace-write + never; no code edits, candidate, ordinary handoff or PASS occurred.\nMain separately reproduced with `codex sandbox -C /tmp/fp17-real-kqrq6b8u/herdr-project -P :workspace -- python3 ...`. Actual stdout in /tmp/fp17-real-kqrq6b8u/socket-syscall.stdout includes BOTH before_socket AND before_connect. The PermissionError occurs at connect(), not at socket creation. An earlier consultation prompt erroneously described socket creation as failing; that description and Astra's repetition are superseded by this raw syscall-stage output. The exact kernel/sandbox denial layer remains undetermined.\nBound socket: /home/server/.config/herdr/herdr.sock. Exact socket allowlist probes (including profile with proxy enabled) also returned EPERM. No global config changes, sandbox disabling, hidden Main relay or fabricated peer reports. Keep the original fixture/run and live participants for recovery. This observation records BLOCKED only; it does not establish successful communication, completed review, a closed run or permission to merge the follow-up PR.\n",
+    "participants": {
+      "249b647355db": {
+        "request_id": "fdd770d5d534",
+        "handle_digest": "3f964daae226698a5370ad2a08943db3f77ca28e1e205219cb00a48a72fcc202",
+        "terminal_id": "term_65ca03e57360628",
+        "state_change_seq": 685
+      },
+      "8bb071715d0b": {
+        "request_id": "59ec37bca280",
+        "handle_digest": "c2a285e4d9467797d2200571cbecfc8a3f6f44e9efe3668dbdd2c6b2e7ac088c",
+        "terminal_id": "term_65ca03e0e84d727",
+        "state_change_seq": 683
+      }
+    },
+    "recorded_at": 1790693768.315548
+  },
+  "note": "No child report, PASS or closure was created. Resolve transport before resume; a revised Plan may explicitly abandon this stopped work."
+}

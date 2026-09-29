@@ -1,0 +1,192 @@
+{
+  "pair": {
+    "id": "249b647355db",
+    "run": "/tmp/frontierplan-j503_xcu",
+    "plan_id": "herdr-peer-smoke-1",
+    "worker": "249b647355db",
+    "reviewer": "8bb071715d0b",
+    "cwd": "/tmp/fp17-real-kqrq6b8u/herdr-project",
+    "scope": [
+      "normalize.py",
+      "test_normalize.py"
+    ],
+    "contract": "Objective: finish normalize_label in /tmp/fp17-real-kqrq6b8u/herdr-project/normalize.py to trim/collapse whitespace and Unicode-casefold, with empty input returning \"\". Owned files: normalize.py and test_normalize.py. Existing public function signature stays stable.\nCompletion: \"  HELLO\\tStraße  \" becomes \"hello strasse\"; whitespace-only input is empty; existing whitespace behavior stays intact. Run python3 -m unittest -v and an independent mixed-case/Unicode check.\nLive-test staging: on the FIRST Worker turn only, submit the existing seeded candidate unchanged and label it incomplete test input. This fixture deliberately lacks casefold so the real Reviewer must independently find the concrete contract violation. On the subsequent Worker turn, make the smallest fix plus focused tests and resubmit to the SAME Reviewer. Reviewer must give truthful findings/PASS for the real code.\nEnd each turn immediately after handoff. Preserve exact command output, actual CODEX_THREAD_ID/CODEX_SESSION_ID, finding IDs, and session continuity in reports. No other agents, external messages, config changes, or publishing.\n",
+    "contract_digest": "ed9140b09c710542fc9f73234d347e7a5737079a3a4febe40d137ed4ef77a541",
+    "status": "BLOCKED",
+    "candidate": null,
+    "pass": null,
+    "collected": null,
+    "pending": null,
+    "native_capability": null,
+    "startup_blocker": {
+      "source": "main_observed_transport_failure",
+      "evidence": "Real host startup transport failure, observed by original Main. Both child begin and blocked submit calls failed with Operation not permitted; no child result was registered. Preserve unedited worker /tmp/frontierplan-j503_xcu/tasks/249b647355db/fdd770d5d534.blocked.md and reviewer /tmp/frontierplan-j503_xcu/tasks/8bb071715d0b/59ec37bca280.blocked.md. Both registered sessions were observed done/idle, with distinct runtime threads and configured workspace-write + never; no code edits, candidate, ordinary handoff or PASS occurred.\nMain separately reproduced with `codex sandbox -C /tmp/fp17-real-kqrq6b8u/herdr-project -P :workspace -- python3 ...`. Actual stdout in /tmp/fp17-real-kqrq6b8u/socket-syscall.stdout includes BOTH before_socket AND before_connect. The PermissionError occurs at connect(), not at socket creation. An earlier consultation prompt erroneously described socket creation as failing; that description and Astra's repetition are superseded by this raw syscall-stage output. The exact kernel/sandbox denial layer remains undetermined.\nBound socket: /home/server/.config/herdr/herdr.sock. Exact socket allowlist probes (including profile with proxy enabled) also returned EPERM. No global config changes, sandbox disabling, hidden Main relay or fabricated peer reports. Keep the original fixture/run and live participants for recovery. This observation records BLOCKED only; it does not establish successful communication, completed review, a closed run or permission to merge the follow-up PR.\n",
+      "participants": {
+        "249b647355db": {
+          "request_id": "fdd770d5d534",
+          "handle_digest": "3f964daae226698a5370ad2a08943db3f77ca28e1e205219cb00a48a72fcc202",
+          "terminal_id": "term_65ca03e57360628",
+          "state_change_seq": 685
+        },
+        "8bb071715d0b": {
+          "request_id": "59ec37bca280",
+          "handle_digest": "c2a285e4d9467797d2200571cbecfc8a3f6f44e9efe3668dbdd2c6b2e7ac088c",
+          "terminal_id": "term_65ca03e0e84d727",
+          "state_change_seq": 683
+        }
+      },
+      "recorded_at": 1790693768.315548
+    }
+  },
+  "participants": [
+    {
+      "id": "e1e1815499d2",
+      "role": "director",
+      "profile": {
+        "role": "director",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "xhigh"
+      },
+      "name": "fp-87624cc57b10-e1e1815499d2",
+      "handle": {
+        "pane_id": "w1:p2J",
+        "terminal_id": "term_65ca026b4ba6426"
+      },
+      "request_id": "cc423274e4ff",
+      "delivery": "sent",
+      "requested_codex_args": [
+        "-C",
+        "/tmp/fp17-real-kqrq6b8u/herdr-project",
+        "-m",
+        "gpt-6-astra",
+        "-c",
+        "model_reasoning_effort=\"xhigh\"",
+        "-c",
+        "default_permissions=\":workspace\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_ROLE=\"director\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_TASK=\"/tmp/frontierplan-j503_xcu/tasks/e1e1815499d2\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_PANE_ID=\"w1:p2J\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_BIN_PATH=\"/home/server/.local/bin/herdr\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_AGENT=\"\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_SESSION_ID=\"\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_SOCKET_PATH=\"/home/server/.config/herdr/herdr.sock\"",
+        "--sandbox",
+        "workspace-write",
+        "--ask-for-approval",
+        "never",
+        "--add-dir",
+        "/tmp/frontierplan-j503_xcu",
+        "--no-alt-screen"
+      ]
+    },
+    {
+      "id": "249b647355db",
+      "role": "worker",
+      "profile": {
+        "role": "worker",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "max",
+        "service_tier": "fast"
+      },
+      "name": "fp-87624cc57b10-249b647355db",
+      "handle": {
+        "pane_id": "w1:p2M",
+        "terminal_id": "term_65ca03e57360628"
+      },
+      "request_id": "fdd770d5d534",
+      "delivery": "sent",
+      "requested_codex_args": [
+        "-C",
+        "/tmp/fp17-real-kqrq6b8u/herdr-project",
+        "-m",
+        "gpt-6-luna",
+        "-c",
+        "model_reasoning_effort=\"max\"",
+        "-c",
+        "default_permissions=\":workspace\"",
+        "-c",
+        "service_tier=\"fast\"",
+        "-c",
+        "features.fast_mode=true",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_ROLE=\"worker\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_TASK=\"/tmp/frontierplan-j503_xcu/tasks/249b647355db\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_PANE_ID=\"w1:p2M\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_BIN_PATH=\"/home/server/.local/bin/herdr\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_AGENT=\"\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_SESSION_ID=\"\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_SOCKET_PATH=\"/home/server/.config/herdr/herdr.sock\"",
+        "--sandbox",
+        "workspace-write",
+        "--ask-for-approval",
+        "never",
+        "--add-dir",
+        "/tmp/frontierplan-j503_xcu",
+        "--no-alt-screen"
+      ]
+    },
+    {
+      "id": "8bb071715d0b",
+      "role": "reviewer",
+      "profile": {
+        "role": "reviewer",
+        "model": "gpt-6-sol",
+        "reasoning_effort": "xhigh"
+      },
+      "name": "fp-87624cc57b10-8bb071715d0b",
+      "handle": {
+        "pane_id": "w1:p2K",
+        "terminal_id": "term_65ca03e0e84d727"
+      },
+      "request_id": "59ec37bca280",
+      "delivery": "sent",
+      "requested_codex_args": [
+        "-C",
+        "/tmp/fp17-real-kqrq6b8u/herdr-project",
+        "-m",
+        "gpt-6-sol",
+        "-c",
+        "model_reasoning_effort=\"xhigh\"",
+        "-c",
+        "default_permissions=\":workspace\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_ROLE=\"reviewer\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_TASK=\"/tmp/frontierplan-j503_xcu/tasks/8bb071715d0b\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_PANE_ID=\"w1:p2K\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_BIN_PATH=\"/home/server/.local/bin/herdr\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_AGENT=\"\"",
+        "-c",
+        "shell_environment_policy.set.FRONTIERPLAN_MAIN_SESSION_ID=\"\"",
+        "-c",
+        "shell_environment_policy.set.HERDR_SOCKET_PATH=\"/home/server/.config/herdr/herdr.sock\"",
+        "--sandbox",
+        "workspace-write",
+        "--ask-for-approval",
+        "never",
+        "--add-dir",
+        "/tmp/frontierplan-j503_xcu",
+        "--no-alt-screen"
+      ]
+    }
+  ],
+  "fixture_head": "61d804be41953b947390d2257a7641cd02972a18",
+  "fixture_status": "",
+  "recovery_helper_sha256": "f7a39531a841f12138d8269e8beec75f5ee41220cc8dc8d1457277e8d3c916fe"
+}

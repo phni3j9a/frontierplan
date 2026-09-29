@@ -415,6 +415,43 @@ def spawn_pair(run: str, file: str, cwd: str | None = None,
     return {"pair": value["pair"], **launched}
 
 
+def block_pair_start(task_path: str, file: str) -> dict:
+    """Main records a live, idle pair's transport failure before either turn began.
+
+    A child unable to reach Herdr cannot authenticate even a blocked submission.
+    Keep this external observation separate from child reports and verdicts.
+    """
+    import pairs
+    evidence = fp.text(file)
+    with pairs.edit(task_path) as (record, pair, _, state):
+        api = Herdr(state)
+        main_pane(state, api)
+        fp.require(state["phase"] == "executing" and state["plan"]["id"] == pair["plan_id"],
+                   "Only the current executing Plan's pair can be stopped.")
+        fp.require(pair["status"] == "IMPLEMENTING" and all(pair[key] is None for key in
+                   ("candidate", "pass", "collected", "pending")),
+                   "Only an unstarted pair without a candidate or handoff can be stopped this way.")
+        participants = {}
+        for path in pairs.members(pair):
+            task = fp.read(path / "task.json")
+            fp.require(not fp.ended(task) and not task.get("closing") and task.get("handle"),
+                       "Both original participants must still be available.")
+            fp.require(fp.current_result(path, task) is None,
+                       "A participant already began or reported; use its existing recovery protocol.")
+            agent = owned_pane(task, state, api)
+            fp.require(ready(agent) and "state_change_seq" in agent,
+                       "Wait until both original participants are idle with activity evidence.")
+            participants[task["id"]] = {"request_id": task["request_id"],
+                "handle_digest": fp.digest(task["handle"]), "terminal_id": agent["terminal_id"],
+                "state_change_seq": agent["state_change_seq"]}
+        pair["startup_blocker"] = {"source": "main_observed_transport_failure", "evidence": evidence,
+                                   "participants": participants, "recorded_at": time.time()}
+        pair["status"] = "BLOCKED"
+        return {"status": "BLOCKED", "pair": str(record), "startup_blocker": pair["startup_blocker"],
+                "note": "No child report, PASS or closure was created. Resolve transport before resume; "
+                        "a revised Plan may explicitly abandon this stopped work."}
+
+
 def deliver_pair(task_path: str, request_id: str, timeout: int = 30) -> dict:
     """Child-only transport to its registered peer; never general run management."""
     import pairs
@@ -666,6 +703,7 @@ def cli() -> None:
     q = sub.add_parser("spawn"); q.add_argument("--run", required=True); q.add_argument("--role", choices=("director", *fp.EXECUTORS), required=True); q.add_argument("--file"); q.add_argument("--cwd")
     q = sub.add_parser("pair-spawn"); q.add_argument("--run", required=True); q.add_argument("--file", required=True); q.add_argument("--cwd"); q.add_argument("--scope", action="append"); q.add_argument("--role", choices=("worker", "design"), default="worker")
     q = sub.add_parser("pair-close"); q.add_argument("--task", required=True)
+    q = sub.add_parser("pair-block-start"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("pair-resume", "pair-replace"):
         q = sub.add_parser(name); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
         if name == "pair-resume": q.add_argument("--contract-file")
@@ -682,6 +720,7 @@ def cli() -> None:
     elif a.action == "spawn": result = spawn(a.run, a.role, a.file, a.cwd)
     elif a.action == "pair-spawn": result = spawn_pair(a.run, a.file, a.cwd, a.scope, a.role)
     elif a.action == "pair-close": result = close_pair(a.task)
+    elif a.action == "pair-block-start": result = block_pair_start(a.task, a.file)
     elif a.action == "pair-resume": result = resume_pair(a.task, a.file, a.contract_file)
     elif a.action == "pair-replace": result = replace_pair(a.task, a.file)
     elif a.action == "send": result = send(a.task, a.file)

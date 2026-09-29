@@ -224,7 +224,11 @@ python3 tools/package_release.py
 ```
 
 GitHub Actionsにも同じ検証を登録しています。詳細は [検証手順](docs/validation.md)。
-**Issue #17の実Herdrペア往復はローカルCodexでの検証待ちです。nativeの実往復も未検証です。**
+**Issue #17の実機検証は未完了です。** 2026-09-29のHerdr試験では、制限付きの子から
+ローカルソケットへの接続が拒否され、候補提出前に停止しました。nativeを含む実測範囲・
+結果・残事項は[実機証拠](docs/evidence/issue-17-peer-smoke.json)を参照してください。
+開始も障害報告もできないHerdrペアは、Mainが実identityとidleを確認する
+`pair-block-start`で別の障害記録を残せます。これはPASSや検証完了を意味しません。
 [ローカル検証の引継ぎ手順](docs/issue-17-validation.md)に、同一Worker修正→同一Reviewer PASS→
 Main回収→両ペイン終了の確認項目と、残すべき証跡を記載しています。
 自動テストはローカルの状態遷移と模擬herdrを検証するもので、実モデルのルーティング・課金・

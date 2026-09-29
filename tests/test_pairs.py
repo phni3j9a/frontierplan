@@ -374,6 +374,56 @@ class HerdrPairs(unittest.TestCase):
         fp.start(self.run)
         return worker, reviewer
 
+    def test_main_records_unstarted_transport_failure_without_fabricating_child_reports(self):
+        worker, reviewer = self.ready()
+        before = [fp.task_at(p)[1] for p in (worker, reviewer)]
+        value = hd.block_pair_start(worker, self.write("ipc.md", "SIMULATED: both begin calls failed at Herdr IPC; local reports preserved."))
+        self.assertEqual(value["status"], "BLOCKED")
+        self.assertEqual(value["startup_blocker"]["source"], "main_observed_transport_failure")
+        self.assertEqual([fp.task_at(p)[1] for p in (worker, reviewer)], before)
+        self.assertTrue(all(fp.current_result(Path(p), fp.task_at(p)[1]) is None for p in (worker, reviewer)))
+        self.assertEqual(pairs.collect(worker)["reports"], [])
+        with self.assertRaises(fp.Failure): hd.close_pair(worker)
+        with self.assertRaises(fp.Failure): hd.final_check(self.run, self.input)
+        hd.resume_pair(worker, self.write("restored.md", "SIMULATED: restored IPC within existing permissions"))
+        self.assertEqual(pairs.at(worker)[1]["status"], "IMPLEMENTING")
+        self.assertIsNotNone(pairs.at(worker)[1]["startup_blocker"])
+        pass_pair(self, worker, reviewer)
+        pairs.collect(worker); hd.close_pair(worker)
+
+    def test_startup_blocker_requires_idle_original_sessions_and_unstarted_turns(self):
+        worker, reviewer = self.ready()
+        peer = self.api.registered[fp.task_at(reviewer)[1]["name"]]
+        for change in ({"agent_status": "working"}, {"terminal_id": "unrelated-terminal"}):
+            original = dict(peer); peer.update(change)
+            with self.assertRaises(fp.Failure): hd.block_pair_start(worker, self.input)
+            self.assertEqual(pairs.at(worker)[1]["status"], "IMPLEMENTING")
+            peer.clear(); peer.update(original)
+        with child(self, worker):
+            with self.assertRaises(fp.Failure): hd.block_pair_start(worker, self.input)
+            pairs.begin(worker, fp.task_at(worker)[1]["request_id"])
+        with self.assertRaisesRegex(fp.Failure, "already began"):
+            hd.block_pair_start(worker, self.input)
+        pair_turn(self, worker, "candidate")
+        with self.assertRaises(fp.Failure): hd.block_pair_start(worker, self.input)
+
+    def test_startup_blocker_can_be_abandoned_only_after_real_replan_and_activity_check(self):
+        worker, reviewer = self.ready()
+        hd.block_pair_start(worker, self.input)
+        with self.assertRaises(fp.Failure): pairs.abandon(worker, self.input)
+        director = str(fp.director_task(Path(self.run))[0])
+        hd.consult(self.run, self.input)
+        self.decide(director, dict(base.PLAN, plan_id="plan-2", authorization_message=1))
+        fp.start(self.run)
+        pairs.abandon(worker, self.input)
+        peer = self.api.registered[fp.task_at(reviewer)[1]["name"]]
+        peer["state_change_seq"] += 1
+        with self.assertRaisesRegex(fp.Failure, "activity changed"): hd.close_pair(worker)
+        pairs.abandon(worker, self.input)
+        hd.close_pair(worker)
+        self.assertEqual(pairs.at(worker)[1]["status"], "ABANDONED")
+        self.assertIsNone(pairs.at(worker)[1]["pass"])
+
     def test_abandoned_pair_closes_idle_bootstrap_but_keeps_activity_and_identity_guards(self):
         worker, reviewer = self.obsolete_pair()
         peer = self.api.registered[fp.task_at(reviewer)[1]["name"]]

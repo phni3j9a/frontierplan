@@ -1,0 +1,218 @@
+{
+  "source": "Read-only state_5.sqlite query, scoped to the two disposable fixture cwd values. Child model/effort/permissions are observed runtime metadata, not inferred from requested arguments.",
+  "observed_at": "2026-09-29T14:58:04.655328+00:00",
+  "threads": [
+    {
+      "id": "01a0ed9b-6416-7302-8371-986fca4de561",
+      "model": "gpt-6-astra",
+      "reasoning_effort": "xhigh",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/herdr-project",
+      "source": "cli",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/herdr-project"
+          },
+          {
+            "type": "path",
+            "path": "/tmp/frontierplan-j503_xcu"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a0ed9e-0bd3-7a10-b74c-c19b54181ee4",
+      "model": "gpt-6-astra",
+      "reasoning_effort": "xhigh",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/native-project",
+      "source": "exec",
+      "effective_policy": {
+        "type": "disabled",
+        "filesystem": null,
+        "network": null,
+        "writable_entries": []
+      }
+    },
+    {
+      "id": "01a0eda1-5117-7ae1-bfa5-e34e4f5dd667",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "xhigh",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/herdr-project",
+      "source": "cli",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/herdr-project"
+          },
+          {
+            "type": "path",
+            "path": "/tmp/frontierplan-j503_xcu"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a0eda1-6352-7f73-97f9-5ecf3e5a4552",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "max",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/herdr-project",
+      "source": "cli",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/herdr-project"
+          },
+          {
+            "type": "path",
+            "path": "/tmp/frontierplan-j503_xcu"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a0eda1-fa97-7b00-90da-82cf72974e60",
+      "model": "gpt-6-astra",
+      "reasoning_effort": "xhigh",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/native-project",
+      "source": "exec",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/native-project"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a0eda7-9cf0-7990-aa85-927a6b962836",
+      "model": "gpt-6-luna",
+      "reasoning_effort": "max",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/native-project",
+      "source": "{\"subagent\":{\"thread_spawn\":{\"parent_thread_id\":\"01a0eda1-fa97-7b00-90da-82cf72974e60\",\"depth\":1,\"agent_path\":\"/root/smoke_worker\",\"agent_nickname\":\"Turing\",\"agent_role\":null}}}",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/native-project"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a0eda7-c613-7ed1-b8fe-2e858139f60b",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "xhigh",
+      "approval_mode": "never",
+      "cwd": "/tmp/fp17-real-kqrq6b8u/native-project",
+      "source": "{\"subagent\":{\"thread_spawn\":{\"parent_thread_id\":\"01a0eda1-fa97-7b00-90da-82cf72974e60\",\"depth\":1,\"agent_path\":\"/root/smoke_reviewer\",\"agent_nickname\":\"Anscombe\",\"agent_role\":null}}}",
+      "effective_policy": {
+        "type": "managed",
+        "filesystem": "restricted",
+        "network": "restricted",
+        "writable_entries": [
+          {
+            "type": "path",
+            "path": "/tmp/fp17-real-kqrq6b8u/native-project"
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "slash_tmp"
+            }
+          },
+          {
+            "type": "special",
+            "value": {
+              "kind": "tmpdir"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

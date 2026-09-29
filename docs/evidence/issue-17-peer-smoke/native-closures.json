@@ -1,0 +1,37 @@
+{
+  "closed_by": "Original TUI Main, after child runtime task_complete events and real Reviewer PASS; exec harness does not expose this tool.",
+  "closures": [
+    {
+      "tool": "mcp__codex_tui__set_thread_archived",
+      "arguments": {
+        "archived": true,
+        "threadId": "01a0eda7-9cf0-7990-aa85-927a6b962836"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "thread/archive failed: thread 01a0eda7-9cf0-7990-aa85-927a6b962836 already has an active writer (code -32600)"
+          }
+        ],
+        "isError": true
+      }
+    },
+    {
+      "tool": "mcp__codex_tui__set_thread_archived",
+      "arguments": {
+        "archived": true,
+        "threadId": "01a0eda7-c613-7ed1-b8fe-2e858139f60b"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "thread/archive failed: thread 01a0eda7-c613-7ed1-b8fe-2e858139f60b already has an active writer (code -32600)"
+          }
+        ],
+        "isError": true
+      }
+    }
+  ]
+}

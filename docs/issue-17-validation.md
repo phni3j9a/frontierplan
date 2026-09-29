@@ -1,9 +1,14 @@
 # Issue #17: local Codex validation handoff
 
-Status: **real Herdr and native peer-continuation validation pending**. The Python
-suite simulates both backends; it cannot establish that live agents receive and
-resume peer turns. The user will perform Herdr validation with local Codex. Do not
-label the smoke complete or enable a hidden Main relay to make it pass.
+Status: **not complete; the 2026-09-29 real Herdr attempt failed before peer
+continuation**. Actual Codex children using workspace-write + never could not
+connect to Herdr's Unix socket (`EPERM`). Both `begin` and their attempted
+`blocked` submissions failed the required live identity check. No candidate or
+PASS was produced. The Python suite still simulates both backends; it cannot
+establish live communication. See the
+[real-host evidence](evidence/issue-17-peer-smoke.json) for native coverage and
+remaining blockers. PR #18 is already merged; the follow-up must not be merged as
+successful validation while the live acceptance criteria remain unmet.
 
 ## Automated checks
 
@@ -18,6 +23,9 @@ uncommitted/untracked changes, ownership and stale identity, counter-evidence,
 stagnation/resume, replacement, completion/closure and transport failure races.
 Regression cases also cover identity bootstrap before native binding and explicit
 abandonment of stopped tasks excluded by a revised Plan, without fabricating PASS.
+The startup failure regression verifies Main's separate transport-blocker record,
+rejection of busy/reused/started participants, and ordinary resume or revised-Plan
+abandonment without weakening the closure activity checks.
 These are simulated tests, including the fixture's native capability assertions.
 
 ## Real Herdr smoke — local Codex
@@ -70,6 +78,21 @@ not just Main. Confirm both children end their turn after handoff; a worker bloc
 in a permanent peer wait prevents its own continuation. A busy-peer retry must not
 create duplicate prompts. An uncertain prompt response must be investigated, not
 blindly retried. Inspect wrong/reused terminal handling only in a disposable run.
+
+Check child socket access under the actual launch boundary before treating an
+idle session as a successful bootstrap. On the observed Linux/Codex 0.159.0 host,
+`codex sandbox -P :workspace -- herdr ...` reproduced the permission failure.
+An independent Python probe reached `socket.connect()` before EPERM; socket
+creation itself succeeded. Exact socket allowlist attempts also failed. The
+specific enforcement layer is not established. Do not infer a dead Herdr daemon,
+disable the sandbox, broaden networking, or bypass identity checks to turn this
+failure into a passing smoke.
+
+When both original children are idle and neither has begun, preserve their local
+error reports and use `herdr.py pair-block-start --task "$worker" --file
+"$transport_evidence"`. This is Main's external observation, not a child verdict.
+The pair remains incomplete and cannot close normally until recovery or explicit
+abandonment under a revised Plan. Preserve the sessions needed for recovery.
 
 For SWE2, repeat the essential round trip with a real Devin Worker and Codex
 Reviewer; record Devin's actual exported model and existing bypass-mode boundary.
