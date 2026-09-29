@@ -1,0 +1,40 @@
+  │ … +17 lines
+  └ # Worker report — initial turn
+
+    Status: BLOCKED before candidate submission.
+    +29 lines (ctrl+t to view transcript)
+
+• 割り当ての初回ターンとして、既存候補を変更せず
+  提出しようとしましたが、pairs.py begin が
+  Herdr の現在ペイン確認で Operation not
+  permitted となり、ペア手順を開始できませんでし
+  た。pairs.py submit --kind blocked も同じエ
+  ラーで失敗しています。
+
+  プロトコル用の停止レポートを /tmp/
+  frontierplan-j503_xcu/tasks/41594b896c4f/
+  a2fe2261c587.report.md に保存しました。ペア記
+  録は IMPLEMENTING のままで、候補 digest も
+  Reviewer へのハンドオフもありません。作業ツ
+  リーは変更していません。テストも未実行です。
+
+  レポートに実際の CODEX_THREAD_ID /
+  CODEX_SESSION_ID と、両コマンドの出力を記録し
+  ています。 Herdr の本人確認アクセスが復旧した
+  後、同じ Worker/Reviewer ペアを再開する必要が
+  あります。
+
+  Worked for 2m 33s • 12:39 AM
+
+  Warnings · 1 of 2 · Startup
+
+  Configured value for `permission_profile`
+  is disallowed by requirements; falling back
+  from `frontierplan-frontierplan-j503_xcu` to
+  required value `:workspace`.
+
+
+
+
+
+  k keep & next · esc dismiss & close

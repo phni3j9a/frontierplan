@@ -1,0 +1,24 @@
+{
+  "status": "BLOCKED",
+  "pair": "/tmp/frontierplan-j503_xcu/tasks/6e4e914a2ba1/pair.json",
+  "startup_blocker": {
+    "source": "main_observed_transport_failure",
+    "evidence": "Corrected per-process config passed codex sandbox probe, but actual Herdr TUI children still use active_permission_profile :workspace (observed actual turn_context), network_access false and inherited shared-server allowed domains. Requested run-specific profile is in both task requested_codex_args, but not active in either runtime. Both child begin and blocked submit again failed EPERM before result/candidate. Original per-child error files and rollout tool responses preserved. Both exact new sessions 01a0edc8-7c60-7b10-8d47-78ea8955a6f7 and 01a0edc8-69f1-7cd1-b754-accea31b4e20 observed idle with original terminals. No edits or peer exchange. This is second failed attempt, not a successful launch-profile test. Codex --no-daemon is an explicit CLI option to use its own process/server instead of shared background server; Main is adding it to child launch so per-process settings take effect. Existing shared server remains untouched.\n",
+    "participants": {
+      "6e4e914a2ba1": {
+        "request_id": "81d9694c6638",
+        "handle_digest": "a92487e0a65f652ffe0e0911f99d4c60429a644769f73817c41a4e8260e046dc",
+        "terminal_id": "term_65ca0d70dc8d72a",
+        "state_change_seq": 728
+      },
+      "9140903ba72e": {
+        "request_id": "64e1be389a11",
+        "handle_digest": "7f7abe242f7097af2cce4797f19cf8ca0ba8658527ee803c5b3ddd74dd3f72c2",
+        "terminal_id": "term_65ca0d6c512eb29",
+        "state_change_seq": 727
+      }
+    },
+    "recorded_at": 1790695982.5594065
+  },
+  "note": "No child report, PASS or closure was created. Resolve transport before resume; a revised Plan may explicitly abandon this stopped work."
+}

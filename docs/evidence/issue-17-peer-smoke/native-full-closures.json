@@ -1,0 +1,38 @@
+[
+  {
+    "role": "worker",
+    "threadId": "01a0edca-f04c-7df3-afe0-2ecd93933f67",
+    "tool": "mcp__codex_tui__set_thread_archived",
+    "arguments": {
+      "archived": true,
+      "threadId": "01a0edca-f04c-7df3-afe0-2ecd93933f67"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"threadId\":\"01a0edca-f04c-7df3-afe0-2ecd93933f67\",\"archived\":true}"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "role": "reviewer",
+    "threadId": "01a0edca-caac-7241-b2c2-046b523ccdba",
+    "tool": "mcp__codex_tui__set_thread_archived",
+    "arguments": {
+      "archived": true,
+      "threadId": "01a0edca-caac-7241-b2c2-046b523ccdba"
+    },
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"threadId\":\"01a0edca-caac-7241-b2c2-046b523ccdba\",\"archived\":true}"
+        }
+      ],
+      "isError": false
+    }
+  }
+]

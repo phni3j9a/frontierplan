@@ -1,0 +1,45 @@
+{
+  "codex": "codex-cli 0.159.0",
+  "herdr": "herdr 0.9.1",
+  "python": "Python 3.12.3",
+  "tested_plugin_commit": "5c6c95380b230ac3920d32d42a97d98cbfb3c5ae",
+  "source_tag": "rust-v0.159.0",
+  "sources": [
+    {
+      "url": "https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/linux-sandbox/src/landlock.rs",
+      "sha256": "4f92e49f44694d2c946ab2cb96fa4293daf52023b674a63332a863bb00c1370d"
+    },
+    {
+      "url": "https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/core/src/config/permissions.rs",
+      "sha256": "cda9109f6a5405dbf2abbe7d53883b755419c5b6d0b3e7f5834c65710db3479a"
+    },
+    {
+      "url": "https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/network-proxy/README.md",
+      "sha256": "677dd6517cab4cbbab9ad35f680fb56f674069631af4ba2aa150959fe001ef0d"
+    }
+  ],
+  "finding": "Linux restricted seccomp denies connect. Managed proxy routing permits AF_UNIX only with allow-all Unix sockets; per-path Unix-socket proxy allowlists are macOS-specific. Corrected profile retains workspace filesystem and never, with proxy domain policy and all local AF_UNIX access. No global config mutation. Probe results are scoped to the tested operations, not a universal isolation proof.",
+  "shared_server_failure": {
+    "actual_profile": ":workspace",
+    "requested_profile": "frontierplan-frontierplan-j503_xcu",
+    "participants": [
+      "01a0edc8-7c60-7b10-8d47-78ea8955a6f7",
+      "01a0edc8-69f1-7cd1-b754-accea31b4e20"
+    ],
+    "source": "https://github.com/openai/codex/blob/rust-v0.159.0/codex-rs/tui/src/app_server_session.rs",
+    "detail": "Earlier inference that shared-server reuse alone explained fallback was disproved: --no-daemon also selected :workspace. Actual F2 startup warning established /etc/codex/requirements.toml disallowed the requested named profile. Source behavior and isolated sandbox success do not establish real-session policy acceptance."
+  },
+  "managed_requirements": {
+    "path": "/etc/codex/requirements.toml",
+    "owner": "root:root",
+    "mode": "0644",
+    "allowed_profiles_before": [
+      ":read-only",
+      ":workspace",
+      ":danger-full-access",
+      "rfkit-loop-worker"
+    ],
+    "required_setup": "Explicit user-approved sudo addition of frontierplan-herdr=true in allowed_permission_profiles; proposal prepared, approval pending.",
+    "warning_file": "herdr-requirements-warning.txt"
+  }
+}

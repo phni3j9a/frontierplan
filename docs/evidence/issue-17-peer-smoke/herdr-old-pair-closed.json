@@ -1,0 +1,11 @@
+{
+  "closed": [
+    {
+      "closed_record": "249b647355db"
+    },
+    {
+      "closed_record": "8bb071715d0b"
+    }
+  ],
+  "note": "Recorded lost/unlaunched terminals are never closed; collected/abandoned evidence is retained."
+}

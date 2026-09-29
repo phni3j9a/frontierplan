@@ -1,0 +1,129 @@
+{
+  "status": "PHASE_A_PASS_COLLECTED_CLOSURE_PENDING",
+  "summary": "実際の同一 peer 間の finding → fix → PASS、collection、独立 integration test まで完了しました。closure は未完了です。",
+  "run": "/tmp/frontierplan-gz8qi71g",
+  "run_id": "b3580048bb29",
+  "plan_id": "native-normalize-composite-1",
+  "controller": {
+    "native_task_path": "/root",
+    "CODEX_THREAD_ID": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+    "CODEX_SESSION_ID": "01a0edc5-ff16-7f61-89d5-25185f2e5463"
+  },
+  "subjects": [
+    {
+      "role": "Astra Director",
+      "native_handle": "/root/native_astra",
+      "native_task_path": "/root/native_astra",
+      "helper_task": "/tmp/frontierplan-gz8qi71g/tasks/c0762e3a7488",
+      "CODEX_THREAD_ID": "01a0edc7-70c6-70f3-a64b-fcbbfca1ffbf",
+      "CODEX_SESSION_ID": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+      "actual_model": "gpt-6-astra",
+      "actual_effort": "xhigh",
+      "fork_turns": "none",
+      "observed_native_status": "completed",
+      "idle": true,
+      "closed": false
+    },
+    {
+      "role": "Reviewer",
+      "native_handle": "/root/native_reviewer",
+      "native_task_path": "/root/native_reviewer",
+      "helper_task": "/tmp/frontierplan-gz8qi71g/tasks/7327dfa54d40",
+      "CODEX_THREAD_ID": "01a0edca-caac-7241-b2c2-046b523ccdba",
+      "CODEX_SESSION_ID": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+      "actual_model": "gpt-6-sol",
+      "actual_effort": "xhigh",
+      "fork_turns": "none",
+      "observed_native_status": "completed",
+      "idle": true,
+      "closed": false
+    },
+    {
+      "role": "Worker",
+      "native_handle": "/root/native_worker",
+      "native_task_path": "/root/native_worker",
+      "helper_task": "/tmp/frontierplan-gz8qi71g/tasks/a84d0b179b9b",
+      "CODEX_THREAD_ID": "01a0edca-f04c-7df3-afe0-2ecd93933f67",
+      "CODEX_SESSION_ID": "01a0edc5-ff16-7f61-89d5-25185f2e5463",
+      "actual_model": "gpt-6-luna",
+      "actual_effort": "max",
+      "fork_turns": "none",
+      "fast": "未検証。native spawn schema に tier フィールドなし",
+      "observed_native_status": "completed",
+      "idle": true,
+      "closed": false
+    }
+  ],
+  "identity_and_permissions": {
+    "ids_modified": false,
+    "native_handles_equal_thread_ids_claimed": false,
+    "all_subjects_runtime_boundary": "workspace-write / never",
+    "runtime_log_evidence_saved": true,
+    "sqlite_check": "元の Main が独立確認するため未実施"
+  },
+  "communication": {
+    "spawn_count": 3,
+    "main_ordinary_relay_count": 0,
+    "main_initial_lifecycle_followups": 2,
+    "worker_to_same_reviewer_native_followups": 2,
+    "reviewer_to_same_worker_native_followups": 1,
+    "native_call_results_preserved": true
+  },
+  "review": {
+    "initial_candidate_digest": "e8115ba0ef96851bada760911dec2351c70bb8e0fcddd108a6dc53a20e535cc5",
+    "initial_candidate_unchanged_from_seed": true,
+    "initial_candidate_labeled_incomplete": true,
+    "finding_id": "FP-001",
+    "finding": "Unicode casefold の欠落。独立チェックで HELLO Straße を再現",
+    "finding_resolved": true,
+    "pass_candidate_digest": "d01a15214e58e9575266dc3199d2c2f06d6cbf8b4ebde88903cfa96fcf01b2d4",
+    "contract_digest": "fae27dc3cb45b0d566dd782c6674cecca18ce492d3a8d2cfd5468607bd1fc192",
+    "same_reviewer_pass": true
+  },
+  "collection": {
+    "status": "PASS",
+    "both_peers_observed_idle_before_collection": true,
+    "receipt_digest": "8009f028fbc5fa0fc1a21e7b489217882a5f659ce8d0684540f2667352ddfc53",
+    "evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/25-pair-collect.json"
+  },
+  "integration_tests": {
+    "unittest": {
+      "passed": 3,
+      "exit_code": 0
+    },
+    "independent_mixed_case_unicode_and_whitespace_checks": {
+      "passed": 5,
+      "exit_code": 0
+    },
+    "reviewed_candidate_unchanged_after_tests": true
+  },
+  "astra_relay_exact": "使い捨て fixture で、実際の native helper workflow を検証します。最初の Worker 候補は casefold が欠けた既存コードのまま提出し、同じ Reviewer による独立した指摘、同じ Worker の最小修正、再レビューの PASS までを直接通信で進めます。単体テストだけの確認では、今回求められた実通信とセッション継続を検証できないため、この一組の実行に限定します。PASS の収集後に Phase A を終了し、元の TUI Main が両 peer の正確な thread を実アーカイブしてから、同じ controller と Astra で closure 記録、1 回限りの最終確認、finish に進みます。検証結果は、この連携した host 構成に限って報告します。許可済みの範囲なので、追加確認なしで進められます。",
+  "closure": {
+    "complete": false,
+    "archive_or_interrupt_called_by_controller": false,
+    "close_record_performed": false,
+    "astra_final_check_performed": false,
+    "finish_performed": false,
+    "next": "この exec 終了後、元の TUI Main が上記 Worker と Reviewer の正確な thread ID を実 native tool でアーカイブし、実結果を保存。同じ controller セッションの後続ターンで close-record、同じ Astra の一度限りの final-check、finish を実行し、最後に元の Main が Astra を実アーカイブする。",
+    "capability_limit": "この連携した composite host 構成の検証です。standalone exec の safe-close capability は実証していません。"
+  },
+  "artifacts": {
+    "phase_a_result": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/phase-a-result.json",
+    "controller_state": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/controller-state.json",
+    "runtime_audit": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/native-runtime-audit.json",
+    "idle_evidence": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/26-native-idle-before-collection.json",
+    "astra_relay": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/astra-relay.md",
+    "run_snapshot": "/tmp/fp17-real-kqrq6b8u/native-full-evidence/phase-a-run-snapshot"
+  },
+  "fixture": {
+    "path": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+    "branch": "master",
+    "uncommitted_changes": [
+      "normalize.py",
+      "test_normalize.py"
+    ],
+    "extra_fixture_files_created": false,
+    "cleanup": "後続フェーズ用に fixture・全成果物・各セッションを保持",
+    "issue_pr_publish_merge": "使い捨てテストの範囲外。FrontierPlan 本体の開発・レビュー・統合は元の Main の担当"
+  }
+}

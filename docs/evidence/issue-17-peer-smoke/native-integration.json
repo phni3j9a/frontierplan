@@ -1,0 +1,12 @@
+{
+  "source": "/tmp/fp17-real-kqrq6b8u/native-full-project",
+  "integrated": "/tmp/fp17-real-kqrq6b8u/native-integrated",
+  "files_sha256": {
+    "normalize.py": "e861ee5e98373f5e7378b6dbb05d582a33895590da2d7f261a3886dd544c95e9",
+    "test_normalize.py": "2d64ed6e53b6ee852b70d2107513f49026b42b1ec856f2533cb573738ef67c1b"
+  },
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "test_casefold_unicode (test_normalize.NormalizeTests.test_casefold_unicode) ... ok\ntest_empty (test_normalize.NormalizeTests.test_empty) ... ok\ntest_whitespace (test_normalize.NormalizeTests.test_whitespace) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+  "note": "Original Main copied exact reviewed source/test bytes after real peer archive; no implementation edits."
+}

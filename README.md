@@ -238,7 +238,8 @@ Planの適切さ・実機UI・権限・nativeツール互換性の実証では�
 herdrの子はworkspaceのファイル書き込み制限とneverを維持し、管理プロキシ経由の
 通信制限とローカルUnixソケットへのアクセスを起動引数で指定します。検証したLinuxでは
 ソケット単位の許可ができず、Herdr以外のローカルUnixソケットにも接続可能になります。
-グローバル設定は変更しません。[権限の詳細](plugins/frontierplan/backends/herdr.md#permissions-routing-and-partial-failures)を参照し、実効値は環境で確認してください。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
+Pluginはグローバル設定を変更しません。ホストがプロファイル名を制限している場合、
+管理者による`frontierplan-herdr`の許可が必要です。[権限の詳細](plugins/frontierplan/backends/herdr.md#permissions-routing-and-partial-failures)を参照し、実効値は環境で確認してください。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
 扱いません。必要条件を満たせない場合は停止・報告し、勝手に権限拡大/モデル変更しません。
 
 helperは協調的な手順チェックで、認証・sandbox・ユーザー同意の自動判定ではありません。

@@ -1,0 +1,24 @@
+{
+  "status": "BLOCKED",
+  "pair": "/tmp/frontierplan-j503_xcu/tasks/41594b896c4f/pair.json",
+  "startup_blocker": {
+    "source": "main_observed_transport_failure",
+    "evidence": "Third actual pair also failed before begin/blocked submission, with no candidate or project edits. Both requested --no-daemon, yet actual active_permission_profile remained :workspace. Original Main opened the idle Worker's F2 startup warning panel and observed: Configured value for permission_profile is disallowed by requirements; falling back from frontierplan-frontierplan-j503_xcu to required value :workspace. Warning saved verbatim in herdr-requirements-warning.txt. /etc/codex/requirements.toml is root:root 0644 and allowlists :read-only, :workspace, :danger-full-access, rfkit-loop-worker only. This supersedes the earlier inference that shared-server reuse alone explained the fallback. --no-daemon cannot bypass managed requirements and is not treated as such. Correct setup requires an administrator-approved dedicated frontierplan-herdr profile entry. User approval was requested under the user's explicit sudo-before-confirmation rule; no host config was changed before approval. Existing boundary probe only establishes isolated codex sandbox behavior, not acceptance of that profile in a real model session. Preserve every failed attempt; do not manufacture PASS or mark live idle sessions lost.\n",
+    "participants": {
+      "41594b896c4f": {
+        "request_id": "a2fe2261c587",
+        "handle_digest": "86e5f5c40a3bcc75a27274b7946b42593d9b3febb80da1fa13ae329fa914c3b8",
+        "terminal_id": "term_65ca0f3d7db7d2c",
+        "state_change_seq": 737
+      },
+      "a9af62163d73": {
+        "request_id": "c83050870b6c",
+        "handle_digest": "e823cfe96063d51db4ae34f52d01bf853444bdff8d828036069d64c65bee38b9",
+        "terminal_id": "term_65ca0f38d8a2e2b",
+        "state_change_seq": 735
+      }
+    },
+    "recorded_at": 1790696663.6161435
+  },
+  "note": "No child report, PASS or closure was created. Resolve transport before resume; a revised Plan may explicitly abandon this stopped work."
+}

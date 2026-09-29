@@ -1,14 +1,16 @@
 # Issue #17: local Codex validation handoff
 
-Status: **not complete; the 2026-09-29 real Herdr attempt failed before peer
-continuation**. Actual Codex children using workspace-write + never could not
-connect to Herdr's Unix socket (`EPERM`). Both `begin` and their attempted
-`blocked` submissions failed the required live identity check. No candidate or
-PASS was produced. The Python suite still simulates both backends; it cannot
-establish live communication. See the
-[real-host evidence](evidence/issue-17-peer-smoke.json) for native coverage and
-remaining blockers. PR #18 is already merged; the follow-up must not be merged as
-successful validation while the live acceptance criteria remain unmet.
+Status: **real-host validation in progress; Herdr still requires an approved host
+policy change**. Actual Herdr child `begin`/`blocked` calls failed before candidate
+submission. The final startup warning identified an unlisted permission profile:
+`/etc/codex/requirements.toml` forced `:workspace` instead. A successful isolated
+`codex sandbox` probe did not establish real-session policy acceptance, and
+`--no-daemon` did not bypass the host's requirements. Keep these failed attempts
+separate from successful communication evidence. Native has completed the actual
+helper finding/fix/PASS and collection; its final lifecycle evidence is being
+recorded. The Python suite simulates both backends and cannot establish live
+communication. PR #18 remains merged; follow-up PR #19 must stay unmerged until the
+user's real-host completion condition is met.
 
 ## Automated checks
 
@@ -86,13 +88,18 @@ idle session as a successful bootstrap. On the observed Linux/Codex 0.159.0 host
 An independent Python probe reached `socket.connect()` before EPERM; socket
 creation itself succeeded. Investigation of the installed version's Linux sandbox
 source confirmed the restricted seccomp `connect` denial. Exact socket allowlists
-do not work for Linux AF_UNIX. The corrected run-specific profile enables the
+do not work for Linux AF_UNIX. The dedicated `frontierplan-herdr` profile enables the
 managed network proxy and all-local-Unix-socket IPC; no global config is changed.
 An actual boundary probe confirmed Herdr access and workspace writes succeed,
 outside-workspace writes are read-only, direct external connections have no route,
 and the proxy rejects external requests without domain allow entries (403).
 This is broader local IPC than an exact Herdr socket permission; document that
 scope explicitly and test it on the actual host/version before using it.
+A managed `[allowed_permission_profiles]` policy must explicitly allow that name.
+Have the administrator approve the minimal policy entry; do not modify requirements
+automatically, reuse another application's allowed profile, ignore managed policy,
+or choose full access as a hidden fallback. Check the model session's actual
+`active_permission_profile` and startup warnings, not only the sandbox probe.
 
 When both original children are idle and neither has begun, preserve their local
 error reports and use `herdr.py pair-block-start --task "$worker" --file
