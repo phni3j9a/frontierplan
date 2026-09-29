@@ -279,8 +279,11 @@ Each Codex child selects a run-specific permissions profile extending `:workspac
 with `--ask-for-approval never` and the run directory added as writable. The launch
 sets `features.network_proxy.enabled=true`, profile `network.enabled=true`, and
 `network.dangerously_allow_all_unix_sockets=true`. These are process arguments;
-FrontierPlan does not edit global configuration. A legacy `--sandbox` override must
-not replace the selected profile.
+FrontierPlan does not edit global configuration. Each child uses `--no-daemon` so
+its process-local configuration reaches its own server. The tested shared server
+kept `:workspace` instead of applying the requested profile. Existing shared
+servers and other sessions are untouched. A legacy `--sandbox` override must not
+replace the selected profile.
 
 On the tested Linux/Codex 0.159.0 host, plain `:workspace` denies Unix-socket
 `connect()`, including Herdr. The managed proxy keeps external networking subject

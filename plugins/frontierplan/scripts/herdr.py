@@ -309,7 +309,9 @@ def codex_args(task: dict, root: Path, pane: dict, api: Herdr) -> list[str]:
         env["HERDR_SOCKET_PATH"] = api.env["HERDR_SOCKET_PATH"]
     for key, value in env.items():
         args += ["-c", f"shell_environment_policy.set.{key}={json.dumps(value)}"]
-    return args + ["--ask-for-approval", "never",
+    # Shared app-server sessions can retain a different permissions profile;
+    # use this child's own server so its process-local launch config is effective.
+    return args + ["--no-daemon", "--ask-for-approval", "never",
                    "--add-dir", str(root), "--no-alt-screen"]
 
 

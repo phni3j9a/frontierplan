@@ -162,6 +162,7 @@ class HerdrTransport(unittest.TestCase):
         self.assertIn(f'permissions.{permissions}.network.dangerously_allow_all_unix_sockets=true', args)
         self.assertIn('features.network_proxy.enabled=true', args)
         self.assertNotIn("--sandbox", args)  # A legacy override would replace this profile.
+        self.assertIn("--no-daemon", args)
         self.assertEqual(args[args.index("--ask-for-approval")+1], "never")
         self.assertFalse(any("service_tier" in arg for arg in args))
 
