@@ -73,7 +73,7 @@ def validate(root: Path) -> list[str]:
                            "reasoning_effort": "max"}, f"swe2 profile mismatch: {name}")
         for required in ("core/workflow.md", "core/astra.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
                          "backends/herdr.md", "backends/subagent.md", "scripts/frontierplan.py",
-                         "scripts/herdr.py", "scripts/pairs.py", "core/pairs.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
+                         "scripts/herdr.py", "LICENSE", "THIRD_PARTY_NOTICES.md"):
             check((root / required).is_file(), f"Missing packaged resource: {required}")
         for path in root.rglob("*.md"):
             for example in re.findall(r"```json\n(.*?)\n```", path.read_text(), re.S):

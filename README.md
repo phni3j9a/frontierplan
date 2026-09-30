@@ -1,10 +1,10 @@
 # FrontierPlan
 
-**AstraがPlanを決め、Worker–Reviewerがタスクを仕上げ、Mainが統合・完了する。**
+**Plan まではAstraが決め、実行はMainが回す。**
 
 Codex向けの明示起動専用Pluginです（Claude Code・Devinにも導入できます）。[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)
-を土台に、実装前の調査・設計・Plan作成をAstraに一任します。実装タスクはWorkerとReviewerが
-直接やり取りして完了させ、Mainは通常レビューの中継・採否判断から外れます。herdr版ではMainにDevinなどの
+の進め方（Mainが統合・レビュー判定・完了判断を持ち、Lunaが実装し、独立したSolがレビューする）を
+土台に、実装前の調査・設計・Plan作成だけをAstraに一任します。herdr版ではMainにDevinなどの
 既存エージェントやClaude Codeも使えます。子エージェントはCodexで起動します。
 
 ## 流れ
@@ -12,9 +12,9 @@ Codex向けの明示起動専用Pluginです（Claude Code・Devinにも導入�
 | フェーズ | 判断する人 | Mainの役割 |
 |---|---|---|
 | 調査〜Plan確定 | **Astra**。Lunaへの調査依頼とユーザーへの質問もAstraが決める | 判断せずに中継する（Astraの文面はそのまま表示、ユーザーの返事はそのままAstraへ） |
-| 実装〜レビュー | **Worker–Reviewerペア**。担当タスクの具体的な不適合だけを確認 | 短いタスクを割当て、PASS済み成果物を回収・統合する |
-| 詰まったとき | **Main**。Plan判断だけAstraに相談する | 要求の曖昧さ・環境・同じ原因で進展しない状態を解消する |
-| 最終確認 | **Astraが1回だけ**AC表・具体的な問題・Planとのずれを返す（否認権なし） | 完了・修正・再計画を決める。具体的な修正は新しいペアへ渡す |
+| 実装〜レビュー | **Main**（axiom_for_herdrと同じ） | 分割・割当・統合・指摘の採否。担当Workerはレビューサイクルの最後まで残す |
+| 詰まったとき | MainがAstraに相談し、採否はMainが決める | 相談の材料を用意する |
+| 最終確認 | **Astraが1回だけ**AC表・指摘・Planとのずれを返す | 指摘をReviewerの指摘と同じく判定し、完了報告を書く |
 
 ユーザーに返すのは、Astraの質問やPlanの提示、完了報告、範囲やコストが変わる分岐
 （推奨案つきの選択肢）の3つだけです。レビューの回数や経過時間では返しません。
@@ -27,11 +27,6 @@ IssueのACを基準にし、より単純な代替案と2段の検証（反復中
 v0.1ではAstraが最終受入の門番で、ユーザーへ戻る経路もありませんでした。実案件で
 作業が収束しなかったため、v0.2でこの形に作り直しました（[Issue #11](https://github.com/phni3j9a/frontierplan/issues/11)）。
 v0.1で作ったrunはv0.2のhelperでは続けられません。v0.1のまま終えてください。
-
-v0.4では[Issue #17](https://github.com/phni3j9a/frontierplan/issues/17)のペア方式へ移行します。
-短いTask Contractに対する検証・最小修正を基本とし、将来拡張や好みをレビューの追加要件にしません。
-直接通信だけで収束改善が実証されたとは扱いません。旧版で実行中の未ペアrunは旧版で終え、
-途中から暗黙に移行させないでください。
 
 ## 3つの入口
 
@@ -54,11 +49,11 @@ $frontierplan:astraplan-herdr
 | 役割 | モデル | effort | 責務 |
 |---|---|---|---|
 | Director (Astra) | `gpt-6-astra` | `xhigh` | 調査・設計・ユーザーへの質問・Plan・実装許可の記録、実行中の相談、1回の最終確認 |
-| Main | 起動済みセッションを継承 | 起動元を継承 | Plan前は中継、実行中はペア割当・成果物統合・行き詰まりの解消・完了報告 |
+| Main | 起動済みセッションを継承 | 起動元を継承 | Plan前は中継、実行中は分割・割当・統合・レビュー判定・完了報告 |
 | Researcher | `gpt-6-luna` | `max` + fast | Astraの依頼による読み取り専用の調査 |
 | Worker | `gpt-6-luna` | `max` + fast | 実装・テスト・修正・監視 |
 | Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当 |
-| Reviewer | `gpt-6-sol` | `xhigh` | 担当Task Contractを検証。具体的な指摘をWorkerへ直接返し、現候補にPASSを出す |
+| Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで回数上限なく再レビュー |
 
 `astraplan-herdr-swe2` では、Luna枠のResearcherとWorkerを Devin CLI の `swe-2-max`
 （effortはモデル名に含まれ、fast枠はありません）に置き換えます。Astra・Design・Reviewerは
@@ -73,10 +68,9 @@ subagent版では子が孫を起動できない（`agents.max_depth` 既定1）�
 
 ## インストール
 
-必要条件: **Python 3.11+**、対応するCodexとモデルへのアクセスおよび**Git worktree**（未コミット変更も含む候補の識別に必要）。
+必要条件: **Python 3.11+**、対応するCodexとモデルへのアクセス（Gitは最終確認の材料にHEADを記録するためだけに使います）。
 herdr版は同一ホストのherdrが必要です。subagent版はCodex上でモデル/effort指定、同一セッション
-継続、待機、終了に加え、**子同士が同じセッションを再開できるnativeツール**が必要です。
-通知や親からの継続しかできないホストはペア方式に未対応です。Main中継で取り繕いません。こちらの会話のコネクタが子へ自動移植される
+継続、待機、終了のnativeツールが必要です。こちらの会話のコネクタが子へ自動移植される
 わけではありません。Astraが必要な調査ツールを使えるかも確認してください。
 
 herdr版のMainは、検証済みの現在ペインからエージェント種別・セッションIDを取得し、
@@ -172,15 +166,9 @@ Devinの `--sandbox` モードを使わない理由: sandboxではファイル�
 - Plan確定前は、AstraとAstraが依頼したResearcher以外は起動しません。Mainは調査も要約もしません。
 - 実装許可はAstraが記録します（許可にあたるユーザー発言の番号）。記録がなければ `start` できません。
 - Plan作成中にユーザーが書き込んだら、その発言をAstraへ渡すまで古い判断は採用されません。
-- 最終確認はPlanごとに1回です。後続の具体的な修正は新しいペアで確認し、Astraには戻しません。
-- 同じWorker/DesignとReviewerをタスク完了まで維持します。最新候補のPASSとMainの回収後に
-  **両ペインを閉じます**。Astraは`finish`まで残します。未解決ブロッカーは、解消または証跡を
-  引き継いだ担当変更まで残します。終了のために未解決をPASS扱いにはしません。
-- 再Planで不要になった旧タスクは、Mainが理由・作業内容の保存先・両セッションの停止確認を
-  `pairs.py abandon --task <member> --file <evidence>`に記録して終了できます。
-  現Planのタスクには使えず、打ち切った未完了の変更は統合しません。
-- PASSは契約・候補の実ファイル・Reviewer・最新報告に結び付けます。Mainの回収前に内容が
-  変われば古いPASSは使えません。回収後の変更は別タスクでレビューし、古い成果物を再監査し続けません。
+- 最終確認はPlanごとに1回です。修正はAstraに戻さず、担当Workerと同じReviewerで確認します。
+- Worker/Design/Reviewerはレビューサイクルが終わったら閉じます。Astraは`finish`まで残します。
+  未解決のブロッカーを持つ参加者は、全体の終了まで閉じません。
 - Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合します。herdrの`check`は通知履歴に
   依存せず状態を確認し、`wait`は既定・最大300秒です。native版の`status`には`uncollected`一覧があります。
   バックグラウンドwaitだけ残してMainのターンを終えても自動再開は保証されません。
@@ -192,28 +180,8 @@ herdr版の配置はMainが左40%、Astraが右60%。ResearcherやWorkerが入�
 端末の識別が崩れた場合は操作を停止します。
 
 herdr操作とnative tool呼び出しは別のbackendです。native版のPython helperは
-モデルを起動するランタイムではなく、packet/receipt管理です。Mainは実際のnative起動・終了
-ツールを使い、通常レビューの継続ツールは登録済みの子自身が呼び出します。
-nativeの新規・交換セッションは`bootstrap_packet`で識別情報だけを取得してidleにし、
-両者をbindした後に実作業の`packet`を同じセッションへ送ります。初回の作業開始がbindに
-先行しない順序です。既存セッション間の通常レビューにはMainは介在しません。
-
-## ペアの操作
-
-Plan開始後、Mainは短い契約を渡してペアを作成します。
-```
-python3 "$hd" pair-spawn --run "$run" --file "$contract" [--cwd "$worktree"]
-```
-子は生成されたpacketの`pairs.py begin/submit`を使い、候補・指摘・修正・PASSを直接交換します。
-MainはPASSまたは行き詰まりだけを受け取り、PASSなら次を実行します。
-```
-python3 "$pp" collect --task "$worker"
-python3 "$hd" pair-close --task "$worker"
-```
-`hd`と`pp`は導入済みPluginの`scripts/herdr.py`、`scripts/pairs.py`の絶対パスです。
-並列作業は専用worktreeまたは重ならない`--scope`で分離します。候補のmanifestはファイルの
-ハッシュでありソースの複製ではないため、レビューしたworktree・diff・証跡は統合まで保持します。
-詳しくは[ペア手順](plugins/frontierplan/core/pairs.md)を参照してください。
+モデルを起動するランタイムではなく、Mainが実際のnativeツールを呼び出すための
+packet/receipt管理です。
 
 ## 検証と制限
 
@@ -224,9 +192,6 @@ python3 tools/package_release.py
 ```
 
 GitHub Actionsにも同じ検証を登録しています。詳細は [検証手順](docs/validation.md)。
-**Issue #17の実Herdrペア往復はローカルCodexでの検証待ちです。nativeの実往復も未検証です。**
-[ローカル検証の引継ぎ手順](docs/issue-17-validation.md)に、同一Worker修正→同一Reviewer PASS→
-Main回収→両ペイン終了の確認項目と、残すべき証跡を記載しています。
 自動テストはローカルの状態遷移と模擬herdrを検証するもので、実モデルのルーティング・課金・
 Planの適切さ・実機UI・権限・nativeツール互換性の実証ではありません。実herdr（0.9.1）での
 ペイン配置は合成エージェントのsmokeで確認済みです（[証跡](docs/evidence/issue-11-herdr-layout.json)）。

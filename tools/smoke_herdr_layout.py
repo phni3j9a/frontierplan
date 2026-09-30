@@ -56,9 +56,6 @@ class SyntheticAgents:
 
 
 def smoke(socket):
-    fp.require(not (fp.ROOT / "scripts" / "pairs.py").exists(),
-               "Legacy pre-pair smoke: use its original v0.3 checkout, or docs/issue-17-validation.md "
-               "for the v0.4 local Codex peer smoke. No panes/models have been started.")
     real = hd.Herdr(socket=socket)
     real.env.pop("HERDR_SESSION", None)
     fp.require(not real.call("workspace", "list")["workspaces"],
