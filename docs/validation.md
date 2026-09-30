@@ -36,8 +36,8 @@ and Worker load `profiles/swe2/*.toml` and start with `--kind devin` and exactly
 `--permission-mode dangerous --model swe-2-max --export <task>/devin-session.json`
 (no derived config), while Astra, Design and the Reviewer keep their Codex arguments;
 a missing `devin` binary stops before any pane split; `collect` records the models from Devin's session export (or reports
-them as unavailable); a Codex pane cannot stand in for a Devin task; and a simulated paired
-fix/re-review/final-check/close cycle works. Standard role profiles are unchanged.
+them as unavailable); a Codex pane cannot stand in for a Devin task; and a full
+fix/re-review/final-check/close cycle works. A standard run is unchanged.
 
 `tests/test_herdr_lifecycle.py` exercises the 40/60 role layout with a split-tree
 fake, inset pane rectangles, manual ratios, moved/missing anchors and unrelated panes;
@@ -50,28 +50,6 @@ responses must preserve the intent and stop automatic retry.
 read-only reconciliation while a waiter is alive, same-file publication, idle gating,
 old requests and the five-minute heartbeat. The clock and herdr are simulated; no
 model is launched by these tests.
-
-## Issue #17 pair execution
-
-The suite includes bounded pair registration, authenticated same-session peer turns,
-explicit current-candidate PASS, stale/untracked/unstaged changes, candidate ownership,
-Main collection/closure, same-cause stagnation, session replacement and delivery
-race/uncertainty handling. Fixtures explicitly simulate native capability and Herdr
-transport. Regression cases cover native bootstrap returning before Main binds,
-then initial assignment and direct peer review; and revised-Plan abandonment before
-any candidate or after Reviewer escalation, including closure after finish, changed
-evidence/activity, reused/lost terminals and rejection of current-Plan bypasses.
-These checks do not launch actual children or demonstrate real peer continuation.
-
-**Real Herdr pair validation is delegated to the user's local Codex and has not
-been run here. Native reciprocal continuation is also unverified.** Follow the
-[Issue #17 validation handoff](issue-17-validation.md). Prior geometry and SWE2
-smokes below are historical evidence of their original flows, not evidence of the
-new peer protocol. Re-run the new finding/fix/PASS/close flow before claiming support.
-The two legacy smoke scripts now stop before any pane/model activity on v0.4 and
-direct the operator to the new runbook; their synthetic Main-relay harnesses are
-not a valid test of peer continuation. Historical replication uses the original
-pre-pair checkout. Do not remove this preflight guard and treat old fixtures as PASS.
 
 ## Herdr pane smoke (real transport, synthetic agents)
 

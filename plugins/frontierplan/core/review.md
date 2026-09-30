@@ -1,74 +1,93 @@
-# Bounded Sol task verification
+# Independent Sol review
 
 Adapted from phni3j9a/axiom_for_herdr's MIT-licensed review guidance.
 
-> Review exists to close the assigned task, not to improve the system.
+Start the review cycle with a fresh Reviewer (`gpt-6-sol` / `xhigh`), independent
+of Astra, Workers and Design. Keep that same session for re-review, and keep the
+Workers responsible for the candidate through the cycle so they can address
+accepted findings. Main owns adjudication, risk tolerance within the Plan, and the
+decision to end the cycle. Astra is never the independent Reviewer.
 
-Each task has one Worker (or Design) and one fresh independent Sol Reviewer
-(`gpt-6-sol` / `xhigh`). Keep both sessions through the task's fix/re-review cycle.
-The Reviewer verifies the short Task Contract, not the whole project. Astra is
-never this Reviewer. Main assigns and integrates; it neither relays ordinary
-findings nor ACCEPT/REJECT/DEFERs them.
+## Review boundary
 
-## Boundary and evidence
+Supply the Plan's intent, acceptance criteria, relevant decisions and non-goals,
+the candidate diff, existing changes outside scope, and verification already
+performed. Scale this to the task; do not demand fields that add no value.
 
-Main supplies the objective, owned scope, observable completion conditions,
-relevant supported contracts and required focused checks. Link the Plan and
-non-goals where useful. A small task needs a small contract, not a checklist of
-hypothetical edge cases. Use the current candidate and independent requirements,
-not the Worker's confidence or its self-authored tests alone.
+Review project content read-only: no project edits, commits, formatters, auto-fixes
+or commands likely to mutate the candidate. The assigned report location is the
+only permitted output.
 
-Review project content read-only: no project edits, commits, formatters or
-auto-fixes. Reports/protocol data under the assigned run directory are permitted.
+## Admissible findings
 
-A material finding needs concrete current evidence of a requirement violation,
-relevant supported-contract break, bug/regression, security/data-integrity/
-compatibility defect, or missing verification that prevents judging the task.
-Hypothetical use, optional hardening, style, preference and future extensibility
-are not blockers. Candidate-created code/tests/schemas do not create requirements.
-Unnecessary complexity is reviewable only when independently unjustified machinery
-materially increases failure surface or maintenance; request removal only when it
-is the smallest correction. Do not use this as permission for broad redesign.
+A material finding needs independent current evidence of at least one of:
 
-## Direct completion loop
+- a violation of the Plan's intent or an existing supported contract;
+- a concrete failure or regression in the candidate;
+- a concrete security, data-integrity, trust-boundary or compatibility defect;
+- a verification gap that materially prevents judging one of those obligations.
 
-Use [pairs.md](pairs.md). Worker sends a candidate with focused evidence directly
-to its registered Reviewer. Reviewer sends concrete findings directly back; Worker
-fixes them or returns concrete counter-evidence. Reviewer decides task-local PASS
-when the required checks support completion and no material defect remains. PASS
-is the normal outcome of sufficient verification, **not** permission to skip it.
-Only the assigned Reviewer can publish PASS for the current candidate/contract.
-Main receives that reviewed result or a blocker/escalation, not every round.
+Hypothetical future use, optional hardening, preference, style and generic advice
+are not blocking findings. Candidate-created code, tests, schemas, documentation or
+abstractions do not establish that their capability is required. Prior reviewer
+suggestions do not create requirements.
 
-Keep reports short and use stable finding IDs:
+**Unnecessary complexity is reviewable** when it lacks independent current
+justification and materially increases failure surface, state, concurrency,
+dependencies, migrations or maintenance. Prefer removing unjustified machinery when
+that is the smallest correction that meets the current contract. Do not redesign
+beyond the Plan unless its intent cannot otherwise be met.
+
+## Return
+
+Use stable finding IDs:
 ```
-FP-001 <concrete defect>
-Evidence: <existing requirement; actual failing behavior; path/command>
-Impact: <material consequence>
-Correction: <smallest correction or required focused check>
+FINDINGS:
+- FP-001 <title>
+  Evidence: <file/symbol/behavior and independent current basis>
+  Impact: <concrete consequence>
+  Remediation: <smallest useful correction>
+
+VERIFICATION_GAPS: <only material gaps>
+RESIDUAL_RISK: <concise relevant uncertainty>
+DIRECT_USER_INSTRUCTIONS: <instruction and effect, or none>
 ```
-For PASS, record resolved finding IDs, required verification and relevant gaps.
-Task PASS is not permission to publish or overall project acceptance.
+Return `FINDINGS: none` when there are no material findings. A complete review is
+not a release verdict.
 
-## Convergence and escalation
+## Adjudication
 
-Re-review primarily checks the previous findings and regressions caused by the
-fixes. Do not restart broad review, invent requirements or reopen resolved concerns
-without materially new evidence. Newly evidenced serious existing-contract or
-correctness/security/data-integrity/compatibility defects remain admissible,
-including defects missed initially. Do not search for optional improvements.
+Main classifies each finding ACCEPT, REJECT, DEFER or ESCALATE and turns accepted
+ones into bounded fixes for the responsible Worker, with the finding IDs, the
+expected behavior and the required verification. Do not forward every suggestion
+blindly. Concrete evidence stays visible in the final report even when Main defers
+a mitigation.
 
-There is no fixed finding or round quota. If another iteration cannot make useful
-progress for the same underlying reason, return ESCALATE: this covers both unclear
-requirements and a clear task the current Worker cannot implement because of its
-approach, capability or environment. Give the evidence and intervention needed.
-Main resolves ownership/scope/environment or replaces a session; it does not
-become the ordinary review judge. Consult Astra only for Plan-level decisions.
+## Finding freeze and continuity
 
-A replacement keeps the current contract, candidate, earlier finding IDs and
-verification. Do not change role/model or use loss as a fresh broad-review excuse.
+There is no fixed finding count and no round limit. After accepted fixes, Main
+sends the same Reviewer its adjudication, the updated candidate and verification
+evidence. Keep accepted fixes central. Do not reopen REJECT/DEFER concerns without
+materially new independent evidence. New findings remain admissible for:
 
-After PASS, Main collects the exact reviewed result and closes both idle sessions.
-Do not keep completed pairs until Astra's final check. Later integration changes or
-concrete findings from Astra's one-time check get a bounded follow-up pair.
-Astra does not re-accept the fix; Main owns completion.
+- material defects directly introduced or revealed by an accepted fix;
+- newly evidenced concrete correctness, security, data-integrity, trust-boundary
+  or compatibility defects, including ones missed initially;
+- independently evidenced violations of requirements already inside the boundary.
+
+Do not restart preference or optional-hardening review. If the Plan changes
+materially, Main decides whether the same session resets its boundary or a fresh
+cycle is useful.
+
+If the same accepted finding keeps returning after fixes, or fixes keep revealing
+defects of one kind, that points at the approach rather than the code: Main
+consults Astra with the finding history before sending another fix. This is not a
+user checkpoint and not a round quota.
+
+If the Reviewer session is lost, a fresh Sol replacement gets the earlier findings,
+adjudication, fixes, current candidate and evidence. Never substitute Luna.
+
+Main ends review when the candidate is sufficiently resolved and no accepted
+material finding remains unaddressed. Then Main runs Astra's final check; findings
+from it are adjudicated the same way and re-reviewed by the same Reviewer. After
+the cycle, close the Reviewer and the Workers whose work is resolved.

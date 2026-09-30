@@ -1,21 +1,27 @@
-# Architecture / v0.4.0
+# Architecture / v0.3.0
 
-FrontierPlan keeps Astra-owned planning and one-time final checking. Ordinary
-execution now belongs to bounded Worker/Design–Reviewer pairs.
+FrontierPlan = axiom_for_herdr's working structure + an Astra-owned planning phase,
+on shared contracts, role profiles and two execution backends.
 
 ```
-User -> Main relay -> Astra -> research / user dialogue / Plan + authorization
-Main -> [Worker <-> Reviewer] -> current PASS -> collect and close pair
-Main -> reviewed integration -> Astra checks once -> Main finish/rework/replan
-Repair -> new bounded pair -> PASS -> Main finish (no Astra re-acceptance)
+User ─ Main (relay) ─ Astra ─┬─ research requests ─> Main relay ─> Luna researchers
+        ^                    ├─ user questions / Plan ─> Main relays verbatim
+        └────────────────────┘  Plan + implementation authorization
+                   │
+          Main coordinates (axiom_for_herdr)
+          /        |          \
+      Worker     Design     Reviewer (same session, no round limit)
+          \        |          /
+        integrated result + evidence
+                   │
+        Astra final check (once per Plan) ─> Main adjudicates, finishes, reports
 ```
 
-Main remains the technical parent of every child: there is no nested spawning.
-Research remains mechanically relayed by Main. Ordinary task review is different:
-registered peers exchange candidates/findings directly. Main receives completed
-reviewed work or escalation and owns integration, exceptions and overall completion.
-The change moves existing convergence rules into the pair; direct communication
-alone is not evidence of better convergence, latency or cost.
+Main is the technical parent of every child, including Astra and the researchers;
+nothing nests. Before execution Main performs only mechanical steps returned by the
+helper (`relay`, `forward`, `start`, relaying `user_response`), so a Main with weaker
+judgment (for example Devin SWE-2) does not dilute planning. After `start`, Main
+judges as in axiom_for_herdr.
 
 ## Why v0.2 changed
 
@@ -32,7 +38,7 @@ completion, and scope/cost-changing branches. See
 ## Components
 
 `skills/` holds the three explicit entry points; `core/` defines common behavior
-(`workflow`, `astra`, `roles`, `handoff`, `review`, `pairs`, `waiting`); `profiles/` holds
+(`workflow`, `astra`, `roles`, `handoff`, `review`, `waiting`); `profiles/` holds
 role runtime data; `backends/` defines the real transport steps.
 
 `astraplan-herdr-swe2` is a variant of the herdr backend, not a third backend. The
@@ -48,16 +54,7 @@ messages, packets, Astra decision validation with a mechanical `next` step, the
 research relay state, the once-per-Plan final check, and finish/close records.
 `scripts/herdr.py` implements visible CLI sessions, identity-aware continuation,
 the relay/forward/consult/final-check deliveries, wait/check and safe close.
-`scripts/pairs.py` adds one pair record using existing task packets/reports. It
-binds current contract/candidate/Reviewer identity, restricts peer handoffs, records
-collection and supports bounded blocker recovery. Herdr resumes the registered
-peer through its actual prompt operation, preserving existing idle/terminal checks.
-Native management calls stay with Main, but peer continuations belong to the child;
-shell Python never invokes native tools. Missing reciprocal host capability is
-reported, not hidden behind a Main relay.
-New native pair participants first return their observed identity from a separate
-bootstrap packet. Main binds both idle sessions before sending work packets;
-replacement sessions follow the same order. Binding never implies delivery.
+Native tool calls stay in Main; shell Python does not invoke Codex agent tools.
 
 The ledger refuses executor dispatch before Astra records authorization for the
 current Plan, planning decisions made before the newest user message reached Astra,
@@ -65,17 +62,7 @@ decisions that do not fit the turn (for example `final_check` during planning), 
 second final check for the same Plan, finish without that check or with uncollected
 executors, and early closes (Astra before finish; executors with unresolved blockers).
 It does not verify the semantic truth of consent or evidence, and it is not a sandbox.
-There is still no Astra acceptance state. Task-local PASS is now bound to a content
-manifest (tracked/untracked owned files, modes, symlinks and deletions), not merely
-HEAD. Collection checks live bytes and seals the delivered result; later edits are
-new tasks. Finish validates collected pair evidence, not a perpetual rehash/review
-of completed worktrees. Main must integrate the exact reviewed artifact; a manifest
-of hashes is not a source archive or an automatic integration verifier.
-For stopped work excluded by a revised Plan, Main can record explicit abandonment
-with the scope decision and existing reports/identities, including an empty idle
-bootstrap. This allows closure and removes the old task from completion checks
-without manufacturing PASS. Current-Plan tasks cannot use this route. Herdr still
-checks idle state, terminal identity and activity sequences before pane closure.
+There is no candidate fingerprint gate or Astra acceptance state anymore.
 
 The herdr layout keeps Main left 40% and Astra right 60%; researchers and executors
 share the lower 60% of Astra's region. Completion reconciliation compares current
@@ -84,10 +71,6 @@ Main that missed reports). Neither a shell waiter nor a report file can guarante
 restarting a stopped Main.
 
 Runs created by v0.1 (`schema_version` 1) are rejected; finish them with v0.1.
-In-flight unpaired runs from earlier schema-2 releases must also finish with their
-original helper version; do not implicitly mix orchestration protocols. Raw task
-preparation remains available for staging/recovery, but unpaired executors cannot
-pass the new final completion checks.
 Fable is not shipped. Add a verified Director profile plus a supported launcher and
 contract tests before registering it. Keep vendor connection details out of core.
 
@@ -103,6 +86,4 @@ contract tests before registering it. Keep vendor connection details out of core
 
 Public APIs and host versions vary; exact native argument names and effective
 permissions must be checked on the target host. Historical upstream tests are not
-FrontierPlan validation. See [validation](validation.md) and the
-[Issue #17 local Codex handoff](issue-17-validation.md); real peer round trips remain
-pending separately from simulated tests.
+FrontierPlan validation. See validation.md for the boundary of automated coverage.

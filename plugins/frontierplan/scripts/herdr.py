@@ -193,13 +193,8 @@ def owned_pane(task: dict, state: dict, api: Herdr) -> dict:
 
 
 def safe_collected(path: Path, task: dict, state: dict, api: Herdr, complete: bool = True) -> dict:
-    import pairs
-    if task.get("pair") and not task.get("replaced_by") and pairs.at(path)[1]["status"] == "ABANDONED":
-        receipt = pairs.abandonment_receipt(path)
-        result = fp.current_result(path, task)  # May be absent for an idle bootstrap.
-    else:
-        result = fp.collected(path, task, complete)
-        receipt = fp.read(path / "receipt.json")
+    result = fp.collected(path, task, complete)
+    receipt = fp.read(path / "receipt.json")
     agent = owned_pane(task, state, api)
     fp.require(ready(agent) and receipt.get("state_change_seq") is not None
                and receipt.get("terminal_id") == agent["terminal_id"]
@@ -401,91 +396,6 @@ def send(task_path: str, file: str) -> dict:
     return continue_session(path, api)
 
 
-
-def spawn_pair(run: str, file: str, cwd: str | None = None,
-               scope: list[str] | None = None, role: str = "worker") -> dict:
-    import pairs
-    value = pairs.create(run, file, cwd, scope, role)
-    root, state = fp.run_at(run)
-    api = Herdr(state)
-    # The Reviewer bootstraps and returns idle; it is not asked to review empty work.
-    # Return prepared task IDs before mutations so a partial launch is inspectable.
-    print(json.dumps(value), flush=True)
-    launched = {key: launch(root, Path(value[key]["task"]), api) for key in ("reviewer", "worker")}
-    return {"pair": value["pair"], **launched}
-
-
-def deliver_pair(task_path: str, request_id: str, timeout: int = 30) -> dict:
-    """Child-only transport to its registered peer; never general run management."""
-    import pairs
-    fp.require(0 <= timeout <= 30, "Pair transport wait is limited to 30 seconds.")
-    deadline = time.monotonic() + timeout
-    while True:
-        with pairs.edit(task_path) as (_, pair, root, state):
-            _, caller, _ = pairs.actor(task_path, request_id, pair, state)
-            handoff = pair["pending"]
-            fp.require(handoff and handoff["from"] == caller["id"] and handoff["from_request"] == request_id,
-                       "No pending peer handoff for this turn.")
-            fp.require(handoff["delivery"] == "prepared", "Delivery is sent/uncertain; inspect before retrying, never resend blindly.")
-            target = root / "tasks" / handoff["to"]
-            peer = fp.read(target / "task.json")
-            fp.require(peer["id"] in (pair["worker"], pair["reviewer"]) and peer["id"] != caller["id"]
-                       and peer["request_id"] == handoff["request_id"], "Peer handoff is stale.")
-            api = Herdr(state)
-            available = ready(live(peer, api.agents()))
-            if available:
-                # Persist before the external effect. begin may acknowledge/clear it
-                # even before agent prompt returns, so do not recreate it afterward.
-                handoff["delivery"] = "uncertain"
-                peer.update(delivery="uncertain", submitted_at=time.time())
-                fp.atomic(target / "task.json", peer)
-        if available:
-            break
-        if time.monotonic() >= deadline:
-            return {"delivery": "prepared", "peer_busy": True,
-                    "note": "No prompt sent. End unnecessary waits; retry deliver for this same handoff, not submit."}
-        time.sleep(min(0.25, max(0, deadline - time.monotonic())))
-    api.call("agent", "prompt", peer["name"], f"Read {handoff['packet']} and perform its pair turn and return protocol.")
-    with pairs.edit(task_path) as (_, pair, _, _):
-        current = pair["pending"]
-        if current and current["request_id"] == handoff["request_id"] and current["to"] == handoff["to"]:
-            current["delivery"] = "sent"
-        latest = fp.read(target / "task.json")
-        if latest["request_id"] == handoff["request_id"]:
-            latest["delivery"] = "sent"
-            fp.atomic(target / "task.json", latest)
-    return {"delivery": "sent", "peer_task": str(target), "request_id": handoff["request_id"]}
-
-
-def close_pair(task_path: str) -> dict:
-    import pairs
-    _, pair, _, state = pairs.at(task_path)
-    main_pane(state, Herdr(state))
-    if pair["status"] == "ABANDONED":
-        for path in pairs.members(pair):
-            pairs.abandonment_receipt(path)
-    else:
-        pairs.require_collected(task_path)
-    return {"closed": [close(str(path)) for path in pairs.members(pair)
-                       if not fp.read(path / "task.json").get("lost")
-                       and fp.read(path / "task.json").get("handle")],
-            "note": "Recorded lost/unlaunched terminals are never closed; collected/abandoned evidence is retained."}
-
-
-def resume_pair(task_path: str, file: str, contract_file: str | None = None) -> dict:
-    import pairs
-    value = pairs.resume(task_path, file, contract_file)
-    _, _, _, state = fp.task_at(value["task"])
-    return continue_session(Path(value["task"]), Herdr(state))
-
-
-def replace_pair(task_path: str, file: str) -> dict:
-    import pairs
-    value = pairs.replace(task_path, file)
-    path, _, root, state = fp.task_at(value["task"])
-    return dict(launch(root, path, Herdr(state)), replaced_task=value["replaced_task"])
-
-
 def director_turn(run: str, prepare) -> dict:
     root, state = fp.run_at(run)
     api = Herdr(state)
@@ -586,20 +496,6 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
         if agent and (agent.get("terminal_id") != (task.get("handle") or {}).get("terminal_id")
                       or str(agent.get("agent", "")).lower() != child_agent(task)):
             agent = None
-        internal_pair_turn = waiting_for_peer = uncertain_pair_delivery = False
-        if task.get("pair") and not task.get("replaced_by"):
-            import pairs
-            pair = pairs.at(path)[1]
-            if pair["status"] == "ABANDONED":
-                pairs.abandonment_receipt(path)
-                events.append({"task": str(path), "event": "abandoned_needs_close"})
-                marks[str(path)] = fp.digest({"event": "abandoned_needs_close", "seq": (agent or {}).get("state_change_seq")})
-                pending += 1
-                continue
-            internal_pair_turn = pair["status"] not in pairs.TERMINAL
-            active = pair["reviewer"] if pair["status"] == "REVIEW" else pair["worker"]
-            waiting_for_peer = internal_pair_turn and task["id"] != active
-            uncertain_pair_delivery = bool(pair["pending"] and pair["pending"]["delivery"] == "uncertain")
         result = fp.current_result(path, task)
         receipt = fp.read(path / "receipt.json") if (path / "receipt.json").exists() else {}
         unchanged = result and receipt.get("digest") == fp.digest(result)
@@ -612,9 +508,7 @@ def pending_snapshot(root: Path, api: Herdr) -> tuple[dict, dict]:
         event = None
         if not agent: event = "unavailable"
         elif agent.get("agent_status") in ("blocked", "unknown"): event = agent["agent_status"]
-        elif uncertain_pair_delivery: event = "pair_delivery_uncertain"
-        elif waiting_for_peer: continue
-        elif result and result["status"] in ("complete", "blocked") and not internal_pair_turn:
+        elif result and result["status"] in ("complete", "blocked"):
             if not ready(agent): event = "report_waiting_idle"
             elif collected_idle: event = "blocked"
             else: event = "report"
@@ -664,11 +558,6 @@ def cli() -> None:
     sub = p.add_subparsers(dest="action", required=True)
     q = sub.add_parser("init"); q.add_argument("--cwd", default=os.getcwd()); q.add_argument("--request-file", required=True); q.add_argument("--main-pane"); q.add_argument("--main-terminal-id"); q.add_argument("--socket"); q.add_argument("--variant", choices=fp.VARIANTS, default="standard")
     q = sub.add_parser("spawn"); q.add_argument("--run", required=True); q.add_argument("--role", choices=("director", *fp.EXECUTORS), required=True); q.add_argument("--file"); q.add_argument("--cwd")
-    q = sub.add_parser("pair-spawn"); q.add_argument("--run", required=True); q.add_argument("--file", required=True); q.add_argument("--cwd"); q.add_argument("--scope", action="append"); q.add_argument("--role", choices=("worker", "design"), default="worker")
-    q = sub.add_parser("pair-close"); q.add_argument("--task", required=True)
-    for name in ("pair-resume", "pair-replace"):
-        q = sub.add_parser(name); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
-        if name == "pair-resume": q.add_argument("--contract-file")
     q = sub.add_parser("send"); q.add_argument("--task", required=True); q.add_argument("--file", required=True)
     for name in ("collect", "close"):
         q = sub.add_parser(name); q.add_argument("--task", required=True)
@@ -680,10 +569,6 @@ def cli() -> None:
     a = p.parse_args()
     if a.action == "init": result = initialize(a.cwd, a.request_file, a.main_pane, a.main_terminal_id, a.socket, a.variant)
     elif a.action == "spawn": result = spawn(a.run, a.role, a.file, a.cwd)
-    elif a.action == "pair-spawn": result = spawn_pair(a.run, a.file, a.cwd, a.scope, a.role)
-    elif a.action == "pair-close": result = close_pair(a.task)
-    elif a.action == "pair-resume": result = resume_pair(a.task, a.file, a.contract_file)
-    elif a.action == "pair-replace": result = replace_pair(a.task, a.file)
     elif a.action == "send": result = send(a.task, a.file)
     elif a.action == "collect": result = collect(a.task)
     elif a.action == "close": result = close(a.task)

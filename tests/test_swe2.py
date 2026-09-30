@@ -11,8 +11,6 @@ from unittest.mock import patch
 import test_herdr as th
 import frontierplan as fp
 import herdr as hd
-from pair_support import create_pair, pair_turn
-import pairs
 
 
 class Swe2Variant(unittest.TestCase):
@@ -127,13 +125,16 @@ class Swe2Variant(unittest.TestCase):
 
     def test_full_cycle_closes_devin_participants(self):
         director = self.director(); self.director_plan(director)
-        worker, reviewer = create_pair(self)
-        pair_turn(self, worker, "candidate")
-        pair_turn(self, reviewer, "findings", "FP-001: concrete simulated defect")
-        pair_turn(self, worker, "candidate", "FP-001 fixed")
-        self.assertEqual(sum(self.kind(c) == "devin" for c in self.starts()), 1)
-        pair_turn(self, reviewer, "pass")
-        pairs.collect(worker)
+        worker = hd.spawn(self.run, "worker", self.input)["task"]
+        self.report(worker, "Implemented.", collect=False); hd.collect(worker)
+        self.assertEqual(hd.check(self.run)["pending"], 0)
+        reviewer = hd.spawn(self.run, "reviewer", self.input)["task"]
+        self.report(reviewer, "FINDINGS: FP-001", collect=False); hd.collect(reviewer)
+        hd.send(worker, self.write("fix.md", "FP-001 accepted: fix it."))
+        self.assertEqual(sum(self.kind(c) == "devin" for c in self.starts()), 1)  # same session
+        self.report(worker, "Fixed.", collect=False); hd.collect(worker)
+        hd.send(reviewer, self.write("rereview.md", "Re-review FP-001."))
+        self.report(reviewer, "FINDINGS: none", collect=False); hd.collect(reviewer)
         hd.final_check(self.run, self.write("evidence.md", "Criteria map."))
         self.decide(director, {"kind": "final_check", "plan_id": "p1",
                                "ac_status": [{"criterion": "Works", "status": "met", "evidence": "tests"}],
