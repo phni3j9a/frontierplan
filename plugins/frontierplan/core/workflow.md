@@ -56,16 +56,57 @@ complexity and regressions caused by the changes, including affected behavior
 outside the diff. Report contradictory assignments or concrete out-of-scope
 problems to Main; do not add requirements or redesign the task yourself.
 
-Main decides which findings to accept and explains consequential decisions. Send
-accepted fixes to the responsible Worker or Design and return the result to the
-same Reviewer. Keep those sessions through the review cycle; neither a round
-quota nor elapsed time is a reason to stop or ask whether to continue.
+On the first review, work through the assigned scope and affected behavior,
+including relevant callers and checks, and report the findings together. Finding
+a few issues is not a reason to stop looking within that scope; neither is the
+review an invitation to search the whole repository for unrelated improvements.
+Normally review a coherent implementation before the next repair starts, rather
+than chasing a moving target. No finding-count cutoff or custom lock is needed.
+
+Ground findings in failure conditions, the expected behavior, current impact and
+evidence, using a useful explanation rather than a required format. Main decides
+which findings to accept and explains consequential decisions. Severity labels,
+including P2, are not automatic reasons to accept or dismiss a finding. Speculative
+future uses, optional hardening and design preferences are not new completion
+requirements. For unnecessary complexity, explain its present cost to understanding,
+changing or verifying the requested implementation, not just a preferred alternative.
+
+For accepted defects, prefer a regression test that fails before the fix and
+passes afterward where practical. Reviewer checks that the evidence actually
+detects the defect, not merely that a test was added. Static reasoning, manual
+checks or real-device evidence can support issues that are hard to automate;
+lack of an automated reproduction is not a reason to dismiss a concrete defect.
+
+Send accepted fixes to the responsible Worker or Design and return the result,
+Main's review decisions and their reasons to the same Reviewer. Keep those
+sessions through the review cycle. On re-review, focus on whether accepted
+findings are resolved and whether the repair causes regressions, including in
+behavior outside the diff. Do not restart a broad search for improvements or
+reopen rejected/deferred concerns without new evidence. Still report newly
+established requirement violations and concrete defects, including ones missed
+on the first pass; Main adjudicates them on their evidence and impact.
+
+Main closes a task's review when its completion criteria are met, accepted
+material findings are resolved and the necessary verification supports that
+judgment. Remaining improvement ideas are not extra acceptance conditions.
+Report and adjudicate missing required checks or material uncertainty rather
+than counting them as passed. Neither a round quota nor elapsed time is a reason
+to stop or ask whether to continue; completion does not require zero suggestions.
+
+When the same concern or type of failure repeats without useful new information,
+Main diagnoses the disagreement before assigning another patch: check the
+requirement interpretation, failure conditions and whether proposed fixes conflict.
+Use that understanding to clarify the task or reconsider the implementation, and
+consult Astra when a substantive design judgment is needed. This is not another
+final-acceptance round. Judge progress by new evidence and resolved problems,
+not a fixed number of attempts.
 
 ### Main: verify integration
 
 Main owns verification across task boundaries. Assign necessary integration
 checks to a Worker and have the Reviewer verify that assignment and its evidence.
 Individually completed tasks do not establish that the combined result works.
+Apply the same review and completion criteria to integration checks.
 
 ### Astra: check the overall result once
 
@@ -79,7 +120,8 @@ defect encountered still goes to Main.
 
 Main adjudicates Astra's findings like review findings. Address accepted fixes
 with the responsible Worker or Design and the same Reviewer; fixes do not return
-to Astra for another final check. Main decides completion and reports the outcome.
+to Astra for another final check. Main decides completion from the task and
+integration evidence and reports the outcome and remaining limitations.
 Astra is an adviser here, not an additional acceptance gate.
 
 ## Continuity and completion
@@ -90,10 +132,10 @@ a completed turn or an idle terminal is not proof that its task succeeded.
 A timeout alone does not justify duplicating a prompt or replacing an agent.
 
 For long work, keep a short handoff note with the current Plan, participant
-names/IDs, unfinished work and the next action. Choose a convenient location;
-there is no required schema or update command. On resume, inspect those
-participants and their latest results before continuing. If a session is lost,
-recover its context and identify any replacement clearly.
+names/IDs, review decisions and reasons, unfinished work and the next action.
+Choose a convenient location; there is no required schema or update command.
+On resume, inspect those participants and their latest results before continuing.
+If a session is lost, recover its context and identify any replacement clearly.
 
 Retain the running wait's handle across host yields. A background command does
 not guarantee that a stopped Main will resume; describe any actual host limit.
