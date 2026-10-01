@@ -1,4 +1,4 @@
-# Validation / v0.5.0
+# Validation / v0.5.1
 
 ## Automated package checks
 
@@ -41,8 +41,13 @@ distributed skills keep both extensions, preserving explicit invocation.
 
 ## Current validation boundary
 
-Implementation and review of this revision are Main-only, as requested by the
-user. No child model is launched for testing. Installed Herdr 0.9.1's
+The v0.5.1 task-review and final-check clarification is implemented and reviewed
+by Main alone, as requested by the user. Its validation covers the package and a
+manual consistency review of the instructions; it does not establish live model
+adherence to the new boundaries. No child model is launched for this implementation
+or its testing. The behavioral scenarios below remain target-host checks to run.
+
+During v0.5.0 validation, installed Herdr 0.9.1's
 `--skill` and command help were checked, along with the official v0.9.3
 [SKILL](https://github.com/herdrdev/herdr/blob/v0.9.3/skills/herdr/SKILL.md).
 Codex CLI 0.159.3 and Devin CLI 3000.11.3 help confirm the native launch options.
@@ -68,7 +73,11 @@ checks are run. Record versions, task input, actual outputs and limits.
 |---|---|
 | Consultation only | Astra answers; Main relays; no executor is started |
 | Research request | Main starts requested Researchers and returns their results |
-| Small implementation and a review fix | Same Worker and Reviewer continue; Main adjudicates; Astra checks once |
+| Worker reports completion with a missing task requirement | Reviewer compares Main's assignment with the actual diff and evidence; same Worker and Reviewer continue through accepted fixes |
+| UI implementation by Design | Independent Reviewer verifies Design's assigned task with the same boundaries as Worker tasks |
+| Concrete regression or contradictory assignment | Reviewer reports evidence to Main without adding requirements or independently redesigning the task |
+| Tasks pass separately but fail when combined | Main assigns integration checks to Worker; Reviewer verifies that task and its evidence |
+| Integrated result misses the user's goal or a Plan requirement | Astra identifies overall gaps once; Main adjudicates; accepted fixes return to the implementer and same Reviewer without another Astra final check |
 | Interruption and resume | Retained names/IDs and latest results are read; no duplicate prompt on timeout |
 | Herdr layout | Main/Astra 40/60, lower execution region, additional horizontal splits, no focus theft |
 | SWE-2 difference | Only Researcher/Worker use Devin; recorded model and permissions are distinguished |
@@ -82,7 +91,7 @@ effort, tier and permissions from host/runtime evidence, not self-report.
 ## Historical evidence
 
 The old helper-specific smoke scripts were removed with the runtime. Reproduce
-them from their original Git revision, not by installing them into v0.5.0.
+them from their original Git revision, not by installing them into v0.5.x.
 
 - [2026-09-20 layout evidence](evidence/issue-4-herdr-layout.json):
   v0.1 with Herdr 0.9.0; real pane operations, synthetic agents.
