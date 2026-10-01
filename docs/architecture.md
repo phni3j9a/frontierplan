@@ -1,89 +1,74 @@
-# Architecture / v0.3.0
+# Architecture / v0.5.0
 
-FrontierPlan = axiom_for_herdr's working structure + an Astra-owned planning phase,
-on shared contracts, role profiles and two execution backends.
+FrontierPlan is an instructions-only plugin. It teaches a division of responsibility
+and a preferred way to work, using Herdr's official CLI/SKILL or native host tools
+for transport. It has no runtime Python, TOML role profiles or state machine.
 
+```text
+User <-> Main (relay) <-> Astra
+                           | research requests
+                      Main -> Researcher -> Main -> Astra
+
+Plan ready + implementation authorized
+                   |
+        Main coordinates and adjudicates
+             Worker <-> Main <-> Reviewer
+                   |
+          Astra's one final check
+                   |
+            Main finishes
 ```
-User ─ Main (relay) ─ Astra ─┬─ research requests ─> Main relay ─> Luna researchers
-        ^                    ├─ user questions / Plan ─> Main relays verbatim
-        └────────────────────┘  Plan + implementation authorization
-                   │
-          Main coordinates (axiom_for_herdr)
-          /        |          \
-      Worker     Design     Reviewer (same session, no round limit)
-          \        |          /
-        integrated result + evidence
-                   │
-        Astra final check (once per Plan) ─> Main adjudicates, finishes, reports
-```
 
-Main is the technical parent of every child, including Astra and the researchers;
-nothing nests. Before execution Main performs only mechanical steps returned by the
-helper (`relay`, `forward`, `start`, relaying `user_response`), so a Main with weaker
-judgment (for example Devin SWE-2) does not dilute planning. After `start`, Main
-judges as in axiom_for_herdr.
-
-## Why v0.2 changed
-
-v0.1 made Astra the final acceptance gate and forbade extra user checkpoints. In
-real runs (meeterm #27, meeshogi #17) Plans grew beyond the issue, each acceptance
-request triggered a new Astra audit, and review escalations went back to Astra, so
-work did not converge until the user stopped it. v0.2 keeps Astra's strength where
-it matters (research, design, Plan, one final look), returns execution judgment to
-Main, restores axiom_for_herdr's review rules (including unnecessary-complexity
-findings and no round quota), and limits user returns to planning dialogue,
-completion, and scope/cost-changing branches. See
-[Issue #11](https://github.com/phni3j9a/frontierplan/issues/11).
+The default role structure follows axiom_for_herdr. User instructions can change
+the assignment; the plugin is guidance, not a mechanism for overriding them.
+Independent review remains the default. This release does not introduce direct
+Worker–Reviewer orchestration.
 
 ## Components
 
-`skills/` holds the three explicit entry points; `core/` defines common behavior
-(`workflow`, `astra`, `roles`, `handoff`, `review`, `waiting`); `profiles/` holds
-role runtime data; `backends/` defines the real transport steps.
+- `skills/`: three short explicit entry points.
+- `core/workflow.md`: shared planning, execution, review and continuity guidance.
+- `core/roles.md`: one model/effort/tier table.
+- `backends/herdr.md`: the familiar layout and per-role CLI launch guidance;
+  general control and lifecycle behavior come from installed `herdr --skill`.
+- `backends/swe2.md`: only the Devin Researcher/Worker difference.
+- `backends/subagent.md`: direct use of native host tools.
+- `tools/` and `tests/`: development-time package checks, outside the plugin ZIP.
 
-`astraplan-herdr-swe2` is a variant of the herdr backend, not a third backend. The
-run records `variant: swe2` at init; Researcher and Worker then load
-`profiles/swe2/*.toml` (`agent = "devin"`, `swe-2-max`) and start as Devin CLI
-sessions in Devin's bypass mode (no OS sandbox, every tool auto-approved), while
-every other role, the ledger and the layout are shared. Each child's agent kind comes
-from its own profile, so identity checks compare Codex tasks with Codex panes and
-Devin tasks with Devin panes. See [herdr backend](../plugins/frontierplan/backends/herdr.md).
+The Herdr layout retains Main left 40%, Astra right 60%, with execution in the
+lower 60% of Astra's region. Additional participants split the widest execution
+pane horizontally. The instructions teach these steps; manual resizing is not
+an error and no custom geometry validator governs the task.
 
-`scripts/frontierplan.py` is a cooperative ledger: run state, verbatim user
-messages, packets, Astra decision validation with a mechanical `next` step, the
-research relay state, the once-per-Plan final check, and finish/close records.
-`scripts/herdr.py` implements visible CLI sessions, identity-aware continuation,
-the relay/forward/consult/final-check deliveries, wait/check and safe close.
-Native tool calls stay in Main; shell Python does not invoke Codex agent tools.
+## What moved out of code
 
-The ledger refuses executor dispatch before Astra records authorization for the
-current Plan, planning decisions made before the newest user message reached Astra,
-decisions that do not fit the turn (for example `final_check` during planning), a
-second final check for the same Plan, finish without that check or with uncollected
-executors, and early closes (Astra before finish; executors with unresolved blockers).
-It does not verify the semantic truth of consent or evidence, and it is not a sandbox.
-There is no candidate fingerprint gate or Astra acceptance state anymore.
+Main now reads ordinary replies and carries the Plan and participant identities
+in conversation or a short handoff note. There are no decision JSON schemas,
+message numbers for permission, request digests, receipts, begin/report commands,
+fixed acceptance tables, close records or mandatory five-minute reconciliation.
 
-The herdr layout keeps Main left 40% and Astra right 60%; researchers and executors
-share the lower 60% of Astra's region. Completion reconciliation compares current
-results with receipts instead of trusting notification delivery (added for a Devin
-Main that missed reports). Neither a shell waiter nor a report file can guarantee
-restarting a stopped Main.
+Herdr already offers agent readiness, prompt submission, wait, read and live
+names/IDs. Native tools supply their own equivalent capabilities. These systems
+do not prove semantic success or that Main read the output. Guidance covers
+reading results, same-session continuation and checking uncertain delivery;
+there is no replacement ledger or promise of unattended resumption.
 
-Runs created by v0.1 (`schema_version` 1) are rejected; finish them with v0.1.
-Fable is not shipped. Add a verified Director profile plus a supported launcher and
-contract tests before registering it. Keep vendor connection details out of core.
+The user/environment controls authentication, permissions and settings. Codex
+launch examples request workspace-write/never; native permissions depend on the
+parent. The SWE-2 variant keeps its existing broader Devin permission mode, with
+the distinction explained at its point of use.
 
-## Public references used for package/compatibility design
+## Migration and evidence
 
-- [Plugin packaging](https://developers.openai.com/plugins/build/plugins): portable
-  root manifest and optional Codex compatibility manifest; all referenced data ships.
-- [Skills](https://developers.openai.com/codex/skills): skill packaging. Explicit-only
-  agents/openai.yaml follows the existing repository's tested configuration.
-- [Native subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents):
-  effective permissions may inherit the parent's live runtime overrides; nesting is
-  limited by `agents.max_depth`, which is why research is relayed through Main.
+v0.5.0 replaces v0.3.0 on main; v0.4.0 was used by a reverted design and is not
+reused. Finish old runs with their existing version, then start fresh with the
+updated plugin. Old helper state is not migrated or read. Installed copies and
+user settings are never automatically changed.
 
-Public APIs and host versions vary; exact native argument names and effective
-permissions must be checked on the target host. Historical upstream tests are not
-FrontierPlan validation. See validation.md for the boundary of automated coverage.
+The previous implementation and smoke tools remain in Git history, for example
+commit `b766d2a`. Saved historical evidence is retained and labeled with its
+original versions; it is not a validation of the new instructions-only workflow.
+
+See [validation](validation.md) for current tests and the separate target-host
+checks. See [third-party notices](../plugins/frontierplan/THIRD_PARTY_NOTICES.md)
+for retained attribution.

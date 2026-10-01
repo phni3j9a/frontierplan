@@ -1,268 +1,110 @@
-# herdr backend
+# Herdr operations
 
-Requires Python 3.11+ and herdr plus Codex on the same host (the swe2 variant also
-needs Devin CLI); Git only labels the final-check packet. Main is an existing session inside herdr, not necessarily
-Codex: a recognized Devin or another agent can coordinate while all children still
-run through Codex.
-Main keeps its existing agent, model, effort and permissions. FrontierPlan never
-launches, switches or retunes Main, and never edits user configuration automatically.
-Set absolute helper paths from this installed plugin, not a guessed checkout path:
-```
-fp=<plugin-root>/scripts/frontierplan.py
-hd=<plugin-root>/scripts/herdr.py
-```
+Read `herdr --skill` from the installed binary and follow its current command
+syntax and lifecycle guidance. It is the authority for transport; this document
+adds FrontierPlan's layout and role-specific launch choices. Run inside Herdr
+(`HERDR_ENV=1`) with the required agent CLIs available. If that environment is
+missing, explain what is needed instead of switching backends.
 
-## Initialize and start Astra
+Use the current pane as Main and returned pane IDs or unique agent names for
+subsequent operations. Keep the current project directory unless the assignment
+requires another workspace. Resolve referenced resources relative to this loaded
+Plugin, so a different checkout does not supply the instructions.
 
-Save the user's exact request to a UTF-8 file, then:
-```
-python3 "$hd" init --cwd "$project" --request-file "$request"
-python3 "$hd" spawn --run "$run" --role director [--file "$transport_facts"]
-```
-Retain the returned run/task handles and `main_identity`. The optional file holds
-transport facts only (repository/worktree paths, available environments, known
-permissions), never Main's research or a Plan. The common
-`frontierplan.py init --backend herdr` entry point uses the same binding procedure;
-it cannot create an unbound herdr run.
+## Keep the familiar layout
 
-### Main identity: agent kind + session ID + terminal ID
+Use this arrangement within Main's original region; leave other user panes alone:
 
-When `HERDR_PANE_ID` is available, the helper checks `pane current --current` against
-that ID. With no explicit identity or Codex identity in the environment, it derives
-Main's agent kind and session ID from this verified current pane. It does not look
-at focus, cwd, the only available agent, or model names to guess Main.
-
-Codex's `CODEX_THREAD_ID` / `CODEX_SESSION_ID` remain supported and must agree when
-both are present. For other hosts that cannot expose a trustworthy current pane or
-session ID, independently verify Main's actual agent kind, actual session ID and
-pane/terminal pair, then supply the provider-neutral identity in Main's command
-environment for **every** helper invocation (both scripts), not only initialization:
-```
-export FRONTIERPLAN_MAIN_AGENT="$verified_agent_kind"
-export FRONTIERPLAN_MAIN_SESSION_ID="$verified_session_id"
-python3 "$hd" init --cwd "$project" --request-file "$request" \
-  --main-pane "$verified_pane" --main-terminal-id "$verified_terminal" --socket "$socket"
-```
-Use the agent kind reported by the installed herdr, not an assumed product label.
-For example `devin` is appropriate only if that is the actual reported kind. These
-are FrontierPlan variables, not claims about a Devin-specific environment API.
-Do not invent a session ID, reuse a previous session's value, or copy an unrelated
-pane's identity. Explicit pane IDs alone do not prove which conversation is calling.
-Set both identity variables or neither. Contradictions with live metadata or inherited
-Codex IDs stop the command; inspect stale environment values rather than overriding
-checks. A shell/unknown/unrecognized agent cannot be made valid merely by naming it.
-
-If live session metadata is absent, an independently verified explicit identity can
-be used with the verified agent kind and terminal; this is cooperative identity
-checking, not authentication. A session ID observed at initialization must remain
-available and equal on later commands. The shared ledger also verifies live identity
-before Main-only operations such as message, forward, prepare, decision and finish.
-
-Main's original terminal remains the anchor after moves/swaps. With an explicit or
-Codex session identity, its current pane is located by terminal ID. Auto-detection
-also needs a correct current `HERDR_PANE_ID`; if the host leaves it stale after a
-move, stop and re-establish the verified current context or explicit identity. Do
-not infer caller identity from the saved run alone. Replaced terminals, changed
-agent/session identities and ambiguous matches fail closed before pane mutation.
-Pre-existing Codex/herdr runs keep their original Codex ownership checks; there is
-no automatic owner migration. Native subagent runs still require Codex native tools.
-
-The plugin ships Codex, Claude Code and portable (Devin) manifests. Claude Code as
-Main installs the plugin through its marketplace and invokes this SKILL explicitly;
-herdr reports its pane as `claude` with the conversation's session ID, so the
-current-pane identity path applies. Any non-Codex host must explicitly load this
-SKILL and its referenced contracts and be able to run the local helpers on the herdr
-host; FrontierPlan does not establish remote connectivity. Actual provider/host compatibility requires a real-host smoke
-test. Simulated Devin tests are not evidence of real model routing or billing.
-
-### Role layout
-
-The Director splits Main `right / 0.4`: Main retains the left 40%, Astra gets the
-right 60%. The first researcher or Worker/Design/Reviewer splits Astra `down / 0.4`: Astra retains the upper 40% of that right region and the
-execution area receives the lower 60%. Subsequent researcher/Worker/Design/Reviewer spawns
-split the widest owned execution pane `right / 0.5`, with leftmost pane then ID
-breaking ties. These subdivisions need not produce equal columns.
-
-Every split uses `--no-focus`. Existing user panes outside the original Main region
-and manual ratios remain intact; there is no global rebalance. The helper binds the
-Director task and tab/workspace, then verifies the live Main/Director/execution
-regions using `pane layout` split geometry and terminal ownership. Insets from pane
-borders/gaps are allowed. Zoomed, zero-sized, missing or ambiguous layouts stop
-dispatch before splitting. A moved participant or a user pane inserted inside the
-managed region may require manual restoration of the layout before dispatch resumes.
-Failed preparation leaves its task handle visible; inspect before retrying.
-
-Removing execution panes lets Herdr collapse the vacated split naturally. Once all
-execution panes are closed, Astra occupies the right region again. If new work is
-authorized before finish, its first execution pane recreates `down / 0.4` from the
-verified Astra anchor. Retained Reviewer panes also count as execution panes.
-Runs started before role-layout metadata existed cannot guess an execution region;
-finish/clean up those runs with their existing participants before starting a new run.
-A lost Director anchor likewise requires explicit layout/session recovery; the helper
-does not split Main to silently replace it.
-
-## Planning relay
-
-After Astra's turn returns, collect it and record the decision:
-```
-python3 "$hd" collect --task "$director"
-python3 "$fp" decision --task "$director"
-```
-Do exactly what `next` says, without adding judgment:
-
-- `relay`: `python3 "$hd" relay --run "$run"` starts one researcher per request with
-  Astra's exact text. Wait, collect each researcher, then run `relay` again. When all
-  reports are collected it sends Astra their unedited report paths and closes the
-  researchers. A `wait` result lists the researchers still pending.
-- `relay_to_user`: show `relay_to_user` to the user exactly as written. When the user
-  answers, store and forward the words:
-  ```
-  python3 "$fp" message --run "$run" --file "$user_message"
-  python3 "$hd" forward --run "$run"
-  ```
-- `start` / `relay_to_user_then_start`: show the text if present, then
-  `python3 "$fp" start --run "$run"`.
-
-If the user writes while Astra is working, store it with `message`; after her turn
-returns and is collected, `decision` rejects a stale planning decision and you run
-`forward`. If research is in flight, `message` answers `next: relay`: finish the
-relay and the new words reach Astra together with the reports. A consultation-only request ends with `python3 "$fp" finish --run "$run" --discussion`.
-
-## Execution
-
-```
-python3 "$hd" spawn --run "$run" --role worker --file "$assignment" [--cwd "$worktree"]
-python3 "$hd" spawn --run "$run" --role reviewer --file "$review_request"
-python3 "$hd" send --task "$worker" --file "$accepted_fixes"
-python3 "$hd" send --task "$reviewer" --file "$rereview_request"
-python3 "$hd" consult --run "$run" --file "$question"
-```
-Roles: `worker` (Luna MAX fast; SWE-2 Max in the swe2 variant), `design` (Sol MAX),
-`reviewer` (Sol XHIGH).
-Children use the begin/report commands embedded in their packets. Always collect
-through herdr.py to record live idle/activity evidence. `send` continues the same
-Worker/Design/Reviewer session; Astra's turns use `forward`, `relay`, `consult` and
-`final-check`. After `consult`, collect and run `decision`; the advice is Main's to
-adopt (`next: main_decides`) unless it carries a `user_response` to relay.
-
-When review has converged and every Worker/Design/Reviewer is idle and collected:
-```
-python3 "$hd" final-check --run "$run" --file "$evidence"
-python3 "$hd" collect --task "$director"
-python3 "$fp" decision --task "$director"
-```
-It runs once per Plan. Adjudicate its findings like Reviewer findings; accepted
-fixes go to the responsible Worker and the same Reviewer, not back to Astra. Then:
-```
-python3 "$fp" finish --run "$run" --file "$final_report"
+```text
++--------------------+------------------------------+
+|                    | Astra                        |
+|                    | upper 40% of the right side  |
+| Main               +--------------+---------------+
+| left 40%           | Researcher / Worker /        |
+|                    | Design / Reviewer            |
+|                    | lower 60% of the right side  |
++--------------------+------------------------------+
+                     <------- right 60% ------------>
 ```
 
-## Closing participants
+1. Split Main to the right with ratio `0.4`; Main retains 40%, Astra gets 60%.
+2. When the first Researcher or executor is needed, split Astra down with ratio
+   `0.4`; Astra keeps the upper 40% of the right side, execution gets the lower 60%.
+3. Put subsequent Researcher/Worker/Design/Reviewer panes in that lower region:
+   split its widest current pane right with ratio `0.5`. Do not split Main or
+   Astra again while execution panes remain. For equal widths, prefer the leftmost.
+4. When all execution panes close, Herdr naturally restores Astra's right region.
+   Recreate the lower region from Astra when later work needs it.
 
+These are layout instructions, not a geometry gate. Preserve manual resizing and
+use the participants' current locations after moves. Inspect the layout to choose
+the next appropriate split; do not stop work merely because ratios have changed
+or globally rebalance the user's panes. Use `--no-focus` to leave focus with Main.
+
+For a fresh layout, set `project` to the assignment's working directory and run
+these steps as participants are needed, reading each returned ID before the next:
+
+```bash
+herdr pane split --current --direction right --ratio 0.4 --cwd "$project" --no-focus
+# Set astra_pane from .result.pane.pane_id in that response.
+herdr pane split "$astra_pane" --direction down --ratio 0.4 --cwd "$project" --no-focus
+# Set execution_pane from that response. Later choose the widest execution pane.
+herdr pane split "$execution_pane" --direction right --ratio 0.5 --cwd "$project" --no-focus
 ```
-python3 "$hd" close --task "$task"
+
+## Launch and continue
+
+Choose a unique name per participant (for example `fp21-astra`) and an available
+shell pane from the layout above. Set `model` and `effort` from the
+[shared role table](../core/roles.md), then pass native Codex arguments after `--`:
+
+```bash
+herdr agent start "$name" --kind codex --pane "$pane" -- \
+  -C "$project" -m "$model" -c "model_reasoning_effort=\"$effort\"" \
+  --sandbox workspace-write --ask-for-approval never --no-alt-screen
 ```
-Close a researcher once `relay` has returned its report (relay does this), a
-Worker/Design/Reviewer when Main ends its review cycle, and Astra only after finish.
-Close requires the participant's current report to be collected and unchanged
-activity since collection; unresolved Worker/Design/Reviewer blockers stay open until
-finish. Never close Main.
 
-Close verifies ownership, the unique original terminal, the current pane occupant,
-the collected report and unchanged `state_change_seq`. A moved owned terminal is
-closed only at its verified current pane, never by reusing its original pane ID.
-Herdr's pane lookup and close are separate calls; these cooperative checks do not
-atomically intercept direct typing or pane swaps. Avoid manual input during closure.
+For the Luna roles, also pass `-c 'service_tier="fast"'` and
+`-c 'features.fast_mode=true'` after `--` when the installed Codex supports them.
+Other roles have no tier override. These are per-session launch arguments, not
+changes to the user's config. Effective permissions can depend on the host/version;
+do not replace a failed sandbox request with unrestricted access. Older
+Codex/shared-server versions needed `-c 'default_permissions=":workspace"'`;
+use a host-supported setting only when needed, rather than enforcing that
+compatibility workaround everywhere.
 
-Before closing, the helper persists a `closing` record with the pane/terminal
-identity. A lost response or crash leaves that record and blocks retry; it is not
-success. Inspect that terminal and whether closure occurred before recovering the
-record manually; never retry against a reused pane ID. Closing keeps task files,
-reports and evidence.
+After startup is ready, send the role, request and relevant context. Supply
+readable paths to the shared workflow/role table or include the relevant content;
+children need their assignment, not another invocation of the coordinating SKILL.
 
-## Waiting
-
-Follow [Completion reconciliation](../core/waiting.md). On entry/resume and after
-any lost result handle, inspect current conditions without consuming notifications:
+```bash
+herdr agent prompt "$name" "$assignment" --wait --timeout 300000
+herdr agent read "$name" --source recent-unwrapped --lines 200
+# Send fixes or follow-up questions to this same name once its turn is settled.
 ```
-python3 "$hd" check --run "$run"
-```
-`check` is read-only and may run while the one waiter is alive. It returns current
-`events` and `pending`, including already-announced but uncollected reports. It does
-not collect reports or close sessions. Inspect each returned task and collect ready
-reports through `herdr.py collect` before advancing their next action.
 
-Use one `python3 "$hd" wait --run "$run" --timeout 300` process per run (300 is also
-the default and maximum). Retain its execution handle. Its local two-second checks
-do not invoke Main's model. Await the SAME handle with the host's result-wait tool,
-including outer wrappers, and continue after host-limited yields. Set that outer wait
-within 300 seconds or a lower supported/higher-priority cap; never invent unavailable
-arguments. Do not start another waiter when the outer call yields or is interrupted.
+Use `agent wait` when work is already running. The timeout above is in
+milliseconds; host limits can be lower. Retain the command handle through yields
+and await it rather than launching another waiter. If `prompt --wait` times out,
+inspect `agent get` and `agent read` before deciding what to do.
 
-An unread complete/blocked report returns again until collected with current idle
-activity evidence. `report_waiting_idle` means publication arrived but the live
-session is not yet idle: wait before collection or closure. Unchanged collected
-blockers and other anomalies do not repeatedly wake Main inside a wait, but remain
-visible on every `check` and on the next timeout heartbeat. Resolve them or record
-the retained prerequisite before waiting again. Collected complete idle participants
-and closed tasks are not pending; pending:0 alone does not close anyone.
+`idle`/`done` indicate readiness, not successful completion of a particular
+assignment. Read the output and resolve any blocked state. Do not stack a new
+assignment onto a working agent: a lifecycle wait does not distinguish requests.
+Use ordinary responses first; if terminal history cannot recover the result,
+follow the official SKILL's fallback of asking for a Markdown file.
 
-On a busy/stale lock, inspect the recorded owning PID and existing execution handle.
-Reuse the live waiter, or verify its termination before recovering its lock. Do not
-retry lock failures in a fast loop, launch a second watcher, or monitor only new files.
-A wait exit is not proof that Main read/collected its result. Keep the result-wait path
-active; a background waiter cannot guarantee waking a Main that has ended its turn.
-Long-running process monitoring after implementation starts belongs to its Worker.
+## Resume and release
 
-## SWE-2 variant (`astraplan-herdr-swe2`)
+On resume, use the retained names and `agent list`/`agent get` to locate
+participants and read their latest results. A moved pane may have a new ID.
+Before closing a finished participant, resolve its current pane and check that
+it still hosts that participant, then use `pane close` for the pane you created.
+Keep sessions needed for fixes and leave unrelated panes and Main untouched.
 
-`init --variant swe2` records the variant in the run; it cannot change later and the
-subagent backend rejects it. Researchers and Workers then load `profiles/swe2/*.toml`
-and start with `herdr agent start --kind devin`; Astra, Design and the Reviewer are
-still Codex. Every other command, the layout and the relay are unchanged. `live`,
-`collect`, `close`, `check` and `wait` compare each child with the agent kind of its
-own profile, so a Codex pane never stands in for a Devin task or the reverse.
+The CLI supplies startup readiness, prompt delivery, wait and read operations.
+It does not prove semantic success or receipt by Main, and cannot by itself
+resume a Main whose host has stopped running. No FrontierPlan ledger is needed.
 
-Launch arguments are `devin --permission-mode dangerous --model swe-2-max --export
-<task>/devin-session.json`. Before any pane changes, the helper requires `devin` on
-PATH. Devin loads the user's own configuration unchanged (including herdr's Devin
-integration hooks); FrontierPlan adds no config file or rules.
-
-**This is a deliberate, wider permission than the Codex children.** Devin's bypass
-mode (`dangerous`) auto-approves every tool without an OS sandbox: file edits and
-shell commands anywhere the user can write, web fetches, network access and any MCP
-tools configured in Devin. Role instructions (read-only Researcher, no publishing,
-no commits unless assigned) are the only boundary; they are instructions, not
-enforcement. The user chose this over Devin's `--sandbox` mode because, in autonomous
-mode, the edit/write tools still stop at an approval prompt, and working around that
-(denying them and editing only through shell) left a stall path and degraded edits.
-Use this variant only where that trust is acceptable, and never read the Devin
-children's permissions as the Codex `workspace-write` boundary.
-
-Other differences from the Codex children:
-- Effort is part of the model name (`swe-2-max`); there is no fast tier.
-- Devin project configuration (`.devin/config*.json`, rules, hooks) in the workspace
-  applies to the child as usual.
-- SWE-2 usage is subject to the account's Devin plan and quotas.
-
-`collect` on a Devin child adds `session_evidence` (the export path, Devin session
-ID and the model names Devin recorded for agent steps) and `profile_model` to its
-result and receipt. Treat missing evidence as unverified routing.
-
-## Permissions, routing and partial failures
-
-Each child requests workspace-write + never and `default_permissions=":workspace"`,
-matching the predecessor's CLI 0.154.0/shared app-server 0.153.4 workaround. This is
-NOT a cross-version permission guarantee. Verify effective permissions and model /
-effort from session evidence, not launch args or a child's self-report. Only Worker
-adds fast overrides. No role enables network access; Astra and researchers use only already available
-authorized search/connector/command tools. Missing tools are blockers.
-Main's explicit identity variables are cleared in child pane and Codex shell
-configuration; the child-role guard still prevents children from managing the run.
-
-Devin children in the swe2 variant run in Devin's bypass mode instead, as described above.
-
-Starting/sending persists the task and uncertain-delivery state before mutation.
-Inspect the recorded terminal after failures; don't duplicate prompts or start another
-Director or researcher to bypass an error. Wait/collect fail closed on identity mismatch. The
-protocol is cooperative and cannot atomically intercept direct typing.
+References: [official SKILL](https://herdr.dev/docs/agent-skill/),
+[agent automation](https://herdr.dev/docs/agent-automation/).

@@ -1,0 +1,752 @@
+{
+  "date": "2026-10-01T00:10:53.816318+00:00",
+  "plugin_version": "0.5.0",
+  "models_launched": 0,
+  "scope": "Real Herdr CLI and shell panes only; no synthetic or real agents",
+  "commands": [
+    [
+      "workspace",
+      "list"
+    ],
+    [
+      "workspace",
+      "create",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--label",
+      "FrontierPlan pane-only check",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "split",
+      "--current",
+      "--direction",
+      "right",
+      "--ratio",
+      "0.4",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "split",
+      "w1:p2",
+      "--direction",
+      "down",
+      "--ratio",
+      "0.4",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "split",
+      "w1:p3",
+      "--direction",
+      "right",
+      "--ratio",
+      "0.5",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "split",
+      "w1:p3",
+      "--direction",
+      "right",
+      "--ratio",
+      "0.5",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "resize",
+      "--pane",
+      "w1:p1",
+      "--direction",
+      "right",
+      "--amount",
+      "0.1"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "close",
+      "w1:p3"
+    ],
+    [
+      "pane",
+      "close",
+      "w1:p4"
+    ],
+    [
+      "pane",
+      "close",
+      "w1:p5"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "split",
+      "w1:p2",
+      "--direction",
+      "down",
+      "--ratio",
+      "0.4",
+      "--cwd",
+      "/tmp/fp-lay-18e8s93h/project",
+      "--no-focus"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "pane",
+      "close",
+      "w1:p6"
+    ],
+    [
+      "pane",
+      "close",
+      "w1:p2"
+    ],
+    [
+      "pane",
+      "layout",
+      "--pane",
+      "w1:p1"
+    ],
+    [
+      "workspace",
+      "close",
+      "w1"
+    ],
+    [
+      "server",
+      "stop"
+    ]
+  ],
+  "snapshots": {
+    "planning": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "first_executor": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 16,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p3",
+          "rect": {
+            "height": 24,
+            "width": 72,
+            "x": 48,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "two_executors": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 16,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p3",
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 48,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p4",
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 84,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 72,
+            "x": 48,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "three_executors": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 48,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 16,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p3",
+          "rect": {
+            "height": 24,
+            "width": 18,
+            "x": 48,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p5",
+          "rect": {
+            "height": 24,
+            "width": 18,
+            "x": 66,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p4",
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 84,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 72,
+            "x": 48,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 72,
+            "x": 48,
+            "y": 16
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_3_110",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 36,
+            "x": 48,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "manual_resize": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p3",
+          "rect": {
+            "height": 24,
+            "width": 15,
+            "x": 60,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p5",
+          "rect": {
+            "height": 24,
+            "width": 15,
+            "x": 75,
+            "y": 16
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p4",
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 90,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_2_11",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        },
+        {
+          "direction": "right",
+          "id": "split_3_110",
+          "ratio": 0.5,
+          "rect": {
+            "height": 24,
+            "width": 30,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "execution_closed": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "execution_recreated": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p2",
+          "rect": {
+            "height": 16,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        },
+        {
+          "focused": false,
+          "pane_id": "w1:p6",
+          "rect": {
+            "height": 24,
+            "width": 60,
+            "x": 60,
+            "y": 16
+          }
+        }
+      ],
+      "splits": [
+        {
+          "direction": "right",
+          "id": "split_0_root",
+          "ratio": 0.5,
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "direction": "down",
+          "id": "split_1_1",
+          "ratio": 0.4,
+          "rect": {
+            "height": 40,
+            "width": 60,
+            "x": 60,
+            "y": 0
+          }
+        }
+      ],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    },
+    "main_only": {
+      "area": {
+        "height": 40,
+        "width": 120,
+        "x": 0,
+        "y": 0
+      },
+      "focused_pane_id": "w1:p1",
+      "panes": [
+        {
+          "focused": true,
+          "pane_id": "w1:p1",
+          "rect": {
+            "height": 40,
+            "width": 120,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "splits": [],
+      "tab_id": "w1:t1",
+      "workspace_id": "w1",
+      "zoomed": false
+    }
+  },
+  "checks": [
+    "Literal CLI examples preserve Main 40%, Astra right 60%, execution lower 60%",
+    "Additional execution split stays below Astra",
+    "Manual resize preserved when execution region is recreated",
+    "Focus stays on Main throughout",
+    "Closing owned execution/Astra panes restores Main alone"
+  ],
+  "herdr_version": "herdr 0.9.1",
+  "cleanup": {
+    "isolated_workspace_closed": true,
+    "isolated_server_exit_code": 0,
+    "temporary_directory_removed": true
+  }
+}

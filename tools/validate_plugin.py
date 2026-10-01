@@ -1,90 +1,81 @@
 #!/usr/bin/env python3
-"""Validate a checkout or a standalone extracted FrontierPlan plugin."""
+"""Validate a checkout or an extracted, instructions-only FrontierPlan plugin."""
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 from pathlib import Path
 import re
-import tomllib
 
-DEFAULT = Path(__file__).resolve().parents[1] / "plugins" / "frontierplan"
+DEFAULT = Path(__file__).resolve().parents[1] / "plugins/frontierplan"
+SKILLS = {"astraplan-herdr", "astraplan-herdr-swe2", "astraplan-subagent"}
+RESOURCES = (
+    "core/workflow.md", "core/roles.md", "backends/herdr.md",
+    "backends/swe2.md", "backends/subagent.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+)
 
 
 def validate(root: Path) -> list[str]:
+    root = root.resolve()
     errors = []
-    def check(ok, msg):
-        if not ok: errors.append(msg)
+
+    def check(condition, message):
+        if not condition:
+            errors.append(message)
+
     try:
-        manifest = json.loads((root / "plugin.json").read_text())
-        legacy = json.loads((root / ".codex-plugin/plugin.json").read_text())
+        portable = json.loads((root / "plugin.json").read_text())
+        codex = json.loads((root / ".codex-plugin/plugin.json").read_text())
         claude = json.loads((root / ".claude-plugin/plugin.json").read_text())
-        check(manifest.get("name") == "frontierplan", "Wrong plugin name")
-        check(manifest.get("$schema") == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json", "Missing portable manifest schema")
+        check(portable.get("name") == "frontierplan", "Wrong plugin name")
+        check(portable.get("$schema") == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+              "Missing portable manifest schema")
+        check(re.fullmatch(r"\d+\.\d+\.\d+", portable.get("version", "")),
+              "Invalid plugin version")
         for key in ("name", "version", "description", "author", "repository", "license"):
-            check(manifest.get(key) == legacy.get(key), f"Compatibility manifest drift: {key}")
-            check(manifest.get(key) == claude.get(key), f"Claude Code manifest drift: {key}")
-        check(manifest["extensions"]["com.openai"]["interface"] == legacy["interface"], "Interface metadata drift")
-        check(legacy.get("skills") == "./skills/", "Invalid legacy skills path")
+            check(portable.get(key) == codex.get(key), f"Codex manifest drift: {key}")
+            check(portable.get(key) == claude.get(key), f"Claude Code manifest drift: {key}")
+        check(portable["extensions"]["com.openai"]["interface"] == codex["interface"],
+              "Interface metadata drift")
+        check(codex.get("skills") == "./skills/", "Invalid Codex skills path")
+
         skills = {p.name for p in (root / "skills").iterdir() if p.is_dir()}
-        check(skills == {"astraplan-herdr", "astraplan-herdr-swe2", "astraplan-subagent"},
-              "Exactly three implemented SKILLs must ship")
-        for skill in skills:
+        check(skills == SKILLS, "Exactly three implemented SKILLs must ship")
+        for skill in sorted(skills):
             body = (root / "skills" / skill / "SKILL.md").read_text()
-            check(body.startswith(f"---\nname: {skill}\n"), f"Skill frontmatter mismatch: {skill}")
-            frontmatter = re.search(r"(?ms)\A---\n(.*?)\n---", body)
+            match = re.search(r"(?s)\A---\n(.*?)\n---(?:\n|$)", body)
+            frontmatter = match.group(1) if match else ""
+            check(re.search(rf"(?m)^name: {re.escape(skill)}$", frontmatter),
+                  f"Skill frontmatter mismatch: {skill}")
+            check(re.search(r"(?m)^description: \S.+$", frontmatter),
+                  f"Missing skill description: {skill}")
             triggers = re.search(r"(?m)^triggers:[ \t]*(.*(?:\n[ \t]+-[ \t]*\w+)*)",
-                                 frontmatter.group(1) if frontmatter else "")
+                                 frontmatter)
             check(triggers and set(re.findall(r"\w+", triggers.group(1))) == {"user"},
                   f"Explicit-only Devin triggers required: {skill}")
-            check(bool(re.search(r"(?m)^disable-model-invocation:[ \t]*true[ \t]*$",
-                                 frontmatter.group(1) if frontmatter else "")),
+            check(re.search(r"(?m)^disable-model-invocation:[ \t]*true[ \t]*$", frontmatter),
                   f"Explicit-only Claude Code invocation required: {skill}")
             policy = (root / "skills" / skill / "agents/openai.yaml").read_text()
-            check(bool(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy)), f"Explicit invocation required: {skill}")
+            check(re.search(r"(?m)^  allow_implicit_invocation: false\s*$", policy),
+                  f"Explicit-only Codex invocation required: {skill}")
             check(f"$frontierplan:{skill}" in policy, f"Wrong skill prompt: {skill}")
-        swe2 = root / "profiles" / "swe2"
-        profiles = sorted(p for p in (root / "profiles").rglob("*.toml") if not p.is_relative_to(swe2))
-        expected = {"director": ("gpt-6-astra", "xhigh"), "main": (None, None),
-                    "researcher": ("gpt-6-luna", "max"),
-                    "worker": ("gpt-6-luna", "max"), "design": ("gpt-6-sol", "max"),
-                    "reviewer": ("gpt-6-sol", "xhigh")}
-        seen = set()
-        for path in profiles:
-            data = tomllib.loads(path.read_text())
-            role = data.get("role")
-            check(role in expected and role not in seen, f"Unexpected/duplicate profile: {path}")
-            seen.add(role)
-            if role == "main":
-                check(data.get("inherit_session") is True and
-                      not {"model", "reasoning_effort", "service_tier"} & data.keys(),
-                      "Main must inherit the existing session without routing overrides")
-            check((data.get("model"), data.get("reasoning_effort")) == expected.get(role), f"Model/effort mismatch: {path}")
-            luna = role in ("worker", "researcher")
-            check((luna and data.get("service_tier") == "fast") or
-                  (not luna and "service_tier" not in data), f"Unexpected tier override: {path}")
-        check(seen == set(expected), "Missing role profile")
-        # The swe2 variant replaces only the Luna roles, with Devin SWE-2 at the same effort.
-        variant = {p.name: tomllib.loads(p.read_text()) for p in swe2.glob("*.toml")}
-        check(set(variant) == {"researcher.toml", "worker.toml"}, "swe2 must override exactly Researcher/Worker")
-        for name, data in variant.items():
-            check(data == {"role": name.removesuffix(".toml"), "agent": "devin", "model": "swe-2-max",
-                           "reasoning_effort": "max"}, f"swe2 profile mismatch: {name}")
-        for required in ("core/workflow.md", "core/astra.md", "core/roles.md", "core/handoff.md", "core/review.md", "core/waiting.md",
-                         "backends/herdr.md", "backends/subagent.md", "scripts/frontierplan.py",
-                         "scripts/herdr.py", "LICENSE", "THIRD_PARTY_NOTICES.md"):
-            check((root / required).is_file(), f"Missing packaged resource: {required}")
+
+        for resource in RESOURCES:
+            path = root / resource
+            check(path.is_file() and path.resolve().is_relative_to(root),
+                  f"Missing/outside packaged resource: {resource}")
+        for path in root.rglob("*"):
+            if path.is_file():
+                check(path.suffix not in {".py", ".toml"},
+                      f"Runtime code/profile in instructions-only plugin: {path.relative_to(root)}")
         for path in root.rglob("*.md"):
-            for example in re.findall(r"```json\n(.*?)\n```", path.read_text(), re.S):
-                json.loads(example)
             for target in re.findall(r"\]\(([^)]+)\)", path.read_text()):
-                if "://" in target or target.startswith("#"): continue
+                if "://" in target or target.startswith("#"):
+                    continue
                 resolved = (path.parent / target.split("#")[0]).resolve()
-                check(resolved.is_relative_to(root.resolve()) and resolved.exists(), f"Broken/outside package link: {path}: {target}")
-        for path in (root / "scripts").glob("*.py"):
-            ast.parse(path.read_text(), filename=str(path))
-    except (OSError, ValueError, KeyError, SyntaxError) as exc:
+                check(resolved.is_relative_to(root) and resolved.is_file(),
+                      f"Broken/outside package link: {path.relative_to(root)}: {target}")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         errors.append(str(exc))
     return errors
 
