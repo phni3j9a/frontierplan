@@ -1,4 +1,4 @@
-# Architecture / v0.5.1
+# Architecture / v0.5.2
 
 FrontierPlan is an instructions-only plugin. It teaches a division of responsibility
 and a preferred way to work, using Herdr's official CLI/SKILL or native host tools
@@ -35,6 +35,12 @@ fulfillment and gaps between tasks, without repeating task-level implementation
 review. Accepted fixes return to their implementer and the same Reviewer; Main
 decides completion. The [shared workflow](../plugins/frontierplan/core/workflow.md)
 defines these boundaries for all entry points.
+
+v0.5.2 adds convergence guidance within that workflow: cover the assigned scope on
+the first review, verify fixes and their impact on re-review, and carry decisions
+forward unless new evidence changes them. Main ends review on fulfilled criteria
+and verification, not exhausted suggestions. No runtime, ledger or review quota
+is added; the role structure and Astra's once-per-Plan check are unchanged.
 
 ## Components
 
