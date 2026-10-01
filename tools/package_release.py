@@ -1,41 +1,65 @@
 #!/usr/bin/env python3
-"""Build self-contained plugin and source ZIPs and validate the extracted plugin."""
+"""Build plugin/source ZIPs from Git-tracked working files; validate both exports."""
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import zipfile
 
 from validate_plugin import validate
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN = ROOT / "plugins/frontierplan"
 
 
-def package(output: Path) -> list[Path]:
-    errors = validate(PLUGIN)
-    if errors: raise ValueError("\n".join(errors))
-    version = json.loads((PLUGIN / "plugin.json").read_text())["version"]
-    output = output.resolve(); output.mkdir(parents=True, exist_ok=True)
+def tracked_files(root: Path) -> list[Path]:
+    """Use the index as the inventory, reading current working-tree contents."""
+    try:
+        top = subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            stderr=subprocess.PIPE, text=True).strip()
+        if Path(top).resolve() != root.resolve():
+            raise ValueError("Package from the repository root")
+        names = subprocess.check_output(
+            ["git", "-C", str(root), "ls-files", "--cached", "-z"],
+            stderr=subprocess.PIPE).decode().split("\0")
+    except subprocess.CalledProcessError as exc:
+        raise ValueError("Source packaging needs a Git checkout; stage new files first") from exc
+    return sorted({root / name for name in names if name})
+
+
+def package(output: Path, root: Path = ROOT) -> list[Path]:
+    root = root.resolve()
+    plugin = root / "plugins/frontierplan"
+    errors = validate(plugin)
+    if errors:
+        raise ValueError("\n".join(errors))
+    files = tracked_files(root)
+    version = json.loads((plugin / "plugin.json").read_text())["version"]
+    output = output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
     archives = []
-    for name, source in (("plugin", PLUGIN), ("source", ROOT)):
+    for name, source in (("plugin", plugin), ("source", root)):
         target = output / f"frontierplan-v{version}-{name}.zip"
         with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for file in sorted(source.rglob("*")):
-                rel = file.relative_to(source)
-                if (not file.is_file() or file.is_symlink() or file.is_relative_to(output)
-                        or any(part in (".git", "__pycache__", "dist", ".pytest_cache") for part in rel.parts)
-                        or file.suffix in (".pyc", ".pyo")):
+            for file in files:
+                if (not file.is_relative_to(source) or not file.is_file()
+                        or file.is_symlink() or not file.resolve().is_relative_to(root)
+                        or file.is_relative_to(output)):
                     continue
-                archive.write(file, rel)
+                archive.write(file, file.relative_to(source))
         archives.append(target)
-    with tempfile.TemporaryDirectory() as temp:
-        with zipfile.ZipFile(archives[0]) as archive:
-            archive.extractall(temp)
-        errors = validate(Path(temp))
-        if errors: raise ValueError("Extracted plugin failed validation: " + "; ".join(errors))
+    for archive_path, plugin_path in ((archives[0], Path(".")),
+                                      (archives[1], Path("plugins/frontierplan"))):
+        with tempfile.TemporaryDirectory() as temp:
+            with zipfile.ZipFile(archive_path) as archive:
+                archive.extractall(temp)
+            errors = validate(Path(temp) / plugin_path)
+            if errors:
+                raise ValueError("Extracted package failed validation (stage new files first): "
+                                 + "; ".join(errors))
     return archives
 
 

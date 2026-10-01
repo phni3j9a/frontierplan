@@ -1,210 +1,144 @@
 # FrontierPlan
 
-**Plan まではAstraが決め、実行はMainが回す。**
+**PlanまではAstraが決め、実行はMainが回す。**
 
-Codex向けの明示起動専用Pluginです（Claude Code・Devinにも導入できます）。[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)
-の進め方（Mainが統合・レビュー判定・完了判断を持ち、Lunaが実装し、独立したSolがレビューする）を
-土台に、実装前の調査・設計・Plan作成だけをAstraに一任します。herdr版ではMainにDevinなどの
-既存エージェントやClaude Codeも使えます。子エージェントはCodexで起動します。
+v0.5.0は、役割分担と進め方を教える明示起動専用Pluginです。
+独自ランタイム・台帳・JSON判断・受領証はありません。
+Herdrでは公式CLIと同梱SKILL、native版ではホストの実ツールを直接使います。
 
-## 流れ
-
-| フェーズ | 判断する人 | Mainの役割 |
-|---|---|---|
-| 調査〜Plan確定 | **Astra**。Lunaへの調査依頼とユーザーへの質問もAstraが決める | 判断せずに中継する（Astraの文面はそのまま表示、ユーザーの返事はそのままAstraへ） |
-| 実装〜レビュー | **Main**（axiom_for_herdrと同じ） | 分割・割当・統合・指摘の採否。担当Workerはレビューサイクルの最後まで残す |
-| 詰まったとき | MainがAstraに相談し、採否はMainが決める | 相談の材料を用意する |
-| 最終確認 | **Astraが1回だけ**AC表・指摘・Planとのずれを返す | 指摘をReviewerの指摘と同じく判定し、完了報告を書く |
-
-ユーザーに返すのは、Astraの質問やPlanの提示、完了報告、範囲やコストが変わる分岐
-（推奨案つきの選択肢）の3つだけです。レビューの回数や経過時間では返しません。
-
-Astraは、解釈によってコストが大きく変わる場合、Issueにない受入条件を足す場合、
-新しい設計や重い検証が必要な場合に、Planの段階でユーザーに尋ねます。Planは
-IssueのACを基準にし、より単純な代替案と2段の検証（反復中は絞った確認、最後に1回だけフル実行）
-を書き、内部実装の細部は書きません。詳しくは [Astraの規約](plugins/frontierplan/core/astra.md)。
-
-v0.1ではAstraが最終受入の門番で、ユーザーへ戻る経路もありませんでした。実案件で
-作業が収束しなかったため、v0.2でこの形に作り直しました（[Issue #11](https://github.com/phni3j9a/frontierplan/issues/11)）。
-v0.1で作ったrunはv0.2のhelperでは続けられません。v0.1のまま終えてください。
+[axiom_for_herdr](https://github.com/phni3j9a/axiom_for_herdr)の進め方を土台に、
+実装前の調査・設計・PlanをAstraが担当します。実装開始後はMainが割当・統合・
+レビュー判定を担当し、最後にAstraが一度確認してMainが完了を判断します。
+具体的な実装方法や報告形式は担当エージェントに任せます。
 
 ## 3つの入口
 
 | SKILL | 実行方式 |
 |---|---|
-| `astraplan-herdr` | herdr上の見える別ペイン |
-| `astraplan-herdr-swe2` | herdr版と同じ。ResearcherとWorkerだけDevin CLIの`swe-2-max`で起動 |
+| `astraplan-herdr` | Herdr上の見える別ペイン。子はCodex |
+| `astraplan-herdr-swe2` | 同じ配置で、ResearcherとWorkerだけDevin SWE-2 |
 | `astraplan-subagent` | Codexのnative subagentツール |
 
-```
+```text
 $frontierplan:astraplan-herdr
 この機能を調査・設計して実装まで進めてください。
 ```
 
-各SKILLは `allow_implicit_invocation: false`。呼び出した作業とその続きだけに適用し、
-通常の小さなタスクでは自動起動しません。Axiomとは別Pluginで、同じ作業で混用しません。
+3入口とも明示起動です。通常の依頼で自動起動せず、呼び出した作業とその続きに適用します。
+Mainは起動済みのホスト・モデル・設定を継承します。Herdr版ではClaude CodeやDevinも
+Mainにできます。native版にはCodexの対応ツールが必要です。
 
-## 役割とモデル
+## 進め方とモデル
 
-| 役割 | モデル | effort | 責務 |
-|---|---|---|---|
-| Director (Astra) | `gpt-6-astra` | `xhigh` | 調査・設計・ユーザーへの質問・Plan・実装許可の記録、実行中の相談、1回の最終確認 |
-| Main | 起動済みセッションを継承 | 起動元を継承 | Plan前は中継、実行中は分割・割当・統合・レビュー判定・完了報告 |
-| Researcher | `gpt-6-luna` | `max` + fast | Astraの依頼による読み取り専用の調査 |
-| Worker | `gpt-6-luna` | `max` + fast | 実装・テスト・修正・監視 |
-| Design | `gpt-6-sol` | `max` | 任意の実装フェーズUI担当 |
-| Reviewer | `gpt-6-sol` | `xhigh` | 独立レビュー。同じセッションで回数上限なく再レビュー |
+Astraの調査依頼・質問・Planとユーザーの返事はMainがそのまま中継します。
+実装の依頼があれば、その許可範囲でPlanから実行へ進み、形式上の再承認は求めません。
+相談だけの依頼なら相談で終えます。
 
-`astraplan-herdr-swe2` では、Luna枠のResearcherとWorkerを Devin CLI の `swe-2-max`
-（effortはモデル名に含まれ、fast枠はありません）に置き換えます。Astra・Design・Reviewerは
-上の表のままです。詳しくは[SWE-2版](#swe-2版astraplan-herdr-swe2)を参照してください。
+実行中はMainがWorkerの結果を統合し、独立Reviewerの指摘を判断します。
+修正は同じWorker、再レビューは同じReviewerへ戻します。回数制限で打ち切らず、
+Astraの最終確認も追加の受入ゲートにはしません。
 
-`profiles/director/astra.toml` と `profiles/*.toml` で役割別に管理します（swe2版の2役割は
-`profiles/swe2/*.toml`）。profilesは
-FrontierPlan内部の設定で、Codexのカスタムエージェント登録ではありません。Mainのprofileは
-`inherit_session = true` のみで、モデル・effort・tierを指定しません。
-subagent版では子が孫を起動できない（`agents.max_depth` 既定1）ため、Astraの調査依頼は
-両backendともMainの中継で起動します。
+モデル・effort・tierは[共通の役割表](plugins/frontierplan/core/roles.md)に集約しています。
+SWE-2版はResearcher／Workerの起動だけを差し替えます。
+[共通の進め方](plugins/frontierplan/core/workflow.md)が3入口の共通仕様です。
 
-## インストール
+## ペイン配置はそのまま
 
-必要条件: **Python 3.11+**、対応するCodexとモデルへのアクセス（Gitは最終確認の材料にHEADを記録するためだけに使います）。
-herdr版は同一ホストのherdrが必要です。subagent版はCodex上でモデル/effort指定、同一セッション
-継続、待機、終了のnativeツールが必要です。こちらの会話のコネクタが子へ自動移植される
-わけではありません。Astraが必要な調査ツールを使えるかも確認してください。
-
-herdr版のMainは、検証済みの現在ペインからエージェント種別・セッションIDを取得し、
-terminal IDと組み合わせて識別します。取得できないホストでは、独立に確認した実際の識別情報を
-`FRONTIERPLAN_MAIN_AGENT` と `FRONTIERPLAN_MAIN_SESSION_ID` で明示指定します。
-明示指定は初期化だけでなく、その後の両helperへの呼び出しにも必要です。
-詳しくは [herdr手順](plugins/frontierplan/backends/herdr.md) を参照してください。
-非CodexホストではSKILLと参照先の規約を明示的に読み込み、同じherdrホスト上のhelperを
-実行できる必要があります。Devinでは `devin plugins install` がAgent Plugins manifestを
-持つGitHubリポジトリ・git URL・ローカルフォルダを受け付け、両SKILLを
-`/frontierplan:astraplan-herdr` / `/frontierplan:astraplan-herdr-swe2` /
-`/frontierplan:astraplan-subagent` として公開します。
-SKILL frontmatterの `triggers: [user]` はDevin側でも明示起動を維持する宣言で、
-Codexの `allow_implicit_invocation: false` と同じ方針です。subagent backendは
-Codex nativeツールが必要なためDevinでは動作せず、DevinをMainにする場合はherdr版を
-使います。対象ホストでの実機互換性は別途検証してください。
-
-SKILLはPlugin rootを自身の2階層上として解決します。Devinのスラッシュ起動のように
-ホストがSKILL.mdのパスを渡さない場合、Mainはホストが導入・読み込んだPluginのコピーだけを
-使い、ソースのclone・worktree・展開済みZIPなど検索で見つかった別のコピーでは代用しません。
-一意に特定できなければ停止してユーザーに確認し、最初のhelper実行前に解決したrootを示します。
-cloneを開発用に使う場合は、そのフォルダをホストへPluginとして導入してください。
-
-Marketplace登録:
+```text
++--------------------+------------------------------+
+|                    | Astra                        |
+|                    | 右側の上40%                  |
+| Main               +--------------+---------------+
+| 左40%              | Researcher / Worker /        |
+|                    | Design / Reviewer            |
+|                    | 右側の下60%                  |
++--------------------+------------------------------+
+                     <---------- 右60% -------------->
 ```
+
+Mainを右へ `--ratio 0.4` で分け、必要になったらAstraの下へ `--ratio 0.4` で実行領域を作ります。
+追加担当は実行領域で最も幅の広いペインを右へ `--ratio 0.5` で分割します。
+`--no-focus` を使い、ユーザーの手動リサイズや他のペインを保ちます。
+配置の検査で作業を止める仕組みはありません。
+具体的なCLI例は[Herdr手順](plugins/frontierplan/backends/herdr.md)にあります。
+
+## 導入
+
+実行時のPythonは不要です。Herdr版には、Herdr内で動くMain、子のCodex CLIと
+指定モデルへのアクセスが必要です。SWE-2版はDevin CLIと利用枠も必要です。
+native版にはモデル／effort指定、同じ相手への追加指示、待機ができるホストが必要です。
+
+CodexのMarketplace登録:
+
+```bash
 codex plugin marketplace add phni3j9a/frontierplan
-```
-その後、Plugin一覧から **FrontierPlan** を選んでインストールし、新しいセッションで
-SKILLを明示指定します。CLIの `plugin add` が利用可能な環境では:
-```
 codex plugin add frontierplan@frontierplan-local
 ```
-pluginsがfeature flagの環境では `codex --enable plugins ...` を使います。サブコマンドは
-導入済みCLIの `codex plugin --help` を確認してください。ユーザー設定の自動変更はしません。
-ソースをcloneして `codex plugin marketplace add /absolute/path/to/frontierplan` でも登録できます。
 
-Claude Code（herdr版のMainとして使う場合）:
-```
+CLIの対応状況は `codex plugin --help` で確認し、Plugin一覧からの導入も利用できます。
+ローカルcheckoutを使う場合は、Marketplace登録先をリポジトリの絶対パスにします。
+
+Claude Code（Herdr版のMain）:
+
+```text
 /plugin marketplace add phni3j9a/frontierplan
 /plugin install frontierplan@frontierplan
 ```
-CLIでは `claude plugin marketplace add phni3j9a/frontierplan` と
-`claude plugin install frontierplan@frontierplan` です。導入後の新しいセッションで
-`/frontierplan:astraplan-herdr`（または `-swe2`）を明示指定します。各SKILLは `disable-model-invocation: true`
-を持つため、Claude Codeが通常の依頼で自動起動することはありません。Claude Codeは
-herdr上で `agent: "claude"` とセッションIDを報告するため、Mainの識別は現在ペインから
-自動で行われます（`FRONTIERPLAN_MAIN_*` の明示指定は不要です）。`astraplan-subagent` は
-Codex nativeツールが必要なためClaude Codeでは使えず、起動しても停止・報告します。
-Claude Code用のmanifestは `.claude-plugin/marketplace.json`（リポジトリ直下）と
-`plugins/frontierplan/.claude-plugin/plugin.json` で、`claude plugin validate --strict` で確認できます。
 
-配布物は `python3 tools/package_release.py` で生成します。単体Plugin ZIPは中に
-`plugin.json`、互換用`.codex-plugin/plugin.json`と`.claude-plugin/plugin.json`、3 SKILL、共通Core/profiles/scriptsを含みます。
-ZIPを展開しても、別のaxiomリポジトリを参照しません。
+新しいセッションで `/frontierplan:astraplan-herdr` または `-swe2` を明示指定します。
+DevinでもPluginを導入した上で同じスラッシュ入口を利用します。
+`allow_implicit_invocation: false`、`disable-model-invocation: true`、
+`triggers: [user]` で各ホストの明示起動を維持しています。
 
-## SWE-2版（astraplan-herdr-swe2）
+各入口は、ホストが読み込んだPlugin内の相対参照から共通文書を読みます。
+Herdrの操作方法は `herdr --skill` で導入済みバイナリと一致する説明を読み、
+FrontierPlan側には操作マニュアルを重複収録しません。設定の自動変更はありません。
 
-```
-$frontierplan:astraplan-herdr-swe2
-この機能を調査・設計して実装まで進めてください。
-```
+## 権限と継続の扱い
 
-Mainは `herdr.py init --variant swe2` でrunを作り、以降は通常のherdr版と同じ手順です。
-variantはrunに記録され、途中で変更やフォールバックはしません（subagent backendでは使えません）。
+Codex子の起動例は `workspace-write` と `never` を要求します。
+実効権限はホスト・バージョンに依存し、native子は親から継承する場合があります。
+モデルや権限を指示文だけで保証したとは扱いません。
 
-- 必要条件: herdr版の条件に加えて Devin CLI（SWE-2を使えるアカウント）。
-- 起動: `devin --permission-mode dangerous --model swe-2-max --export <task>/devin-session.json`。
-  Devinはユーザー自身の設定をそのまま読み込みます（herdrのDevin連携フックも含む）。
-  FrontierPlanは設定ファイルやルールを追加しません。
-- 実効モデル: `collect` がDevin自身のsession exportから記録された `observed_models` を
-  `session_evidence` として返します。起動引数や子の自己申告では確認扱いにしません。
+SWE-2版は従来どおりDevinの `dangerous` を使います。OS sandboxなしで全ツールを
+自動承認するため、Codexの起動要求より広い権限です。Researcherへの「読むだけ」という
+指示も強制ではありません。[SWE-2の差分](plugins/frontierplan/backends/swe2.md)を参照してください。
 
-**権限はCodex版より広くなります（意図した選択です）。** Devinのbypassモード（`dangerous`）は
-OS sandboxなしで全ツールを自動承認します。ユーザーが書ける場所ならどこでもファイルを編集・
-シェル実行でき、Web取得・ネットワーク・Devinに設定したMCPツールも確認なしで使えます。
-Researcherが読むだけであること、公開やcommitをしないことは役割の指示で、強制ではありません。
-この信頼を置ける環境でだけ使ってください。
+待機後はMainが応答を読んで次の操作を判断します。Herdrの `idle`／`done` は
+仕事の成功や報告の回収を保証しません。長い作業ではPlan・参加者ID・未完了事項・
+次の操作を短い引継ぎメモに残します。バックグラウンド待機だけでは、停止したMainの
+自動再開は保証されません。専用の台帳や常駐監視は持ちません。
 
-Devinの `--sandbox` モードを使わない理由: sandboxではファイル編集ツールが許可ルールを置いても
-確認待ちになり、herdrのペインが止まります。編集ツールを拒否してシェルだけで編集させる方法も
-試しましたが、止まる経路が残り、大きな編集の品質も落ちやすいため採用しませんでした
-（[検証手順](docs/validation.md)）。
+## v0.3／v0.4からの移行
 
-その他の違い:
-- effortはモデル名に含まれ（`swe-2-max`）、fast枠はありません。
-- workspaceのDevinプロジェクト設定（`.devin/config*.json` やルール・フック）は通常どおり子にも効きます。
-- SWE-2の利用はDevinのプランと利用枠に従います。
+既存の進行中runは、そのrunを始めたPluginで終えてから更新してください。
+v0.5.0は旧台帳を読み込まず、新しい作業から文書中心の手順を使います。
+`scripts/`、`profiles/`、`FRONTIERPLAN_MAIN_*` による独自操作は廃止しました。
+更新時はPluginをホストの通常手順で置き換え、新しいセッションで入口を読み直します。
+導入済みコピーをこのリポジトリの変更だけで自動更新することはありません。
 
-実herdrでの確認結果は[検証手順](docs/validation.md)を参照してください。
+0.4.0は過去の別設計で使われたため再利用せず、0.5.0にしています。
+Worker–Reviewer間の直接進行を追加する改訂ではありません。
 
-## 実行の境界
+## 開発・配布・検証
 
-- Plan確定前は、AstraとAstraが依頼したResearcher以外は起動しません。Mainは調査も要約もしません。
-- 実装許可はAstraが記録します（許可にあたるユーザー発言の番号）。記録がなければ `start` できません。
-- Plan作成中にユーザーが書き込んだら、その発言をAstraへ渡すまで古い判断は採用されません。
-- 最終確認はPlanごとに1回です。修正はAstraに戻さず、担当Workerと同じReviewerで確認します。
-- Worker/Design/Reviewerはレビューサイクルが終わったら閉じます。Astraは`finish`まで残します。
-  未解決のブロッカーを持つ参加者は、全体の終了まで閉じません。
-- Mainの実行継続中は最大5分を目安に未回収結果をまとめて照合します。herdrの`check`は通知履歴に
-  依存せず状態を確認し、`wait`は既定・最大300秒です。native版の`status`には`uncollected`一覧があります。
-  バックグラウンドwaitだけ残してMainのターンを終えても自動再開は保証されません。
+開発用ツールにはPython 3.11+とGitが必要です。
 
-swe2版のDevinの子は上の[SWE-2版](#swe-2版astraplan-herdr-swe2)の権限で動きます。
-
-herdr版の配置はMainが左40%、Astraが右60%。ResearcherやWorkerが入ると右側をAstra上40%・
-実行領域下60%へ分け、以降は実行領域内で左右に分割します。手動リサイズを維持し、役割の領域や
-端末の識別が崩れた場合は操作を停止します。
-
-herdr操作とnative tool呼び出しは別のbackendです。native版のPython helperは
-モデルを起動するランタイムではなく、Mainが実際のnativeツールを呼び出すための
-packet/receipt管理です。
-
-## 検証と制限
-
-```
+```bash
 python3 tools/validate_plugin.py
 python3 -m unittest discover -s tests -v
 python3 tools/package_release.py
 ```
 
-GitHub Actionsにも同じ検証を登録しています。詳細は [検証手順](docs/validation.md)。
-自動テストはローカルの状態遷移と模擬herdrを検証するもので、実モデルのルーティング・課金・
-Planの適切さ・実機UI・権限・nativeツール互換性の実証ではありません。実herdr（0.9.1）での
-ペイン配置は合成エージェントのsmokeで確認済みです（[証跡](docs/evidence/issue-11-herdr-layout.json)）。
+ZIP生成はGit管理対象の現在の内容だけを使います。新規ファイルを収録するときは先に
+stageしてください。Git管理外のローカル設定やキャッシュは入りません。
+Plugin／source ZIPを `dist/` に生成し、どちらも展開して検証します。
+単体Pluginは3入口・共通文書・backend案内・manifest・MIT noticesで構成されます。
 
-子の方針はworkspace-write + never。herdrは起動時に要求しますが、実効値は環境で
-確認が必要です。native子は親の権限を継承し得るため、指示文だけで権限を制限したとは
-扱いません。必要条件を満たせない場合は停止・報告し、勝手に権限拡大/モデル変更しません。
+自動テストは配布形式・明示起動・参照先・ZIP収録を検証します。
+実モデルの性能や実機での一連の協調動作を保証するものではありません。
+今回の実装はユーザー指定によりMain単独で進め、子モデルは起動していません。
+[検証範囲と実機確認手順](docs/validation.md)で証拠の範囲を区別しています。
 
-helperは協調的な手順チェックで、認証・sandbox・ユーザー同意の自動判定ではありません。
-runは一時ディレクトリに保存します。永続成果物は必要に応じて通常のプロジェクトへ残してください。
-
-[設計](docs/architecture.md) / [共通ルール](plugins/frontierplan/core/workflow.md) /
-[Astra](plugins/frontierplan/core/astra.md) / [レビュー](plugins/frontierplan/core/review.md) /
-[herdr手順](plugins/frontierplan/backends/herdr.md) /
-[subagent手順](plugins/frontierplan/backends/subagent.md) /
+[設計](docs/architecture.md) /
 [ライセンス・参考元](plugins/frontierplan/THIRD_PARTY_NOTICES.md)

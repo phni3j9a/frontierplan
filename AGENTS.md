@@ -6,8 +6,11 @@ coordination, review adjudication and completion (the axiom_for_herdr structure)
 Astra advises on request and checks the result once per Plan. Do not reintroduce an
 Astra acceptance gate, review round quotas or time-based user checkpoints.
 
-Both SKILLs are explicit only. Keep effort values lowercase, profiles role-specific
-and common contracts single-source. Do not add an unavailable Fable route, implicit
+All three SKILLs are explicit only. Keep effort values lowercase, model selection
+role-specific and shared guidance single-source. Keep the plugin instructions-only:
+use Herdr's official CLI/SKILL or the host's native agent tools directly. Teach the
+existing 40/60 pane arrangement; do not enforce it with a custom runtime.
+Do not add an unavailable Fable route, implicit
 invocation, daemon, auto config mutation or hidden backend fallback. Native tool
 calls stay native.
 

@@ -1,3 +1,0 @@
-# Main is the existing host session; never launch or retune it.
-role = "main"
-inherit_session = true
