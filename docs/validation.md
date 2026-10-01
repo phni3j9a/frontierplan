@@ -1,4 +1,4 @@
-# Validation / v0.5.2
+# Validation / v0.5.3
 
 ## Automated package checks
 
@@ -40,6 +40,10 @@ validation on temporary copies with only those two extensions removed. The
 distributed skills keep both extensions, preserving explicit invocation.
 
 ## Current validation boundary
+
+v0.5.3 changes only the role table (Design/Reviewer `gpt-6.1-sol`, Reviewer
+effort `high`). Package validation and a Claude Code install check cover it;
+no live start of `gpt-6.1-sol` children has been run for this revision.
 
 The v0.5.2 review-convergence changes are instructions-only. Package validation
 and manual consistency review do not establish live model adherence, shorter

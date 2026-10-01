@@ -1,4 +1,4 @@
-# Architecture / v0.5.2
+# Architecture / v0.5.3
 
 FrontierPlan is an instructions-only plugin. It teaches a division of responsibility
 and a preferred way to work, using Herdr's official CLI/SKILL or native host tools
@@ -41,6 +41,9 @@ the first review, verify fixes and their impact on re-review, and carry decision
 forward unless new evidence changes them. Main ends review on fulfilled criteria
 and verification, not exhausted suggestions. No runtime, ledger or review quota
 is added; the role structure and Astra's once-per-Plan check are unchanged.
+
+v0.5.3 changes only the role table: Design and Reviewer use `gpt-6.1-sol`, and
+Reviewer effort is `high`.
 
 ## Components
 
