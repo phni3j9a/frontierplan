@@ -34,26 +34,53 @@ Once the Plan is ready and implementation is authorized, Main owns assignments,
 integration, review decisions and completion. Keep the user's objective in view
 when new information arrives; consult Astra when her design judgment would help.
 
-Give Workers the Plan, relevant project context, scope, completion criteria and
-the checks they should run. Use Design when UI work needs a dedicated owner.
-Researchers investigate without changing the project. Each participant can use
-the skills and tools appropriate to its assignment and existing authorization.
-
-Use an independent Reviewer to examine the actual result against the request,
-including unnecessary complexity and concrete regressions. Main decides which
-findings to accept and explains consequential decisions. Send accepted fixes to
-the responsible Worker and return the result to the same Reviewer. Keep those
-sessions through the review cycle; neither a round quota nor elapsed time is a
-reason to stop or ask whether to continue.
-
-When the result is ready, ask Astra once per Plan to check it against the user's
-intent and Plan, with the diff, verification and remaining limitations. Main
-adjudicates her findings like review findings. Address accepted fixes with the
-Worker and Reviewer, then Main reports the outcome. Astra is an adviser here,
-not an additional acceptance gate.
-
 Keep the user informed during work. Ask for input when a real scope or cost
 decision needs it, carrying forward permission already given.
+
+Give Workers the Plan, relevant project context, task purpose, scope, completion
+criteria and the checks they should run. Use Design when UI work needs a dedicated
+owner. Researchers investigate without changing the project. Each participant can
+use the skills and tools appropriate to its assignment and existing authorization.
+
+### Reviewer: verify the assigned task
+
+Use an independent Reviewer to verify that the responsible Worker correctly
+completed Main's assignment. Review coherent implementation tasks, not every
+commit. Design's UI implementation follows the same review process.
+
+Supply Main's task purpose, scope, completion criteria, relevant Plan constraints,
+the actual diff and verification results. Check these artifacts independently;
+the implementer's completion report cannot narrow the assignment. Review missed
+requirements, implementation defects, material verification gaps, unnecessary
+complexity and regressions caused by the changes, including affected behavior
+outside the diff. Report contradictory assignments or concrete out-of-scope
+problems to Main; do not add requirements or redesign the task yourself.
+
+Main decides which findings to accept and explains consequential decisions. Send
+accepted fixes to the responsible Worker or Design and return the result to the
+same Reviewer. Keep those sessions through the review cycle; neither a round
+quota nor elapsed time is a reason to stop or ask whether to continue.
+
+### Main: verify integration
+
+Main owns verification across task boundaries. Assign necessary integration
+checks to a Worker and have the Reviewer verify that assignment and its evidence.
+Individually completed tasks do not establish that the combined result works.
+
+### Astra: check the overall result once
+
+When the integrated result is ready, ask Astra once per Plan to check whether it
+fulfills the user's intent and Plan. Supply the Plan, diff, task and integration
+verification, review decisions and remaining limitations. Focus on overall goal
+fulfillment, gaps left by task decomposition and meaningful divergence from the
+Plan. Do not repeat the Reviewer's task-level implementation review, introduce
+new requirements or demand verification beyond the agreed Plan. Any concrete
+defect encountered still goes to Main.
+
+Main adjudicates Astra's findings like review findings. Address accepted fixes
+with the responsible Worker or Design and the same Reviewer; fixes do not return
+to Astra for another final check. Main decides completion and reports the outcome.
+Astra is an adviser here, not an additional acceptance gate.
 
 ## Continuity and completion
 

@@ -1,4 +1,4 @@
-# Architecture / v0.5.0
+# Architecture / v0.5.1
 
 FrontierPlan is an instructions-only plugin. It teaches a division of responsibility
 and a preferred way to work, using Herdr's official CLI/SKILL or native host tools
@@ -11,10 +11,14 @@ User <-> Main (relay) <-> Astra
 
 Plan ready + implementation authorized
                    |
-        Main coordinates and adjudicates
-             Worker <-> Main <-> Reviewer
+       Main assigns, integrates and adjudicates
+          Worker/Design <-> Main <-> Reviewer
+                  (assigned task verification)
                    |
-          Astra's one final check
+       Main assigns integration checks to Worker
+            Reviewer verifies the checks
+                   |
+       Astra checks overall intent/Plan once
                    |
             Main finishes
 ```
@@ -23,6 +27,14 @@ The default role structure follows axiom_for_herdr. User instructions can change
 the assignment; the plugin is guidance, not a mechanism for overriding them.
 Independent review remains the default. This release does not introduce direct
 Worker–Reviewer orchestration.
+
+Reviewer verifies the implementation and evidence for Main's assigned Worker or
+Design task, including regressions caused by it. Main owns integration verification
+and finding adjudication. Astra checks the integrated result for overall goal
+fulfillment and gaps between tasks, without repeating task-level implementation
+review. Accepted fixes return to their implementer and the same Reviewer; Main
+decides completion. The [shared workflow](../plugins/frontierplan/core/workflow.md)
+defines these boundaries for all entry points.
 
 ## Components
 

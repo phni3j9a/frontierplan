@@ -1,7 +1,7 @@
 {
   "name": "frontierplan",
-  "version": "0.5.0",
-  "description": "Instructions-only Astra planning and Main-led execution with independent review, using Herdr CLI or native subagents.",
+  "version": "0.5.1",
+  "description": "Instructions-only Astra planning and Main-led execution with independent task review, using Herdr CLI or native subagents.",
   "author": {
     "name": "phni3j9a"
   },

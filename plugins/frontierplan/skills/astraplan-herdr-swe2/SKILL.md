@@ -17,6 +17,8 @@ Also read the [SWE-2 launch difference](../../backends/swe2.md); it changes only
 Researcher and Worker. Astra, Design and Reviewer remain Codex seats.
 
 Main relays Astra's planning decisions and user dialogue. Once implementation
-starts, Main coordinates assignments, independent review and completion, with
-Astra's one final check. Keep Main's existing session and use this selected
-backend. Control panes and agents directly through the Herdr CLI.
+starts, Main coordinates assignments, integration verification and completion.
+Reviewer verifies assigned implementation tasks; Astra checks overall intent and
+Plan fulfillment once. Follow the shared workflow for their boundaries. Keep
+Main's existing session and use this selected backend. Control panes and agents
+directly through the Herdr CLI.
