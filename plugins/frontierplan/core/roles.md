@@ -10,8 +10,8 @@ existing session; FrontierPlan neither launches nor retunes it.
 | Main | Existing session | Inherited | Inherited | Planning relay, then assignment, integration verification, review decisions and completion |
 | Researcher | `gpt-6-luna` | `max` | fast | Focused research without project changes |
 | Worker | `gpt-6-luna` | `max` | fast | Implementation, tests, fixes and monitoring |
-| Design | `gpt-6-sol` | `max` | Host default | Optional UI implementation |
-| Reviewer | `gpt-6-sol` | `xhigh` | Host default | Independently verify Worker/Design task completion and fixes |
+| Design | `gpt-6.1-sol` | `max` | Host default | Optional UI implementation |
+| Reviewer | `gpt-6.1-sol` | `high` | Host default | Independently verify Worker/Design task completion and fixes |
 
 In **astraplan-herdr-swe2**, only Researcher and Worker instead use Devin CLI's
 `swe-2-max`. Effort is encoded in that model name; there is no fast-tier override.
